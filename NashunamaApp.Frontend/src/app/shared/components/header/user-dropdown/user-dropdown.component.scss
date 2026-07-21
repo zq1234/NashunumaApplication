@@ -1,0 +1,44 @@
+:host {
+  display: block;
+}
+
+.dropdown-toggle {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: rgba(0, 0, 0, 0.04);
+  }
+  
+  .dark &:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
+}
+
+// Avatar gradient
+.avatar-gradient {
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+}
+
+// User info section
+.user-info-section {
+  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+  
+  .dark & {
+    background: linear-gradient(135deg, #1e293b, #0f172a);
+  }
+}
+
+// Role badge
+.role-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: 9999px;
+  background: #e0e7ff;
+  color: #4338ca;
+  
+  .dark & {
+    background: #312e81;
+    color: #a5b4fc;
+  }
+}

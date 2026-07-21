@@ -1,0 +1,185 @@
+<div class="page-container">
+  <!-- Page Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">
+        <i class="fas fa-boxes text-brand-500 mr-3"></i>Food Stock Management
+      </h1>
+      <p class="page-subtitle" *ngIf="hasItems">
+        Showing {{ startRecord }} - {{ endRecord }} of {{ totalItems }} records
+      </p>
+    </div>
+    <div class="flex items-center gap-3">
+      <button class="btn btn-primary btn-sm" (click)="exportToExcel()" [disabled]="loading">
+        <i class="fas fa-file-excel"></i>
+        <span>Export</span>
+      </button>
+      <button class="btn btn-primary btn-sm" (click)="refresh()" [disabled]="loading">
+        <i class="fas fa-sync-alt" [class.animate-spin]="loading"></i>
+        <span>Refresh</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Alerts -->
+  <div *ngIf="success" class="alert alert-success mb-4">
+    <div class="flex items-center gap-2">
+      <i class="fas fa-check-circle"></i>
+      <span>{{ success }}</span>
+    </div>
+    <button class="text-success-700 hover:text-success-900" (click)="success = null" aria-label="Close success alert" title="Close">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+
+  <div *ngIf="error" class="alert alert-danger mb-4">
+    <div class="flex items-center gap-2">
+      <i class="fas fa-exclamation-circle"></i>
+      <span>{{ error }}</span>
+    </div>
+    <button class="text-error-700 hover:text-error-900" (click)="clearError()" aria-label="Close error alert" title="Close">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="stat-card">
+      <div class="flex items-center gap-4">
+        <div class="stat-card-icon stat-card-icon-primary">
+          <i class="fas fa-store text-xl"></i>
+        </div>
+        <div>
+          <p class="stat-card-label">Total Sites</p>
+          <h3 class="stat-card-value">{{ totalSites }}</h3>
+        </div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="flex items-center gap-4">
+        <div class="stat-card-icon stat-card-icon-warning">
+          <i class="fas fa-clock text-xl"></i>
+        </div>
+        <div>
+          <p class="stat-card-label">Not Updated</p>
+          <h3 class="stat-card-value">{{ notUpdated }}</h3>
+        </div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="flex items-center gap-4">
+        <div class="stat-card-icon stat-card-icon-danger">
+          <i class="fas fa-exclamation-triangle text-xl"></i>
+        </div>
+        <div>
+          <p class="stat-card-label">Low Stock Sites</p>
+          <h3 class="stat-card-value">{{ lowStockSites }}</h3>
+        </div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="flex items-center gap-4">
+        <div class="stat-card-icon stat-card-icon-info">
+          <i class="fas fa-cubes text-xl"></i>
+        </div>
+        <div>
+          <p class="stat-card-label">Total Records</p>
+          <h3 class="stat-card-value">{{ totalItems }}</h3>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="card mb-6">
+    <div class="card-body">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <!-- Search -->
+        <div class="relative">
+          <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"></i>
+          <input 
+            type="text" 
+            class="form-control pl-9"
+            placeholder="Search food stocks..."
+            [(ngModel)]="searchTerm"
+            (input)="onSearchChange(searchTerm)">
+        </div>
+
+        <!-- Mobile Site Filters -->
+        <div class="flex items-center gap-3">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" 
+                   class="form-checkbox" 
+                   [(ngModel)]="showAll" 
+                   (change)="toggleShowAll()">
+            <span class="text-sm">Show All</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" 
+                   class="form-checkbox" 
+                   [(ngModel)]="hideMobile" 
+                   (change)="toggleHideMobile()">
+            <span class="text-sm">Hide Mobile</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" 
+                   class="form-checkbox" 
+                   [(ngModel)]="onlyMobile" 
+                   (change)="toggleOnlyMobile()">
+            <span class="text-sm">Only Mobile</span>
+          </label>
+        </div>
+      </div>
+      <div class="flex justify-end mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
+        <button class="btn btn-secondary btn-sm" (click)="resetFilters()">
+          <i class="fas fa-undo-alt"></i>
+          <span>Reset Filters</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DataTable Component -->
+  <app-data-table
+    [data]="foodStocks"
+    [columns]="columns"
+    [title]="'Food Stock Records'"
+    [loading]="loading"
+    [showSearch]="false"
+    [showActions]="true"
+    [pageSizeOptions]="pageSizeOptions"
+    [defaultPageSize]="pageSize"
+    [serverSidePaging]="true"
+    [serverSideSearch]="true"
+    [totalItems]="totalItems"
+    (view)="onView($event)"
+    (edit)="onEdit($event)"
+    (delete)="onDelete($event)"
+    (pageChange)="onPageChange($event)"
+    (filterChange)="onFilterChange($event)">
+  </app-data-table>
+
+  <!-- Delete Confirmation Modal -->
+  <app-modal [isOpen]="isDeleteModalOpen" (close)="closeDeleteModal()" className="max-w-[450px] p-6 lg:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <i class="fas fa-exclamation-triangle text-2xl text-error-500"></i>
+      <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Delete Record</h3>
+    </div>
+    <p class="text-sm text-gray-600 dark:text-gray-400">
+      Are you sure you want to delete the food stock record for 
+      <span class="font-semibold">{{ selectedItem?.siteName }}</span>?
+      This action cannot be undone.
+    </p>
+    <div class="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-200 dark:border-gray-800">
+      <button class="btn btn-outline btn-sm" (click)="closeDeleteModal()">
+        <i class="fas fa-times mr-1"></i> Cancel
+      </button>
+      <button class="btn btn-danger btn-sm" (click)="confirmDelete()">
+        <i class="fas fa-trash mr-1"></i> Delete
+      </button>
+    </div>
+  </app-modal>
+</div>

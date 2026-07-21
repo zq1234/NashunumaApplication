@@ -1,0 +1,378 @@
+<div class="card">
+<div class="page-container">
+  <!-- Page Header with Counter Badge -->
+  <div class="page-header">
+    <div class="flex items-center gap-4">
+      <div>
+        <h1 class="page-title">
+          <i class="fas fa-users text-brand-500 mr-3"></i>User Management
+        </h1>
+        <p class="page-subtitle" *ngIf="hasItems">
+          Showing {{ startRecord }} - {{ endRecord }} of {{ totalItems }} users
+        </p>
+      </div>
+      <!-- Top Counter Badge - Placed in the card header -->
+      <div class="flex items-center gap-2 ml-4 px-4 py-2 bg-brand-50 dark:bg-brand-900/20 rounded-full border border-brand-200 dark:border-brand-800">
+        <i class="fas fa-database text-brand-500 text-sm"></i>
+        <span class="text-sm font-medium text-brand-700 dark:text-brand-300">Total:</span>
+        <span class="text-lg font-bold text-brand-600 dark:text-brand-400">{{ totalItems }}</span>
+        <span class="w-px h-6 bg-brand-200 dark:bg-brand-700 mx-2"></span>
+        <span class="text-sm text-brand-600 dark:text-brand-400">
+          <i class="fas fa-user-check mr-1"></i>{{ getActiveCount() }}
+        </span>
+        <span class="text-sm text-brand-400 dark:text-brand-500">
+          <i class="fas fa-user-slash mr-1"></i>{{ getInactiveCount() }}
+        </span>
+      </div>
+    </div>
+    <!-- Add this to the page header section -->
+<div class="flex items-center gap-3">
+  <button class="btn btn-info btn-sm" (click)="exportUsers()" [disabled]="loading">
+    <i class="fas fa-file-excel mr-2"></i>Export
+  </button>
+  <button class="btn btn-primary btn-sm" (click)="refresh()" [disabled]="loading">
+    <i class="fas fa-sync-alt" [class.animate-spin]="loading"></i>
+    <span>Refresh</span>
+  </button>
+</div>
+    
+  </div>
+
+  <!-- Alerts -->
+  <div *ngIf="success" class="alert alert-success mb-4">
+    <div class="flex items-center gap-2">
+      <i class="fas fa-check-circle"></i>
+      <span>{{ success }}</span>
+    </div>
+    <button class="text-success-700 hover:text-success-900" (click)="success = null" aria-label="Close success alert" title="Close">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+
+  <div *ngIf="error" class="alert alert-danger mb-4">
+    <div class="flex items-center gap-2">
+      <i class="fas fa-exclamation-circle"></i>
+      <span>{{ error }}</span>
+    </div>
+    <button class="text-error-700 hover:text-error-900" (click)="clearError()" aria-label="Close error alert" title="Close">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6" *ngIf="totalItems > 0">
+    <div class="stat-card">
+      <div class="flex items-center gap-4">
+        <div class="stat-card-icon stat-card-icon-primary">
+          <i class="fas fa-users text-xl"></i>
+        </div>
+        <div>
+          <p class="stat-card-label">Total Users</p>
+          <h3 class="stat-card-value">{{ totalItems }}</h3>
+        </div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="flex items-center gap-4">
+        <div class="stat-card-icon stat-card-icon-success">
+          <i class="fas fa-user-check text-xl"></i>
+        </div>
+        <div>
+          <p class="stat-card-label">Active</p>
+          <h3 class="stat-card-value">{{ getActiveCount() }}</h3>
+        </div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="flex items-center gap-4">
+        <div class="stat-card-icon stat-card-icon-danger">
+          <i class="fas fa-user-slash text-xl"></i>
+        </div>
+        <div>
+          <p class="stat-card-label">Inactive</p>
+          <h3 class="stat-card-value">{{ getInactiveCount() }}</h3>
+        </div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="flex items-center gap-4">
+        <div class="stat-card-icon stat-card-icon-info">
+          <i class="fas fa-shield-alt text-xl"></i>
+        </div>
+        <div>
+          <p class="stat-card-label">Admins</p>
+          <h3 class="stat-card-value">{{ getAdminCount() }}</h3>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+ <!-- Filters -->
+<div class="card mb-6">
+  <div class="card-body">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+      <!-- Search -->
+      <div class="relative">
+        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"></i>
+        <input 
+          type="text" 
+          class="form-control pl-9"
+          placeholder="Search users..."
+          [(ngModel)]="searchTerm"
+          (input)="onSearchChange(searchTerm)">
+      </div>
+
+      <!-- Province -->
+      <div>
+        <select id="province-filter" class="form-select" [(ngModel)]="selectedProvinceCode" (change)="onProvinceChange(selectedProvinceCode)" aria-label="Filter by province">
+          <option [ngValue]="null">All Provinces</option>
+          <option *ngFor="let p of provinces" [ngValue]="p.provcode">{{ p.province }}</option>
+        </select>
+      </div>
+
+      <!-- District -->
+      <div>
+        <select id="district-filter" class="form-select" [(ngModel)]="selectedDistrictCode" (change)="onDistrictChange(selectedDistrictCode)" aria-label="Filter by district" [disabled]="!selectedProvinceCode">
+          <option [ngValue]="null">All Districts</option>
+          <option *ngFor="let d of districts" [ngValue]="d.distcode">{{ d.district }}</option>
+        </select>
+      </div>
+
+      <!-- Tehsil -->
+      <div>
+        <select id="tehsil-filter" class="form-select" [(ngModel)]="selectedTehsilCode" (change)="onTehsilChange(selectedTehsilCode)" aria-label="Filter by tehsil" [disabled]="!selectedDistrictCode">
+          <option [ngValue]="null">All Tehsils</option>
+          <option *ngFor="let t of tehsils" [ngValue]="t.tehsilcode">{{ t.tehsil }}</option>
+        </select>
+      </div>
+
+      <!-- User Type -->
+      <div>
+        <select id="user-type-filter" class="form-select" [(ngModel)]="userType" (change)="onFilterChange()" aria-label="Filter by user type">
+          <option value="">All Types</option>
+          <option *ngFor="let type of userTypes" [value]="type">{{ type }}</option>
+        </select>
+      </div>
+
+      <!-- Status -->
+      <div>
+        <select id="status-filter" class="form-select" [(ngModel)]="isActive" (change)="onFilterChange()" aria-label="Filter by status">
+          <option [ngValue]="null">All Status</option>
+          <option [ngValue]="true">Active</option>
+          <option [ngValue]="false">Inactive</option>
+        </select>
+      </div>
+    </div>
+    <div class="flex justify-end mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
+      <button class="btn btn-secondary btn-sm" (click)="resetFilters()">
+        <i class="fas fa-undo-alt"></i>
+        <span>Reset Filters</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+  <!-- DataTable Component -->
+  <app-data-table
+    [data]="users"
+    [columns]="columns"
+    [title]="'User Records'"
+    [showSearch]="false"
+    [showActions]="true"
+    [pageSizeOptions]="pageSizeOptions"
+    [defaultPageSize]="pageSize"
+    [serverSidePaging]="true"
+    [serverSideSearch]="true"
+    [totalItems]="totalItems"
+    (view)="onView($event)"
+    (edit)="onEdit($event)"
+    (delete)="onDelete($event)"
+    (pageChange)="onPageChange($event)">
+  </app-data-table>
+
+  <!-- Profile Modal using app-modal -->
+  <app-modal 
+    [isOpen]="isProfileModalOpen" 
+    (close)="closeProfileModal()" 
+    className="max-w-[700px] p-6 lg:p-8">
+    <div class="flex items-center gap-3 mb-6">
+      <i class="fas fa-user-circle text-brand-500 text-2xl"></i>
+      <h3 class="text-xl font-semibold text-gray-900 dark:text-white">User Profile</h3>
+    </div>
+    
+    <div *ngIf="selectedUser" class="space-y-6">
+      <!-- Profile Header -->
+      <div class="flex flex-col sm:flex-row items-center sm:items-start gap-6 pb-6 border-b border-gray-200 dark:border-gray-800">
+        <div class="flex-shrink-0 w-24 h-24 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white text-3xl font-medium shadow-lg">
+          {{ selectedUser.personName.charAt(0) || 'U' }}
+        </div>
+        <div class="flex-1 text-center sm:text-left">
+          <h3 class="text-2xl font-semibold text-gray-900 dark:text-white">{{ selectedUser.personName }}</h3>
+          <p class="text-gray-500 dark:text-gray-400">@{{ selectedUser.username }}</p>
+          <span class="inline-flex items-center px-3 py-1 mt-2 text-sm font-medium rounded-full"
+                [ngClass]="selectedUser.isactive === '1' || selectedUser.isactive === 'true' ? 'badge-success' : 'badge-danger'">
+            {{ selectedUser.isactive === '1' || selectedUser.isactive === 'true' ? 'Active' : 'Inactive' }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Profile Details -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            <i class="fas fa-envelope mr-2"></i>Email
+          </label>
+          <p class="text-sm text-gray-900 dark:text-white mt-1">{{ selectedUser.email }}</p>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            <i class="fas fa-phone mr-2"></i>Mobile
+          </label>
+          <p class="text-sm text-gray-900 dark:text-white mt-1">{{ selectedUser.mobilenumber }}</p>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            <i class="fas fa-briefcase mr-2"></i>Designation
+          </label>
+          <p class="text-sm text-gray-900 dark:text-white mt-1">{{ selectedUser.designation || '-' }}</p>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            <i class="fas fa-tag mr-2"></i>User Type
+          </label>
+          <p class="text-sm text-gray-900 dark:text-white mt-1">{{ selectedUser.usertype || 'User' }}</p>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            <i class="fas fa-map-marker-alt mr-2"></i>Province
+          </label>
+          <p class="text-sm text-gray-900 dark:text-white mt-1">{{ selectedUser.province || '-' }}</p>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            <i class="fas fa-map-pin mr-2"></i>District
+          </label>
+          <p class="text-sm text-gray-900 dark:text-white mt-1">{{ selectedUser.district || '-' }}</p>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            <i class="fas fa-location-dot mr-2"></i>Tehsil
+          </label>
+          <p class="text-sm text-gray-900 dark:text-white mt-1">{{ selectedUser.tehsil || '-' }}</p>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            <i class="fas fa-building mr-2"></i>Site
+          </label>
+          <p class="text-sm text-gray-900 dark:text-white mt-1">{{ selectedUser.siteName || '-' }}</p>
+        </div>
+        <div class="sm:col-span-2" *ngIf="selectedUser.siteAddress">
+          <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            <i class="fas fa-address-card mr-2"></i>Site Address
+          </label>
+          <p class="text-sm text-gray-900 dark:text-white mt-1">{{ selectedUser.siteAddress }}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-200 dark:border-gray-800">
+      <button class="btn btn-outline btn-sm" (click)="closeProfileModal()">
+        <i class="fas fa-times mr-1"></i> Close
+      </button>
+    </div>
+  </app-modal>
+
+  <!-- Transfer Location Modal using app-modal -->
+  <app-modal 
+    [isOpen]="isTransferModalOpen" 
+    (close)="closeTransferModal()" 
+    className="max-w-[600px] p-6 lg:p-8">
+    <div class="flex items-center gap-3 mb-6">
+      <i class="fas fa-exchange-alt text-brand-500 text-xl"></i>
+      <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Transfer Location</h3>
+    </div>
+    
+    <div *ngIf="selectedUser" class="space-y-6">
+      <!-- Current Location -->
+      <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-800">
+        <h5 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+          <i class="fas fa-map-marker-alt text-brand-500 mr-2"></i>Current Location
+        </h5>
+        <div class="grid grid-cols-2 gap-3 text-sm">
+          <div>
+            <span class="text-gray-500 dark:text-gray-400">Province:</span>
+            <span class="text-gray-900 dark:text-white ml-1">{{ selectedUser.province || '-' }}</span>
+          </div>
+          <div>
+            <span class="text-gray-500 dark:text-gray-400">District:</span>
+            <span class="text-gray-900 dark:text-white ml-1">{{ selectedUser.district || '-' }}</span>
+          </div>
+          <div>
+            <span class="text-gray-500 dark:text-gray-400">Tehsil:</span>
+            <span class="text-gray-900 dark:text-white ml-1">{{ selectedUser.tehsil || '-' }}</span>
+          </div>
+          <div>
+            <span class="text-gray-500 dark:text-gray-400">Site:</span>
+            <span class="text-gray-900 dark:text-white ml-1">{{ selectedUser.siteName || '-' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Transfer Form -->
+      <div class="grid grid-cols-1 gap-4">
+        <div>
+          <label class="form-label">Province <span class="text-error-500">*</span></label>
+          <input type="text" class="form-control" [(ngModel)]="transferForm.province" placeholder="Enter province">
+        </div>
+        <div>
+          <label class="form-label">District <span class="text-error-500">*</span></label>
+          <input type="text" class="form-control" [(ngModel)]="transferForm.district" placeholder="Enter district">
+        </div>
+        <div>
+          <label class="form-label">Tehsil</label>
+          <input type="text" class="form-control" [(ngModel)]="transferForm.tehsil" placeholder="Enter tehsil">
+        </div>
+        <div>
+          <label class="form-label">Site Name</label>
+          <input type="text" class="form-control" [(ngModel)]="transferForm.siteName" placeholder="Enter site name">
+        </div>
+      </div>
+    </div>
+
+    <div class="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-200 dark:border-gray-800">
+      <button class="btn btn-outline btn-sm" (click)="closeTransferModal()">
+        <i class="fas fa-times mr-1"></i> Cancel
+      </button>
+      <button class="btn btn-primary btn-sm" (click)="handleTransferSubmit()">
+        <i class="fas fa-exchange-alt mr-1"></i> Transfer
+      </button>
+    </div>
+  </app-modal>
+
+  <!-- Confirm Modal using app-modal -->
+  <app-modal 
+    [isOpen]="isConfirmModalOpen" 
+    (close)="closeConfirmModal()" 
+    className="max-w-[450px] p-6 lg:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <i class="fas fa-exclamation-triangle text-2xl" [class.text-error-500]="confirmModalData.isDanger" [class.text-warning-500]="!confirmModalData.isDanger"></i>
+      <h3 class="text-xl font-semibold text-gray-900 dark:text-white">{{ confirmModalData.title }}</h3>
+    </div>
+    <p class="text-sm text-gray-600 dark:text-gray-400">{{ confirmModalData.message }}</p>
+    <div class="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-200 dark:border-gray-800">
+      <button class="btn btn-outline btn-sm" (click)="closeConfirmModal()">
+        <i class="fas fa-times mr-1"></i> Cancel
+      </button>
+      <button class="btn btn-sm" 
+              [ngClass]="confirmModalData.isDanger ? 'btn-danger' : 'btn-primary'"
+              (click)="handleConfirmAction()">
+        <i class="fas fa-check mr-1"></i> {{ confirmModalData.confirmText }}
+      </button>
+    </div>
+  </app-modal>
+</div>
+</div>

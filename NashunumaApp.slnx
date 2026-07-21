@@ -1,0 +1,11 @@
+<Solution>
+  <Project Path="NashunamaApp.Frontend/NashunamaApp.Frontend.esproj">
+    <Build />
+    <Deploy />
+  </Project>
+  <Project Path="NashunumaApp.API/NashunumaApp.API.csproj" />
+  <Project Path="NashunumaApp.Application/NashunumaApp.Application.csproj" />
+  <Project Path="NashunumaApp.Domain/NashunumaApp.Domain.csproj" />
+  <Project Path="NashunumaApp.Infrastructure/NashunumaApp.Infrastructure.csproj" />
+  <Project Path="NashunumaApp.Shared/NashunumaApp.Shared.csproj" Id="5153e10b-d6b7-4978-8fc1-87904b1296ec" />
+</Solution>

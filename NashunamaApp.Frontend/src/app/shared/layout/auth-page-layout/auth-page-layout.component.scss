@@ -1,0 +1,110 @@
+// src/app/shared/layout/auth-page-layout/auth-page-layout.component.scss
+
+.auth-page-wrapper {
+  position: relative;
+  min-height: 100vh;
+  width: 100%;
+  background: #f8f9fa;
+  overflow: hidden;
+
+  .dark & {
+    background: #1a1a2e;
+  }
+}
+
+/* Background Image with Animation */
+.auth-background {
+  position: fixed;
+  top: -50px;
+  left: -50px;
+  right: -50px;
+  bottom: -50px;
+  background-image: url('/assets/images/bg.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  z-index: 0;
+  animation: backgroundZoom 30s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+@keyframes backgroundZoom {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1.1);
+  }
+}
+
+.auth-background-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.85) 0%,
+    rgba(255, 255, 255, 0.6) 100%
+  );
+  z-index: 0;
+  
+  .dark & {
+    background: linear-gradient(
+      135deg,
+      rgba(0, 0, 0, 0.7) 0%,
+      rgba(0, 0, 0, 0.4) 100%
+    );
+  }
+}
+
+/* Grid Shape styling */
+:host ::ng-deep app-grid-shape {
+  opacity: 0.12;
+  z-index: 1;
+}
+
+/* Theme toggle positioning */
+:host ::ng-deep app-theme-toggle-two {
+  position: fixed;
+  z-index: 50;
+  bottom: 1.5rem;
+  right: 1.5rem;
+}
+
+/* Ensure content is above background */
+:host ::ng-deep .z-1 {
+  z-index: 2;
+}
+
+/* Dark mode improvements */
+.dark :host ::ng-deep .bg-white {
+  background-color: rgba(26, 26, 46, 0.95) !important;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 1024px) {
+  :host ::ng-deep .lg-w-1-2 {
+    width: 100%;
+  }
+}
+
+@media screen and (max-width: 640px) {
+  :host ::ng-deep .p-6 {
+    padding: 1rem;
+  }
+  
+  :host ::ng-deep .lg-flex-row {
+    flex-direction: column;
+  }
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .auth-background,
+  .auth-background-overlay {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
