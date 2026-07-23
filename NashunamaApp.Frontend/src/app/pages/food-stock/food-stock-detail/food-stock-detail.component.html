@@ -30,18 +30,18 @@
             <i class="fas fa-boxes text-brand-500"></i>
             Food Stock Details
             <span class="text-sm font-normal text-gray-500 dark:text-gray-400">
-              #{{ stock?.id || 'New' }}
+              #{{ stock.id || 'New' }}
             </span>
           </h1>
-          <p class="page-subtitle mt-1" *ngIf="stock?.siteName">
+          <p class="page-subtitle mt-1" *ngIf="stock.siteName">
             <i class="fas fa-store mr-2"></i>{{ stock.siteName }}
             <span class="mx-2">•</span>
-            <i class="fas fa-calendar-alt mr-2"></i>{{ stock?.enteredOn | date:'mediumDate' }}
+            <i class="fas fa-calendar-alt mr-2"></i>{{ stock.enteredOn | date:'mediumDate' }}
           </p>
         </div>
       </div>
       <div class="flex items-center gap-3">
-        <span class="badge badge-success" *ngIf="stock?.id">
+        <span class="badge badge-success" *ngIf="stock.id">
           <i class="fas fa-check-circle mr-1"></i>Active
         </span>
         <button class="btn btn-primary btn-sm" (click)="onEdit()">
@@ -118,46 +118,46 @@
                 <label class="detail-label">
                   <i class="fas fa-building mr-2"></i>Site Name
                 </label>
-                <p class="detail-value">{{ stock?.siteName || '-' }}</p>
+                <p class="detail-value">{{ stock.siteName || '-' }}</p>
               </div>
               <div class="detail-item">
                 <label class="detail-label">
                   <i class="fas fa-map-marker-alt mr-2"></i>Address
                 </label>
-                <p class="detail-value">{{ stock?.address || '-' }}</p>
+                <p class="detail-value">{{ stock.address || '-' }}</p>
               </div>
               <div class="detail-item">
                 <label class="detail-label">
                   <i class="fas fa-phone mr-2"></i>Contact
                 </label>
-                <p class="detail-value">{{ stock?.contact || '-' }}</p>
+                <p class="detail-value">{{ stock.contact || '-' }}</p>
               </div>
               <div class="detail-item">
                 <label class="detail-label">
                   <i class="fas fa-user mr-2"></i>Head Name
                 </label>
-                <p class="detail-value">{{ stock?.headName || '-' }}</p>
+                <p class="detail-value">{{ stock.headName || '-' }}</p>
               </div>
               <div class="grid grid-cols-3 gap-3">
                 <div class="detail-item">
                   <label class="detail-label">Province</label>
-                  <p class="detail-value">{{ stock?.province || '-' }}</p>
+                  <p class="detail-value">{{ stock.province || '-' }}</p>
                 </div>
                 <div class="detail-item">
                   <label class="detail-label">District</label>
-                  <p class="detail-value">{{ stock?.district || '-' }}</p>
+                  <p class="detail-value">{{ stock.district || '-' }}</p>
                 </div>
                 <div class="detail-item">
                   <label class="detail-label">Tehsil</label>
-                  <p class="detail-value">{{ stock?.tehsil || '-' }}</p>
+                  <p class="detail-value">{{ stock.tehsil || '-' }}</p>
                 </div>
               </div>
               <div class="detail-item">
                 <label class="detail-label">
                   <i class="fas fa-mobile-alt mr-2"></i>Mobile Site
                 </label>
-                <span class="badge" [ngClass]="stock?.isMobileSite === '1' ? 'badge-success' : 'badge-secondary'">
-                  {{ stock?.isMobileSite === '1' ? 'Yes' : 'No' }}
+                <span class="badge" [ngClass]="stock.isMobileSite === '1' ? 'badge-success' : 'badge-secondary'">
+                  {{ stock.isMobileSite === '1' ? 'Yes' : 'No' }}
                 </span>
               </div>
             </div>
@@ -176,25 +176,25 @@
             <div class="space-y-3">
               <div class="detail-item">
                 <label class="detail-label">Entered By</label>
-                <p class="detail-value">{{ stock?.enteredBy || '-' }}</p>
+                <p class="detail-value">{{ stock.enteredBy || '-' }}</p>
               </div>
               <div class="detail-item">
                 <label class="detail-label">Entered On</label>
-                <p class="detail-value">{{ (stock?.enteredOn | date:'medium') || '-' }}</p>
+                <p class="detail-value">{{ (stock.enteredOn | date:'medium') || '-' }}</p>
               </div>
               <div class="detail-item">
                 <label class="detail-label">Activity Time</label>
-                <p class="detail-value">{{ stock?.activityTime || '-' }}</p>
+                <p class="detail-value">{{ stock.activityTime || '-' }}</p>
               </div>
               <div class="detail-item">
                 <label class="detail-label">Manual Update</label>
-                <span class="badge" [ngClass]="stock?.isManualUpdate === '1' ? 'badge-warning' : 'badge-secondary'">
-                  {{ stock?.isManualUpdate === '1' ? 'Yes' : 'No' }}
+                <span class="badge" [ngClass]="stock.isManualUpdate === '1' ? 'badge-warning' : 'badge-secondary'">
+                  {{ stock.isManualUpdate === '1' ? 'Yes' : 'No' }}
                 </span>
               </div>
               <div class="detail-item">
                 <label class="detail-label">Remarks</label>
-                <p class="detail-value">{{ stock?.remarks || '-' }}</p>
+                <p class="detail-value">{{ stock.remarks || '-' }}</p>
               </div>
             </div>
           </div>
@@ -215,31 +215,31 @@
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div class="stock-item">
                 <label class="stock-label">Opening Boxes</label>
-                <p class="stock-value">{{ stock?.openingStockBoxesMamta || '0' }}</p>
+                <p class="stock-value">{{ stock.openingStockBoxesMamta || '0' }}</p>
               </div>
               <div class="stock-item">
                 <label class="stock-label">Received Boxes</label>
-                <p class="stock-value text-success">{{ stock?.receivedStockBoxesMamta || '0' }}</p>
+                <p class="stock-value text-success">{{ stock.receivedStockBoxesMamta || '0' }}</p>
               </div>
               <div class="stock-item">
                 <label class="stock-label">Distributed Boxes</label>
-                <p class="stock-value text-warning">{{ stock?.distributedBoxesMamta || '0' }}</p>
+                <p class="stock-value text-warning">{{ stock.distributedBoxesMamta || '0' }}</p>
               </div>
               <div class="stock-item">
                 <label class="stock-label">Closing Boxes</label>
-                <p class="stock-value text-primary">{{ stock?.closingStockBoxesMamta || '0' }}</p>
+                <p class="stock-value text-primary">{{ stock.closingStockBoxesMamta || '0' }}</p>
               </div>
               <div class="stock-item">
                 <label class="stock-label">Opening Sachets</label>
-                <p class="stock-value">{{ stock?.openingStockSachetsMamta || '0' }}</p>
+                <p class="stock-value">{{ stock.openingStockSachetsMamta || '0' }}</p>
               </div>
               <div class="stock-item">
                 <label class="stock-label">Distributed Sachets</label>
-                <p class="stock-value text-warning">{{ stock?.distributedSachetsMamta || '0' }}</p>
+                <p class="stock-value text-warning">{{ stock.distributedSachetsMamta || '0' }}</p>
               </div>
               <div class="stock-item">
                 <label class="stock-label">Closing Sachets</label>
-                <p class="stock-value text-primary">{{ stock?.closingStockSachetsMamta || '0' }}</p>
+                <p class="stock-value text-primary">{{ stock.closingStockSachetsMamta || '0' }}</p>
               </div>
             </div>
           </div>
@@ -257,31 +257,31 @@
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div class="stock-item">
                 <label class="stock-label">Opening Boxes</label>
-                <p class="stock-value">{{ stock?.openingStockBoxesWawa || '0' }}</p>
+                <p class="stock-value">{{ stock.openingStockBoxesWawa || '0' }}</p>
               </div>
               <div class="stock-item">
                 <label class="stock-label">Received Boxes</label>
-                <p class="stock-value text-success">{{ stock?.receivedStockBoxesWawa || '0' }}</p>
+                <p class="stock-value text-success">{{ stock.receivedStockBoxesWawa || '0' }}</p>
               </div>
               <div class="stock-item">
                 <label class="stock-label">Distributed Boxes</label>
-                <p class="stock-value text-warning">{{ stock?.distributedBoxesWawa || '0' }}</p>
+                <p class="stock-value text-warning">{{ stock.distributedBoxesWawa || '0' }}</p>
               </div>
               <div class="stock-item">
                 <label class="stock-label">Closing Boxes</label>
-                <p class="stock-value text-primary">{{ stock?.closingStockBoxesWawa || '0' }}</p>
+                <p class="stock-value text-primary">{{ stock.closingStockBoxesWawa || '0' }}</p>
               </div>
               <div class="stock-item">
                 <label class="stock-label">Opening Sachets</label>
-                <p class="stock-value">{{ stock?.openingStockSachetsWawa || '0' }}</p>
+                <p class="stock-value">{{ stock.openingStockSachetsWawa || '0' }}</p>
               </div>
               <div class="stock-item">
                 <label class="stock-label">Distributed Sachets</label>
-                <p class="stock-value text-warning">{{ stock?.distributedSachetsWawa || '0' }}</p>
+                <p class="stock-value text-warning">{{ stock.distributedSachetsWawa || '0' }}</p>
               </div>
               <div class="stock-item">
                 <label class="stock-label">Closing Sachets</label>
-                <p class="stock-value text-primary">{{ stock?.closingStockSachetsWawa || '0' }}</p>
+                <p class="stock-value text-primary">{{ stock.closingStockSachetsWawa || '0' }}</p>
               </div>
             </div>
           </div>
@@ -301,19 +301,19 @@
               <div class="space-y-2">
                 <div class="stock-item">
                   <label class="stock-label text-xs">Opening</label>
-                  <p class="stock-value text-sm">{{ stock?.rutfOpening || '0' }}</p>
+                  <p class="stock-value text-sm">{{ stock.rutfOpening || '0' }}</p>
                 </div>
                 <div class="stock-item">
                   <label class="stock-label text-xs">Received</label>
-                  <p class="stock-value text-sm text-success">{{ stock?.rutfReceived || '0' }}</p>
+                  <p class="stock-value text-sm text-success">{{ stock.rutfReceived || '0' }}</p>
                 </div>
                 <div class="stock-item">
                   <label class="stock-label text-xs">Distributed</label>
-                  <p class="stock-value text-sm text-warning">{{ stock?.rutfDistributed || '0' }}</p>
+                  <p class="stock-value text-sm text-warning">{{ stock.rutfDistributed || '0' }}</p>
                 </div>
                 <div class="stock-item">
                   <label class="stock-label text-xs">Closing</label>
-                  <p class="stock-value text-sm text-primary">{{ stock?.rutfClosing || '0' }}</p>
+                  <p class="stock-value text-sm text-primary">{{ stock.rutfClosing || '0' }}</p>
                 </div>
               </div>
             </div>
@@ -331,19 +331,19 @@
               <div class="space-y-2">
                 <div class="stock-item">
                   <label class="stock-label text-xs">Opening</label>
-                  <p class="stock-value text-sm">{{ stock?.ifaOpening || '0' }}</p>
+                  <p class="stock-value text-sm">{{ stock.ifaOpening || '0' }}</p>
                 </div>
                 <div class="stock-item">
                   <label class="stock-label text-xs">Received</label>
-                  <p class="stock-value text-sm text-success">{{ stock?.ifaReceived || '0' }}</p>
+                  <p class="stock-value text-sm text-success">{{ stock.ifaReceived || '0' }}</p>
                 </div>
                 <div class="stock-item">
                   <label class="stock-label text-xs">Distributed</label>
-                  <p class="stock-value text-sm text-warning">{{ stock?.ifaDistributed || '0' }}</p>
+                  <p class="stock-value text-sm text-warning">{{ stock.ifaDistributed || '0' }}</p>
                 </div>
                 <div class="stock-item">
                   <label class="stock-label text-xs">Closing</label>
-                  <p class="stock-value text-sm text-primary">{{ stock?.ifaClosing || '0' }}</p>
+                  <p class="stock-value text-sm text-primary">{{ stock.ifaClosing || '0' }}</p>
                 </div>
               </div>
             </div>
@@ -361,7 +361,7 @@
               <div class="space-y-2">
                 <div class="stock-item">
                   <label class="stock-label text-xs">Opening</label>
-                  <p class="stock-value text-sm">{{ stock?.mmsOpening || '0' }}</p>
+                  <p class="stock-value text-sm">{{ stock.mmsOpening || '0' }}</p>
                 </div>
                 <div class="stock-item">
                   <label class="stock-label text-xs">Received</label>

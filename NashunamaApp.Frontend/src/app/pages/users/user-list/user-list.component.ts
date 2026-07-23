@@ -3,14 +3,15 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
-import { Subject, debounceTime, distinctUntilChanged, takeUntil, forkJoin } from 'rxjs';
+import { Subject, debounceTime, distinctUntilChanged, takeUntil, finalize } from 'rxjs';
 import { UserManagementService } from '@shared/services/user-management.service';
 import { LocationService, Province, District, Tehsil } from '@shared/services/location.service';
 import { UserDto, UserFilterParams } from '@core/models/user.model';
-import { UpdateUserLocationDto } from '@core/models/user-location.model';
+import { UpdateUserLocationDto, LocationHelper } from '@core/models/user-location.model';
 import { ApiResponse, PaginatedResponse, ApiResponseHelper } from '@core/models/api-response.model';
 import { DataTableComponent, DataTableColumn } from '@shared/components/data-table/data-table.component';
 import { ModalComponent } from '@shared/components/ui/modal/modal.component';
+import { AlertComponent } from '@shared/components/ui/alert/alert.component';
 
 @Component({
   selector: 'app-user-list',
@@ -20,7 +21,8 @@ import { ModalComponent } from '@shared/components/ui/modal/modal.component';
     FormsModule,
     RouterModule,
     DataTableComponent,
-    ModalComponent
+    ModalComponent,
+    AlertComponent
   ],
   templateUrl: './user-list.component.html',
   styleUrls: ['./user-list.component.scss']
@@ -32,19 +34,29 @@ export class UserListComponent implements OnInit, OnDestroy {
   
   // UI State
   loading = false;
+  loadingTransfer = false;
+  loadingStatus = false;
+  loadingBlock = false;
+  loadingExport = false;
   error: string | null = null;
   success: string | null = null;
   loadingLocations = false;
   
+  // Alert
+  alertVariant: 'success' | 'error' | 'warning' | 'info' = 'info';
+  alertTitle = '';
+  alertMessage = '';
+  showAlert = false;
+  
   // Filters
   searchTerm = '';
-  selectedProvinceCode: number | null = null;
-  selectedDistrictCode: number | null = null;
-  selectedTehsilCode: number | null = null;
+  selectedProvinceName: string | null = null;
+  selectedDistrictName: string | null = null;
+  selectedTehsilName: string | null = null;
   userType = '';
   isActive: boolean | null = null;
   
-  // Dropdown options
+  // Dropdown options for filters
   provinces: Province[] = [];
   districts: District[] = [];
   tehsils: Tehsil[] = [];
@@ -70,17 +82,16 @@ export class UserListComponent implements OnInit, OnDestroy {
   isConfirmModalOpen = false;
   selectedUser: UserDto | null = null;
   
-  // Transfer form
-  transferForm: UpdateUserLocationDto = {
-    province: '',
-    provinceId: null,
-    district: '',
-    districtId: null,
-    tehsil: '',
-    tehsilId: null,
-    siteId: null,
-    siteName: ''
-  };
+  // Transfer form - using LocationHelper
+  transferForm: UpdateUserLocationDto = LocationHelper.createDefaultUpdateDto();
+  
+  // Transfer location dropdown data
+  transferProvinces: Province[] = [];
+  transferDistricts: District[] = [];
+  transferTehsils: Tehsil[] = [];
+  transferProvinceName: string | null = null;
+  transferDistrictName: string | null = null;
+  transferTehsilName: string | null = null;
   
   // Confirm modal data
   confirmModalData = {
@@ -135,44 +146,72 @@ export class UserListComponent implements OnInit, OnDestroy {
     });
   }
 
-  /**
-   * Load location data (provinces, districts, tehsils)
-   */
+  // ============================================
+  // Alert Methods
+  // ============================================
+
+  private displayAlert(variant: 'success' | 'error' | 'warning' | 'info', title: string, message: string): void {
+    this.alertVariant = variant;
+    this.alertTitle = title;
+    this.alertMessage = message;
+    this.showAlert = true;
+    
+    setTimeout(() => {
+      this.showAlert = false;
+    }, 5000);
+  }
+
+  private showSuccess(message: string): void {
+    this.success = message;
+    this.displayAlert('success', 'Success', message);
+  }
+
+  private showError(message: string): void {
+    this.error = message;
+    this.displayAlert('error', 'Error', message);
+  }
+
+  clearAlert(): void {
+    this.showAlert = false;
+    this.error = null;
+    this.success = null;
+  }
+
+  // ============================================
+  // Location Data Methods
+  // ============================================
+
   loadLocationData(): void {
     this.loadingLocations = true;
     
-    // Try to get cached data first
     const cachedProvinces = this.locationService.getCachedProvinces();
     if (cachedProvinces && cachedProvinces.length > 0) {
       this.provinces = cachedProvinces;
+      this.transferProvinces = cachedProvinces;
       this.loadingLocations = false;
       return;
     }
 
-    // Load from API
     this.locationService.getProvinces().subscribe({
       next: (response: ApiResponse<Province[]>) => {
         this.loadingLocations = false;
         if (ApiResponseHelper.isSuccess(response) && response.data) {
           this.provinces = response.data;
+          this.transferProvinces = response.data;
         } else {
-          console.error('Failed to load provinces:', response.message);
+          this.showError('Failed to load provinces: ' + response.message);
           this.setDefaultFilterOptions();
         }
       },
       error: (error) => {
         this.loadingLocations = false;
-        console.error('Error loading provinces:', error);
+        this.showError('Error loading provinces: ' + error.message);
         this.setDefaultFilterOptions();
       }
     });
   }
 
-  /**
-   * Set default filter options as fallback
-   */
   private setDefaultFilterOptions(): void {
-    // Create default province objects
     this.provinces = [
       { id: 1, provcode: 1, province: 'Punjab' },
       { id: 2, provcode: 2, province: 'Sindh' },
@@ -182,112 +221,245 @@ export class UserListComponent implements OnInit, OnDestroy {
       { id: 6, provcode: 6, province: 'Gilgit-Baltistan' },
       { id: 7, provcode: 7, province: 'AJK' }
     ];
+    this.transferProvinces = this.provinces;
   }
 
-  /**
-   * Handle province change - load districts
-   */
-  onProvinceChange(provinceCode: number | null): void {
-    this.selectedProvinceCode = provinceCode;
-    this.selectedDistrictCode = null;
-    this.selectedTehsilCode = null;
+  // ============================================
+  // Filter Methods
+  // ============================================
+
+  onProvinceChange(provinceName: string | null): void {
+    this.selectedProvinceName = provinceName;
+    this.selectedDistrictName = null;
+    this.selectedTehsilName = null;
     this.districts = [];
     this.tehsils = [];
     this.districtDisplay = '';
     this.tehsilDisplay = '';
 
-    if (provinceCode) {
-      // Get province name for display
-      const province = this.provinces.find(p => p.provcode === provinceCode);
-      this.provinceDisplay = province?.province || '';
-
-      // Check cache first
-      const cachedDistricts = this.locationService.getCachedDistricts(provinceCode);
-      if (cachedDistricts && cachedDistricts.length > 0) {
-        this.districts = cachedDistricts;
-      } else {
-        // Load from API
-        this.locationService.getDistrictsByProvince(provinceCode).subscribe({
-          next: (response: ApiResponse<District[]>) => {
-            if (ApiResponseHelper.isSuccess(response) && response.data) {
-              this.districts = response.data;
-            } else {
-              console.error('Failed to load districts:', response.message);
-            }
-          },
-          error: (error) => {
-            console.error('Error loading districts:', error);
-          }
-        });
-      }
+    if (provinceName) {
+      this.provinceDisplay = provinceName;
+      this.loadDistrictsForFilter(provinceName);
     }
     
     this.pageNumber = 1;
     this.loadUsers();
   }
 
-  /**
-   * Handle district change - load tehsils
-   */
-  onDistrictChange(districtCode: number | null): void {
-    this.selectedDistrictCode = districtCode;
-    this.selectedTehsilCode = null;
+  private loadDistrictsForFilter(provinceName: string): void {
+    const cachedDistricts = this.locationService.getCachedDistricts(provinceName);
+    if (cachedDistricts && cachedDistricts.length > 0) {
+      this.districts = cachedDistricts;
+      return;
+    }
+
+    this.locationService.getDistrictsByProvince(provinceName).subscribe({
+      next: (response: ApiResponse<District[]>) => {
+        if (ApiResponseHelper.isSuccess(response) && response.data) {
+          this.districts = response.data;
+        }
+      },
+      error: (error) => {
+        this.showError('Error loading districts: ' + error.message);
+      }
+    });
+  }
+
+  onDistrictChange(districtName: string | null): void {
+    this.selectedDistrictName = districtName;
+    this.selectedTehsilName = null;
     this.tehsils = [];
     this.tehsilDisplay = '';
 
-    if (districtCode) {
-      // Get district name for display
-      const district = this.districts.find(d => d.distcode === districtCode);
-      this.districtDisplay = district?.district || '';
+    if (districtName) {
+      this.districtDisplay = districtName;
+      this.loadTehsilsForFilter(districtName);
+    }
+    
+    this.pageNumber = 1;
+    this.loadUsers();
+  }
 
-      // Check cache first
-      const cachedTehsils = this.locationService.getCachedTehsils(districtCode);
-      if (cachedTehsils && cachedTehsils.length > 0) {
-        this.tehsils = cachedTehsils;
-      } else {
-        // Load from API
-        this.locationService.getTehsilsByDistrict(districtCode).subscribe({
-          next: (response: ApiResponse<Tehsil[]>) => {
-            if (ApiResponseHelper.isSuccess(response) && response.data) {
-              this.tehsils = response.data;
-            } else {
-              console.error('Failed to load tehsils:', response.message);
-            }
-          },
-          error: (error) => {
-            console.error('Error loading tehsils:', error);
-          }
-        });
+  private loadTehsilsForFilter(districtName: string): void {
+    const cachedTehsils = this.locationService.getCachedTehsils(districtName);
+    if (cachedTehsils && cachedTehsils.length > 0) {
+      this.tehsils = cachedTehsils;
+      return;
+    }
+
+    this.locationService.getTehsilsByDistrict(districtName).subscribe({
+      next: (response: ApiResponse<Tehsil[]>) => {
+        if (ApiResponseHelper.isSuccess(response) && response.data) {
+          this.tehsils = response.data;
+        }
+      },
+      error: (error) => {
+        this.showError('Error loading tehsils: ' + error.message);
       }
-    }
-    
+    });
+  }
+
+  onTehsilChange(tehsilName: string | null): void {
+    this.selectedTehsilName = tehsilName;
+    this.tehsilDisplay = tehsilName || '';
     this.pageNumber = 1;
     this.loadUsers();
   }
 
-  /**
-   * Handle tehsil change
-   */
-  onTehsilChange(tehsilCode: number | null): void {
-    this.selectedTehsilCode = tehsilCode;
+  // ============================================
+  // Transfer Location Methods
+  // ============================================
 
-    if (tehsilCode) {
-      const tehsil = this.tehsils.find(t => t.tehsilcode === tehsilCode);
-      this.tehsilDisplay = tehsil?.tehsil || '';
-    } else {
-      this.tehsilDisplay = '';
+  transferLocation(user: UserDto): void {
+    this.selectedUser = user;
+    this.transferForm = LocationHelper.toUpdateDto(user);
+    
+    this.transferProvinceName = user.province || null;
+    this.transferDistrictName = user.district || null;
+    this.transferTehsilName = user.tehsil || null;
+    
+    if (this.transferProvinceName) {
+      this.loadTransferDistricts(this.transferProvinceName);
+    }
+    if (this.transferDistrictName) {
+      this.loadTransferTehsils(this.transferDistrictName);
     }
     
-    this.pageNumber = 1;
-    this.loadUsers();
+    this.isTransferModalOpen = true;
   }
 
-  /**
-   * Load users with current filters
-   */
+  private loadTransferDistricts(provinceName: string): void {
+    const cachedDistricts = this.locationService.getCachedDistricts(provinceName);
+    if (cachedDistricts && cachedDistricts.length > 0) {
+      this.transferDistricts = cachedDistricts;
+      return;
+    }
+
+    this.locationService.getDistrictsByProvince(provinceName).subscribe({
+      next: (response: ApiResponse<District[]>) => {
+        if (ApiResponseHelper.isSuccess(response) && response.data) {
+          this.transferDistricts = response.data;
+        }
+      },
+      error: (error) => {
+        this.showError('Error loading districts for transfer: ' + error.message);
+      }
+    });
+  }
+
+  private loadTransferTehsils(districtName: string): void {
+    const cachedTehsils = this.locationService.getCachedTehsils(districtName);
+    if (cachedTehsils && cachedTehsils.length > 0) {
+      this.transferTehsils = cachedTehsils;
+      return;
+    }
+
+    this.locationService.getTehsilsByDistrict(districtName).subscribe({
+      next: (response: ApiResponse<Tehsil[]>) => {
+        if (ApiResponseHelper.isSuccess(response) && response.data) {
+          this.transferTehsils = response.data;
+        }
+      },
+      error: (error) => {
+        this.showError('Error loading tehsils for transfer: ' + error.message);
+      }
+    });
+  }
+
+  onTransferProvinceChange(provinceName: string | null): void {
+    this.transferProvinceName = provinceName;
+    this.transferDistrictName = null;
+    this.transferTehsilName = null;
+    this.transferDistricts = [];
+    this.transferTehsils = [];
+    
+    this.transferForm = {
+      ...this.transferForm,
+      province: provinceName || '',
+      district: '',
+      tehsil: ''
+    };
+
+    if (provinceName) {
+      this.loadTransferDistricts(provinceName);
+    }
+  }
+
+  onTransferDistrictChange(districtName: string | null): void {
+    this.transferDistrictName = districtName;
+    this.transferTehsilName = null;
+    this.transferTehsils = [];
+    
+    this.transferForm = {
+      ...this.transferForm,
+      district: districtName || '',
+      tehsil: ''
+    };
+
+    if (districtName) {
+      this.loadTransferTehsils(districtName);
+    }
+  }
+
+  onTransferTehsilChange(tehsilName: string | null): void {
+    this.transferTehsilName = tehsilName;
+    this.transferForm = {
+      ...this.transferForm,
+      tehsil: tehsilName || ''
+    };
+  }
+
+  closeTransferModal(): void {
+    this.isTransferModalOpen = false;
+    this.selectedUser = null;
+    this.transferProvinceName = null;
+    this.transferDistrictName = null;
+    this.transferTehsilName = null;
+    this.transferDistricts = [];
+    this.transferTehsils = [];
+    this.transferForm = LocationHelper.createDefaultUpdateDto();
+  }
+
+  handleTransferSubmit(): void {
+    if (!this.selectedUser) return;
+    
+    const location = LocationHelper.fromUser(this.selectedUser);
+    if (!location.province) {
+      this.showError('Please select a province');
+      return;
+    }
+    if (!location.district) {
+      this.showError('Please select a district');
+      return;
+    }
+    
+    this.loadingTransfer = true;
+    
+    this.userService.transferUserLocation(this.selectedUser.username, this.transferForm)
+      .pipe(finalize(() => this.loadingTransfer = false))
+      .subscribe({
+        next: (response: ApiResponse<UserDto>) => {
+          if (ApiResponseHelper.isSuccess(response)) {
+            this.showSuccess(response.message || 'Location transferred successfully');
+            this.closeTransferModal();
+            this.loadUsers();
+          } else {
+            this.showError(response.message || 'Failed to transfer location');
+          }
+        },
+        error: (error) => {
+          this.showError('Error transferring location: ' + error.message);
+        }
+      });
+  }
+
+  // ============================================
+  // User Loading Methods
+  // ============================================
+
   loadUsers(): void {
-    this.error = null;
     this.loading = true;
+    this.clearAlert();
 
     const filters: UserFilterParams = {
       pageNumber: this.pageNumber,
@@ -300,162 +472,30 @@ export class UserListComponent implements OnInit, OnDestroy {
       isActive: this.isActive !== null ? this.isActive : undefined
     };
 
-    this.userService.getPagedUsers(filters).subscribe({
-      next: (response: ApiResponse<PaginatedResponse<UserDto>>) => {
-        this.loading = false;
-        if (ApiResponseHelper.isSuccess(response) && response.data) {
-          this.users = response.data.items.map((item, index) => ({
-            ...item,
-            srNo: (this.pageNumber - 1) * this.pageSize + index + 1
-          }));
-          this.totalItems = response.data.totalCount;
-        } else {
-          this.error = response.message || 'Failed to load users';
+    this.userService.getPagedUsers(filters)
+      .pipe(finalize(() => this.loading = false))
+      .subscribe({
+        next: (response: ApiResponse<PaginatedResponse<UserDto>>) => {
+          if (ApiResponseHelper.isSuccess(response) && response.data) {
+            this.users = response.data.items.map((item, index) => ({
+              ...item,
+              srNo: (this.pageNumber - 1) * this.pageSize + index + 1
+            }));
+            this.totalItems = response.data.totalCount;
+          } else {
+            this.showError(response.message || 'Failed to load users');
+          }
+        },
+        error: (error) => {
+          this.showError('Error loading users: ' + error.message);
         }
-      },
-      error: (error) => {
-        this.loading = false;
-        this.error = error.message || 'An error occurred while loading users';
-        console.error('Error loading users:', error);
-      }
-    });
+      });
   }
 
-  /**
-   * Load users by location
-   */
-  loadUsersByLocation(): void {
-    this.error = null;
-    this.loading = true;
+  // ============================================
+  // Helper Methods
+  // ============================================
 
-    this.userService.getUsersByLocation(
-      this.provinceDisplay || undefined,
-      this.districtDisplay || undefined,
-      this.tehsilDisplay || undefined,
-      this.pageNumber,
-      this.pageSize
-    ).subscribe({
-      next: (response: ApiResponse<PaginatedResponse<UserDto>>) => {
-        this.loading = false;
-        if (ApiResponseHelper.isSuccess(response) && response.data) {
-          this.users = response.data.items.map((item, index) => ({
-            ...item,
-            srNo: (this.pageNumber - 1) * this.pageSize + index + 1
-          }));
-          this.totalItems = response.data.totalCount;
-        } else {
-          this.error = response.message || 'Failed to load users by location';
-        }
-      },
-      error: (error) => {
-        this.loading = false;
-        this.error = error.message || 'An error occurred while loading users by location';
-        console.error('Error loading users by location:', error);
-      }
-    });
-  }
-
-  /**
-   * Search users
-   */
-  searchUsers(): void {
-    if (!this.searchTerm || this.searchTerm.length < 2) {
-      this.loadUsers();
-      return;
-    }
-
-    this.error = null;
-    this.loading = true;
-
-    this.userService.searchUsers(
-      this.searchTerm,
-      this.pageNumber,
-      this.pageSize
-    ).subscribe({
-      next: (response: ApiResponse<PaginatedResponse<UserDto>>) => {
-        this.loading = false;
-        if (ApiResponseHelper.isSuccess(response) && response.data) {
-          this.users = response.data.items.map((item, index) => ({
-            ...item,
-            srNo: (this.pageNumber - 1) * this.pageSize + index + 1
-          }));
-          this.totalItems = response.data.totalCount;
-        } else {
-          this.error = response.message || 'No users found';
-        }
-      },
-      error: (error) => {
-        this.loading = false;
-        this.error = error.message || 'An error occurred while searching';
-        console.error('Error searching users:', error);
-      }
-    });
-  }
-
-  /**
-   * Export users to Excel
-   */
-  exportUsers(): void {
-    this.loading = true;
-    const filters = {
-      searchTerm: this.searchTerm || undefined,
-      province: this.provinceDisplay || undefined,
-      district: this.districtDisplay || undefined,
-      tehsil: this.tehsilDisplay || undefined,
-      userType: this.userType || undefined,
-      isActive: this.isActive !== null ? this.isActive : undefined
-    };
-
-    this.userService.exportUsers(filters).subscribe({
-      next: (blob: Blob) => {
-        this.loading = false;
-        // Create download link
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `users_export_${new Date().toISOString().split('T')[0]}.xlsx`;
-        link.click();
-        window.URL.revokeObjectURL(url);
-        this.showSuccess('Users exported successfully');
-      },
-      error: (error) => {
-        this.loading = false;
-        this.error = error.message || 'Failed to export users';
-        console.error('Error exporting users:', error);
-      }
-    });
-  }
-
-  /**
-   * Load users by role
-   */
-  loadUsersByRole(role: string): void {
-    this.error = null;
-    this.loading = true;
-
-    this.userService.getUsersByRole(role, this.pageNumber, this.pageSize).subscribe({
-      next: (response: ApiResponse<PaginatedResponse<UserDto>>) => {
-        this.loading = false;
-        if (ApiResponseHelper.isSuccess(response) && response.data) {
-          this.users = response.data.items.map((item, index) => ({
-            ...item,
-            srNo: (this.pageNumber - 1) * this.pageSize + index + 1
-          }));
-          this.totalItems = response.data.totalCount;
-          this.userType = role;
-        } else {
-          this.error = response.message || 'Failed to load users by role';
-        }
-      },
-      error: (error) => {
-        this.loading = false;
-        this.error = error.message || 'An error occurred while loading users by role';
-        console.error('Error loading users by role:', error);
-      }
-    });
-  }
-
-  // Helper methods for stats
   getActiveCount(): number {
     return this.users.filter(user => user.isactive === '1' || user.isactive === 'true').length;
   }
@@ -468,27 +508,23 @@ export class UserListComponent implements OnInit, OnDestroy {
     return this.users.filter(user => user.usertype?.toLowerCase() === 'admin').length;
   }
 
-  // Handle view from datatable
+  // ============================================
+  // Event Handlers
+  // ============================================
+
   onView(user: UserDto): void {
     this.viewProfile(user);
   }
 
-  // Handle edit from datatable
   onEdit(user: UserDto): void {
     this.transferLocation(user);
   }
 
-  // Handle delete from datatable
   onDelete(user: UserDto): void {
     this.blockUser(user);
   }
 
   onSearchChange(term: string): void {
-    if (term.length >= 2) {
-      this.searchUsers();
-    } else if (term.length === 0) {
-      this.loadUsers();
-    }
     this.searchSubject.next(term);
   }
 
@@ -505,9 +541,9 @@ export class UserListComponent implements OnInit, OnDestroy {
 
   resetFilters(): void {
     this.searchTerm = '';
-    this.selectedProvinceCode = null;
-    this.selectedDistrictCode = null;
-    this.selectedTehsilCode = null;
+    this.selectedProvinceName = null;
+    this.selectedDistrictName = null;
+    this.selectedTehsilName = null;
     this.provinceDisplay = '';
     this.districtDisplay = '';
     this.tehsilDisplay = '';
@@ -520,7 +556,10 @@ export class UserListComponent implements OnInit, OnDestroy {
     this.loadUsers();
   }
 
+  // ============================================
   // Profile Modal
+  // ============================================
+
   viewProfile(user: UserDto): void {
     this.selectedUser = user;
     this.isProfileModalOpen = true;
@@ -531,49 +570,10 @@ export class UserListComponent implements OnInit, OnDestroy {
     this.selectedUser = null;
   }
 
-  // Transfer Location Modal
-  transferLocation(user: UserDto): void {
-    this.selectedUser = user;
-    // Pre-fill form with current values
-    this.transferForm = {
-      province: user.province || '',
-      provinceId: null,
-      district: user.district || '',
-      districtId: null,
-      tehsil: user.tehsil || '',
-      tehsilId: null,
-      siteId: user.siteId || null,
-      siteName: user.siteName || ''
-    };
-    this.isTransferModalOpen = true;
-  }
+  // ============================================
+  // Confirm Modal
+  // ============================================
 
-  closeTransferModal(): void {
-    this.isTransferModalOpen = false;
-    this.selectedUser = null;
-  }
-
-  handleTransferSubmit(): void {
-    if (!this.selectedUser) return;
-    
-    this.userService.transferUserLocation(this.selectedUser.username, this.transferForm).subscribe({
-      next: (response: ApiResponse<UserDto>) => {
-        if (ApiResponseHelper.isSuccess(response)) {
-          this.showSuccess(response.message || 'Location transferred successfully');
-          this.closeTransferModal();
-          this.loadUsers();
-        } else {
-          this.showError(response.message || 'Failed to transfer location');
-        }
-      },
-      error: (error) => {
-        this.showError('Error transferring location');
-        console.error(error);
-      }
-    });
-  }
-
-  // Toggle User Status
   toggleUserStatus(user: UserDto): void {
     const isActive = user.isactive === '1' || user.isactive === 'true';
     const action = isActive ? 'deactivate' : 'activate';
@@ -589,7 +589,6 @@ export class UserListComponent implements OnInit, OnDestroy {
     this.isConfirmModalOpen = true;
   }
 
-  // Block User
   blockUser(user: UserDto): void {
     this.selectedUser = user;
     this.confirmModalData = {
@@ -598,19 +597,6 @@ export class UserListComponent implements OnInit, OnDestroy {
       confirmText: 'Yes, Block',
       isDanger: true,
       action: 'block'
-    };
-    this.isConfirmModalOpen = true;
-  }
-
-  // Delete User (using block as delete)
-  deleteUser(user: UserDto): void {
-    this.selectedUser = user;
-    this.confirmModalData = {
-      title: 'Delete User',
-      message: `Are you sure you want to delete user "${user.personName}"? This action cannot be undone.`,
-      confirmText: 'Yes, Delete',
-      isDanger: true,
-      action: 'delete'
     };
     this.isConfirmModalOpen = true;
   }
@@ -624,57 +610,50 @@ export class UserListComponent implements OnInit, OnDestroy {
     if (!this.selectedUser) return;
 
     if (this.confirmModalData.action === 'toggle') {
+      this.loadingStatus = true;
       const isActive = this.selectedUser.isactive === '1' || this.selectedUser.isactive === 'true';
-      this.userService.toggleUserStatus(this.selectedUser.username, !isActive).subscribe({
-        next: (response: ApiResponse<boolean>) => {
-          if (ApiResponseHelper.isSuccess(response)) {
-            this.showSuccess(response.message || 'User status updated successfully');
-            this.closeConfirmModal();
-            this.loadUsers();
-          } else {
-            this.showError(response.message || 'Failed to update user status');
+      
+      this.userService.toggleUserStatus(this.selectedUser.username, !isActive)
+        .pipe(finalize(() => this.loadingStatus = false))
+        .subscribe({
+          next: (response: ApiResponse<boolean>) => {
+            if (ApiResponseHelper.isSuccess(response)) {
+              this.showSuccess(response.message || 'User status updated successfully');
+              this.closeConfirmModal();
+              this.loadUsers();
+            } else {
+              this.showError(response.message || 'Failed to update user status');
+            }
+          },
+          error: (error) => {
+            this.showError('Error updating user status: ' + error.message);
           }
-        },
-        error: (error) => {
-          this.showError('Error updating user status');
-          console.error(error);
-        }
-      });
+        });
     } else if (this.confirmModalData.action === 'block') {
-      this.userService.blockUser(this.selectedUser.username).subscribe({
-        next: (response: ApiResponse<boolean>) => {
-          if (ApiResponseHelper.isSuccess(response)) {
-            this.showSuccess(response.message || 'User blocked successfully');
-            this.closeConfirmModal();
-            this.loadUsers();
-          } else {
-            this.showError(response.message || 'Failed to block user');
+      this.loadingBlock = true;
+      
+      this.userService.blockUser(this.selectedUser.username)
+        .pipe(finalize(() => this.loadingBlock = false))
+        .subscribe({
+          next: (response: ApiResponse<boolean>) => {
+            if (ApiResponseHelper.isSuccess(response)) {
+              this.showSuccess(response.message || 'User blocked successfully');
+              this.closeConfirmModal();
+              this.loadUsers();
+            } else {
+              this.showError(response.message || 'Failed to block user');
+            }
+          },
+          error: (error) => {
+            this.showError('Error blocking user: ' + error.message);
           }
-        },
-        error: (error) => {
-          this.showError('Error blocking user');
-          console.error(error);
-        }
-      });
-    } else if (this.confirmModalData.action === 'delete') {
-      // Using block as delete
-      this.userService.blockUser(this.selectedUser.username).subscribe({
-        next: (response: ApiResponse<boolean>) => {
-          if (ApiResponseHelper.isSuccess(response)) {
-            this.showSuccess(response.message || 'User deleted successfully');
-            this.closeConfirmModal();
-            this.loadUsers();
-          } else {
-            this.showError(response.message || 'Failed to delete user');
-          }
-        },
-        error: (error) => {
-          this.showError('Error deleting user');
-          console.error(error);
-        }
-      });
+        });
     }
   }
+
+  // ============================================
+  // UI Helpers
+  // ============================================
 
   getStatusText(isActive: string): string {
     return (isActive === '1' || isActive === 'true') ? 'Active' : 'Inactive';
@@ -684,22 +663,8 @@ export class UserListComponent implements OnInit, OnDestroy {
     return (isActive === '1' || isActive === 'true') ? 'status-active' : 'status-inactive';
   }
 
-  private showSuccess(message: string): void {
-    this.success = message;
-    setTimeout(() => this.success = null, 3000);
-  }
-
-  private showError(message: string): void {
-    this.error = message;
-    setTimeout(() => this.error = null, 5000);
-  }
-
   refresh(): void {
     this.loadUsers();
-  }
-
-  clearError(): void {
-    this.error = null;
   }
 
   get hasItems(): boolean {
@@ -712,5 +677,34 @@ export class UserListComponent implements OnInit, OnDestroy {
 
   get endRecord(): number {
     return Math.min(this.pageNumber * this.pageSize, this.totalItems);
+  }
+
+  exportUsers(): void {
+    this.loadingExport = true;
+    const filters = {
+      searchTerm: this.searchTerm || undefined,
+      province: this.provinceDisplay || undefined,
+      district: this.districtDisplay || undefined,
+      tehsil: this.tehsilDisplay || undefined,
+      userType: this.userType || undefined,
+      isActive: this.isActive !== null ? this.isActive : undefined
+    };
+
+    this.userService.exportUsers(filters)
+      .pipe(finalize(() => this.loadingExport = false))
+      .subscribe({
+        next: (blob: Blob) => {
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `users_export_${new Date().toISOString().split('T')[0]}.xlsx`;
+          link.click();
+          window.URL.revokeObjectURL(url);
+          this.showSuccess('Users exported successfully');
+        },
+        error: (error) => {
+          this.showError('Failed to export users: ' + error.message);
+        }
+      });
   }
 }

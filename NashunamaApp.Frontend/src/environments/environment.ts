@@ -44,13 +44,13 @@ export const environment: Environment = {
     
     // Location Management
     'location.getProvinces': '/api/Location/provinces',
-    'location.getDistrictsByProvince': '/api/Location/districts/{provinceCode}',
-    'location.getTehsilsByDistrict': '/api/Location/tehsils/{districtCode}',
-    'location.getUcsByTehsil': '/api/Location/ucs/{tehsilCode}',
+    'location.getDistrictsByProvince': '/api/Location/districts/{provinceName}',
+    'location.getTehsilsByDistrict': '/api/Location/tehsils/{districtName}',
+    'location.getUcsByTehsil': '/api/Location/ucs/{tehsilName}',
     'location.getHierarchy': '/api/Location/hierarchy',
-    'location.getProvinceByCode': '/api/Location/province/{provinceCode}',
-    'location.getDistrictByCode': '/api/Location/district/{districtCode}',
-    'location.getTehsilByCode': '/api/Location/tehsil/{tehsilCode}',
+    'location.getProvinceByName': '/api/Location/province/{provinceName}',
+    'location.getDistrictByName': '/api/Location/district/{districtName}',
+    'location.getTehsilByName': '/api/Location/tehsil/{tehsilName}',
     
     // Add more as needed
   },

@@ -2,8 +2,8 @@
 using AutoMapper;
 using NashunumaApp.Application.DTOs.Common;
 using NashunumaApp.Application.Interfaces;
-using NashunumaApp.Domain.Entities;
 using NashunumaApp.Domain.Interfaces;
+using NashunumaApp.Domain.Common.DTOs;
 
 namespace NashunumaApp.Application.Services
 {
@@ -18,15 +18,14 @@ namespace NashunumaApp.Application.Services
             _mapper = mapper;
         }
 
-        public async Task<ApiResponse<List<ProvinceDto>>> GetAllProvincesAsync()
+        public async Task<ApiResponse<List<ProvinceDto>>> GetAllProvinces()
         {
             try
             {
-                var provinces = await _locationRepository.GetAllProvincesAsync();
-                var mappedData = _mapper.Map<List<ProvinceDto>>(provinces);
+                var provinces = await _locationRepository.GetAllProvinces();
 
                 return ApiResponse<List<ProvinceDto>>.Success(
-                    mappedData,
+                    provinces,
                     "Provinces retrieved successfully"
                 );
             }
@@ -38,20 +37,19 @@ namespace NashunumaApp.Application.Services
             }
         }
 
-        public async Task<ApiResponse<List<DistrictDto>>> GetDistrictsByProvinceAsync(decimal provinceCode)
+        public async Task<ApiResponse<List<DistrictDto>>> GetDistrictsByProvince(string provinceName)
         {
             try
             {
-                if (provinceCode <= 0)
+                if (string.IsNullOrEmpty(provinceName))
                 {
-                    return ApiResponse<List<DistrictDto>>.Failure("Invalid province code");
+                    return ApiResponse<List<DistrictDto>>.Failure("Province name is required");
                 }
 
-                var districts = await _locationRepository.GetDistrictsByProvinceCodeAsync(provinceCode);
-                var mappedData = _mapper.Map<List<DistrictDto>>(districts);
+                var districts = await _locationRepository.GetDistrictsByProvinceName(provinceName);
 
                 return ApiResponse<List<DistrictDto>>.Success(
-                    mappedData,
+                    districts,
                     "Districts retrieved successfully"
                 );
             }
@@ -63,20 +61,19 @@ namespace NashunumaApp.Application.Services
             }
         }
 
-        public async Task<ApiResponse<List<TehsilDto>>> GetTehsilsByDistrictAsync(decimal districtCode)
+        public async Task<ApiResponse<List<TehsilDto>>> GetTehsilsByDistrict(string districtName)
         {
             try
             {
-                if (districtCode <= 0)
+                if (string.IsNullOrEmpty(districtName))
                 {
-                    return ApiResponse<List<TehsilDto>>.Failure("Invalid district code");
+                    return ApiResponse<List<TehsilDto>>.Failure("District name is required");
                 }
 
-                var tehsils = await _locationRepository.GetTehsilsByDistrictCodeAsync(districtCode);
-                var mappedData = _mapper.Map<List<TehsilDto>>(tehsils);
+                var tehsils = await _locationRepository.GetTehsilsByDistrictName(districtName);
 
                 return ApiResponse<List<TehsilDto>>.Success(
-                    mappedData,
+                    tehsils,
                     "Tehsils retrieved successfully"
                 );
             }
@@ -88,20 +85,19 @@ namespace NashunumaApp.Application.Services
             }
         }
 
-        public async Task<ApiResponse<List<UcDto>>> GetUcsByTehsilAsync(decimal tehsilCode)
+        public async Task<ApiResponse<List<UcDto>>> GetUcsByTehsil(string tehsilName)
         {
             try
             {
-                if (tehsilCode <= 0)
+                if (string.IsNullOrEmpty(tehsilName))
                 {
-                    return ApiResponse<List<UcDto>>.Failure("Invalid tehsil code");
+                    return ApiResponse<List<UcDto>>.Failure("Tehsil name is required");
                 }
 
-                var ucs = await _locationRepository.GetUcsByTehsilCodeAsync(tehsilCode);
-                var mappedData = _mapper.Map<List<UcDto>>(ucs);
+                var ucs = await _locationRepository.GetUcsByTehsilName(tehsilName);
 
                 return ApiResponse<List<UcDto>>.Success(
-                    mappedData,
+                    ucs,
                     "UCs retrieved successfully"
                 );
             }
@@ -113,66 +109,11 @@ namespace NashunumaApp.Application.Services
             }
         }
 
-        public async Task<ApiResponse<LocationHierarchyDto>> GetFullLocationHierarchyAsync()
+        public async Task<ApiResponse<LocationHierarchyDto>> GetFullLocationHierarchy()
         {
             try
             {
-                var provinces = await _locationRepository.GetAllProvincesAsync();
-                var hierarchy = new LocationHierarchyDto();
-
-                foreach (var province in provinces)
-                {
-                    var provinceDto = new ProvinceWithDistrictsDto
-                    {
-                        Id = province.Id,
-                        Provcode = province.Provcode,
-                        Province = province.Province
-                    };
-
-                    if (province.Provcode.HasValue)
-                    {
-                        var districts = await _locationRepository.GetDistrictsByProvinceCodeAsync(province.Provcode.Value);
-
-                        foreach (var district in districts)
-                        {
-                            var districtDto = new DistrictWithTehsilsDto
-                            {
-                                Id = district.Id,
-                                Distcode = district.Distcode,
-                                District = district.District,
-                                Provcode = district.Provcode
-                            };
-
-                            if (district.Distcode.HasValue)
-                            {
-                                var tehsils = await _locationRepository.GetTehsilsByDistrictCodeAsync(district.Distcode.Value);
-
-                                foreach (var tehsil in tehsils)
-                                {
-                                    var tehsilDto = new TehsilWithUcsDto
-                                    {
-                                        Id = tehsil.Id,
-                                        Distcode = tehsil.Distcode,
-                                        Tehsilcode = tehsil.Tehsilcode,
-                                        Tehsil = tehsil.Tehsil
-                                    };
-
-                                    if (tehsil.Tehsilcode.HasValue)
-                                    {
-                                        var ucs = await _locationRepository.GetUcsByTehsilCodeAsync(tehsil.Tehsilcode.Value);
-                                        tehsilDto.Ucs = _mapper.Map<List<UcDto>>(ucs);
-                                    }
-
-                                    districtDto.Tehsils.Add(tehsilDto);
-                                }
-                            }
-
-                            provinceDto.Districts.Add(districtDto);
-                        }
-                    }
-
-                    hierarchy.Provinces.Add(provinceDto);
-                }
+                var hierarchy = await _locationRepository.GetLocationHierarchy();
 
                 return ApiResponse<LocationHierarchyDto>.Success(
                     hierarchy,
@@ -187,24 +128,23 @@ namespace NashunumaApp.Application.Services
             }
         }
 
-        public async Task<ApiResponse<ProvinceDto>> GetProvinceByCodeAsync(decimal provinceCode)
+        public async Task<ApiResponse<ProvinceDto>> GetProvinceByName(string provinceName)
         {
             try
             {
-                if (provinceCode <= 0)
+                if (string.IsNullOrEmpty(provinceName))
                 {
-                    return ApiResponse<ProvinceDto>.Failure("Invalid province code");
+                    return ApiResponse<ProvinceDto>.Failure("Province name is required");
                 }
 
-                var province = await _locationRepository.GetProvinceByCodeAsync(provinceCode);
+                var province = await _locationRepository.GetProvinceByName(provinceName);
 
                 if (province == null)
                 {
-                    return ApiResponse<ProvinceDto>.Failure($"Province with code {provinceCode} not found");
+                    return ApiResponse<ProvinceDto>.Failure($"Province '{provinceName}' not found");
                 }
 
-                var mappedData = _mapper.Map<ProvinceDto>(province);
-                return ApiResponse<ProvinceDto>.Success(mappedData, "Province retrieved successfully");
+                return ApiResponse<ProvinceDto>.Success(province, "Province retrieved successfully");
             }
             catch (Exception ex)
             {
@@ -212,24 +152,23 @@ namespace NashunumaApp.Application.Services
             }
         }
 
-        public async Task<ApiResponse<DistrictDto>> GetDistrictByCodeAsync(decimal districtCode)
+        public async Task<ApiResponse<DistrictDto>> GetDistrictByName(string districtName)
         {
             try
             {
-                if (districtCode <= 0)
+                if (string.IsNullOrEmpty(districtName))
                 {
-                    return ApiResponse<DistrictDto>.Failure("Invalid district code");
+                    return ApiResponse<DistrictDto>.Failure("District name is required");
                 }
 
-                var district = await _locationRepository.GetDistrictByCodeAsync(districtCode);
+                var district = await _locationRepository.GetDistrictByName(districtName);
 
                 if (district == null)
                 {
-                    return ApiResponse<DistrictDto>.Failure($"District with code {districtCode} not found");
+                    return ApiResponse<DistrictDto>.Failure($"District '{districtName}' not found");
                 }
 
-                var mappedData = _mapper.Map<DistrictDto>(district);
-                return ApiResponse<DistrictDto>.Success(mappedData, "District retrieved successfully");
+                return ApiResponse<DistrictDto>.Success(district, "District retrieved successfully");
             }
             catch (Exception ex)
             {
@@ -237,24 +176,23 @@ namespace NashunumaApp.Application.Services
             }
         }
 
-        public async Task<ApiResponse<TehsilDto>> GetTehsilByCodeAsync(decimal tehsilCode)
+        public async Task<ApiResponse<TehsilDto>> GetTehsilByName(string tehsilName)
         {
             try
             {
-                if (tehsilCode <= 0)
+                if (string.IsNullOrEmpty(tehsilName))
                 {
-                    return ApiResponse<TehsilDto>.Failure("Invalid tehsil code");
+                    return ApiResponse<TehsilDto>.Failure("Tehsil name is required");
                 }
 
-                var tehsil = await _locationRepository.GetTehsilByCodeAsync(tehsilCode);
+                var tehsil = await _locationRepository.GetTehsilByName(tehsilName);
 
                 if (tehsil == null)
                 {
-                    return ApiResponse<TehsilDto>.Failure($"Tehsil with code {tehsilCode} not found");
+                    return ApiResponse<TehsilDto>.Failure($"Tehsil '{tehsilName}' not found");
                 }
 
-                var mappedData = _mapper.Map<TehsilDto>(tehsil);
-                return ApiResponse<TehsilDto>.Success(mappedData, "Tehsil retrieved successfully");
+                return ApiResponse<TehsilDto>.Success(tehsil, "Tehsil retrieved successfully");
             }
             catch (Exception ex)
             {

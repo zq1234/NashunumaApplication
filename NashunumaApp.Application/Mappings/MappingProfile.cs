@@ -15,10 +15,10 @@ namespace NashunumaApp.Application.Mappings
             CreateMap<FoodStockWithSiteDto, FoodStockDto>();
             CreateMap<UserWithLocationDto, UserDto>();
             CreateMap<NthSnfStock, FoodStockDto>();
-            CreateMap<NthProvince, ProvinceDto>();
-            CreateMap<NthDistrict, DistrictDto>();
-            CreateMap<NthTehsil, TehsilDto>();
-            CreateMap<NthUc, UcDto>();
+            //CreateMap<NthProvince, ProvinceDto>();
+            //CreateMap<NthDistrict, DistrictDto>();
+            //CreateMap<NthTehsil, TehsilDto>();
+            //CreateMap<NthUc, UcDto>();
         }
     }
 }

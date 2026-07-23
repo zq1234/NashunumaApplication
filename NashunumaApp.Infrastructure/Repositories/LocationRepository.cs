@@ -1,6 +1,6 @@
 ﻿// Infrastructure/Repositories/LocationRepository.cs
 using Microsoft.EntityFrameworkCore;
-using NashunumaApp.Domain.Entities;
+using NashunumaApp.Domain.Common.DTOs;
 using NashunumaApp.Domain.Interfaces;
 using NashunumaApp.Infrastructure.Data;
 
@@ -15,13 +15,23 @@ namespace NashunumaApp.Infrastructure.Repositories
             _context = context;
         }
 
-        public async Task<List<NthProvince>> GetAllProvincesAsync()
+        public async Task<List<ProvinceDto>> GetAllProvinces()
         {
             try
             {
-                return await _context.NthProvinces
+                // Get distinct provinces from NthSiteLocation table
+                var provinces = await _context.NthSiteLocations
+                    .Where(s => s.IsActive == 1 && s.Province != null)
+                    .GroupBy(s => new { s.ProvinceId, s.Province })
+                    .Select(g => new ProvinceDto
+                    {
+                        Id = g.Key.ProvinceId ?? 0,
+                        Province = g.Key.Province
+                    })
                     .OrderBy(p => p.Province)
                     .ToListAsync();
+
+                return provinces;
             }
             catch (Exception ex)
             {
@@ -29,87 +39,221 @@ namespace NashunumaApp.Infrastructure.Repositories
             }
         }
 
-        public async Task<List<NthDistrict>> GetDistrictsByProvinceCodeAsync(decimal provinceCode)
+        public async Task<List<DistrictDto>> GetDistrictsByProvinceName(string provinceName)
         {
             try
             {
-                return await _context.NthDistricts
-                    .Where(d => d.Provcode == provinceCode)
+                if (string.IsNullOrEmpty(provinceName))
+                {
+                    return new List<DistrictDto>();
+                }
+
+                // Get distinct districts for the province
+                var districts = await _context.NthSiteLocations
+                    .Where(s => s.IsActive == 1 && s.Province == provinceName && s.District != null)
+                    .GroupBy(s => new { s.DistrictId, s.District, s.ProvinceId })
+                    .Select(g => new DistrictDto
+                    {
+                        Id = g.Key.DistrictId ?? 0,
+                        District = g.Key.District,
+                        ProvinceId = g.Key.ProvinceId
+                    })
                     .OrderBy(d => d.District)
                     .ToListAsync();
+
+                return districts;
             }
             catch (Exception ex)
             {
-                throw new Exception($"Error retrieving districts for province code {provinceCode}: {ex.Message}", ex);
+                throw new Exception($"Error retrieving districts for province {provinceName}: {ex.Message}", ex);
             }
         }
 
-        public async Task<List<NthTehsil>> GetTehsilsByDistrictCodeAsync(decimal districtCode)
+        public async Task<List<TehsilDto>> GetTehsilsByDistrictName(string districtName)
         {
             try
             {
-                return await _context.NthTehsils
-                    .Where(t => t.Distcode == districtCode)
+                if (string.IsNullOrEmpty(districtName))
+                {
+                    return new List<TehsilDto>();
+                }
+
+                // Get distinct tehsils for the district
+                var tehsils = await _context.NthSiteLocations
+                    .Where(s => s.IsActive == 1 && s.District == districtName && s.Tehsil != null)
+                    .GroupBy(s => new { s.TehsilId, s.Tehsil, s.DistrictId })
+                    .Select(g => new TehsilDto
+                    {
+                        Id = g.Key.TehsilId ?? 0,
+                        Tehsil = g.Key.Tehsil,
+                        DistrictId = g.Key.DistrictId
+                    })
                     .OrderBy(t => t.Tehsil)
                     .ToListAsync();
+
+                return tehsils;
             }
             catch (Exception ex)
             {
-                throw new Exception($"Error retrieving tehsils for district code {districtCode}: {ex.Message}", ex);
+                throw new Exception($"Error retrieving tehsils for district {districtName}: {ex.Message}", ex);
             }
         }
 
-        public async Task<List<NthUc>> GetUcsByTehsilCodeAsync(decimal tehsilCode)
+        public async Task<List<UcDto>> GetUcsByTehsilName(string tehsilName)
         {
             try
             {
-                return await _context.NthUcs
-                    .Where(u => u.Tehsilcode == tehsilCode)
-                    .OrderBy(u => u.Uc)
+                // Note: NthSiteLocation doesn't have UC information.
+                // If UC data is needed, you'll need to join with a UC table.
+                // For now, returning empty list.
+                return await Task.FromResult(new List<UcDto>());
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error retrieving UCs for tehsil {tehsilName}: {ex.Message}", ex);
+            }
+        }
+
+        public async Task<ProvinceDto> GetProvinceByName(string provinceName)
+        {
+            try
+            {
+                var province = await _context.NthSiteLocations
+                    .Where(s => s.IsActive == 1 && s.Province == provinceName && s.Province != null)
+                    .GroupBy(s => new { s.ProvinceId, s.Province })
+                    .Select(g => new ProvinceDto
+                    {
+                        Id = g.Key.ProvinceId ?? 0,
+                        Province = g.Key.Province
+                    })
+                    .FirstOrDefaultAsync();
+
+                return province;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error retrieving province {provinceName}: {ex.Message}", ex);
+            }
+        }
+
+        public async Task<DistrictDto> GetDistrictByName(string districtName)
+        {
+            try
+            {
+                var district = await _context.NthSiteLocations
+                    .Where(s => s.IsActive == 1 && s.District == districtName && s.District != null)
+                    .GroupBy(s => new { s.DistrictId, s.District, s.ProvinceId })
+                    .Select(g => new DistrictDto
+                    {
+                        Id = g.Key.DistrictId ?? 0,
+                        District = g.Key.District,
+                        ProvinceId = g.Key.ProvinceId
+                    })
+                    .FirstOrDefaultAsync();
+
+                return district;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error retrieving district {districtName}: {ex.Message}", ex);
+            }
+        }
+
+        public async Task<TehsilDto> GetTehsilByName(string tehsilName)
+        {
+            try
+            {
+                var tehsil = await _context.NthSiteLocations
+                    .Where(s => s.IsActive == 1 && s.Tehsil == tehsilName && s.Tehsil != null)
+                    .GroupBy(s => new { s.TehsilId, s.Tehsil, s.DistrictId })
+                    .Select(g => new TehsilDto
+                    {
+                        Id = g.Key.TehsilId ?? 0,
+                        Tehsil = g.Key.Tehsil,
+                        DistrictId = g.Key.DistrictId
+                    })
+                    .FirstOrDefaultAsync();
+
+                return tehsil;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error retrieving tehsil {tehsilName}: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// Get complete location hierarchy: Provinces -> Districts -> Tehsils
+        /// </summary>
+        public async Task<LocationHierarchyDto> GetLocationHierarchy()
+        {
+            try
+            {
+                var locations = await _context.NthSiteLocations
+                    .Where(s => s.IsActive == 1)
                     .ToListAsync();
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"Error retrieving UCs for tehsil code {tehsilCode}: {ex.Message}", ex);
-            }
-        }
 
-        public async Task<NthProvince> GetProvinceByCodeAsync(decimal provinceCode)
-        {
-            try
-            {
-                return await _context.NthProvinces
-                    .FirstOrDefaultAsync(p => p.Provcode == provinceCode);
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"Error retrieving province with code {provinceCode}: {ex.Message}", ex);
-            }
-        }
+                var hierarchy = new LocationHierarchyDto
+                {
+                    Provinces = new List<ProvinceWithDistrictsDto>()
+                };
 
-        public async Task<NthDistrict> GetDistrictByCodeAsync(decimal districtCode)
-        {
-            try
-            {
-                return await _context.NthDistricts
-                    .FirstOrDefaultAsync(d => d.Distcode == districtCode);
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"Error retrieving district with code {districtCode}: {ex.Message}", ex);
-            }
-        }
+                // Group by Province
+                var provinceGroups = locations
+                    .Where(s => s.Province != null)
+                    .GroupBy(s => new { s.ProvinceId, s.Province });
 
-        public async Task<NthTehsil> GetTehsilByCodeAsync(decimal tehsilCode)
-        {
-            try
-            {
-                return await _context.NthTehsils
-                    .FirstOrDefaultAsync(t => t.Tehsilcode == tehsilCode);
+                foreach (var provinceGroup in provinceGroups)
+                {
+                    var provinceDto = new ProvinceWithDistrictsDto
+                    {
+                        Id = provinceGroup.Key.ProvinceId ?? 0,
+                        Province = provinceGroup.Key.Province,
+                        Districts = new List<DistrictWithTehsilsDto>()
+                    };
+
+                    // Group by District within Province
+                    var districtGroups = provinceGroup
+                        .Where(s => s.District != null)
+                        .GroupBy(s => new { s.DistrictId, s.District });
+
+                    foreach (var districtGroup in districtGroups)
+                    {
+                        var districtDto = new DistrictWithTehsilsDto
+                        {
+                            Id = districtGroup.Key.DistrictId ?? 0,
+                            District = districtGroup.Key.District,
+                            Tehsils = new List<TehsilWithCountDto>()
+                        };
+
+                        // Group by Tehsil within District
+                        var tehsilGroups = districtGroup
+                            .Where(s => s.Tehsil != null)
+                            .GroupBy(s => new { s.TehsilId, s.Tehsil });
+
+                        foreach (var tehsilGroup in tehsilGroups)
+                        {
+                            var tehsilDto = new TehsilWithCountDto
+                            {
+                                Id = tehsilGroup.Key.TehsilId ?? 0,
+                                Tehsil = tehsilGroup.Key.Tehsil,
+                                SiteCount = tehsilGroup.Count()
+                            };
+
+                            districtDto.Tehsils.Add(tehsilDto);
+                        }
+
+                        provinceDto.Districts.Add(districtDto);
+                    }
+
+                    hierarchy.Provinces.Add(provinceDto);
+                }
+
+                return hierarchy;
             }
             catch (Exception ex)
             {
-                throw new Exception($"Error retrieving tehsil with code {tehsilCode}: {ex.Message}", ex);
+                throw new Exception($"Error retrieving location hierarchy: {ex.Message}", ex);
             }
         }
     }

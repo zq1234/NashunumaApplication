@@ -69,17 +69,17 @@ export class LocationService {
   private baseUrl = environment.apiUrl;
   private api = environment.api;
 
-  // Cache for location data
+  // Cache for location data - using strings as keys (names)
   private provincesCache = new BehaviorSubject<Province[]>([]);
-  private districtsCache = new Map<number, District[]>();
-  private tehsilsCache = new Map<number, Tehsil[]>();
-  private ucsCache = new Map<number, Uc[]>();
+  private districtsCache = new Map<string, District[]>(); // Key: province name
+  private tehsilsCache = new Map<string, Tehsil[]>(); // Key: district name
+  private ucsCache = new Map<string, Uc[]>(); // Key: tehsil name
   
   // Loading states
   private loadingProvinces = false;
-  private loadingDistricts = new Map<number, boolean>();
-  private loadingTehsils = new Map<number, boolean>();
-  private loadingUcs = new Map<number, boolean>();
+  private loadingDistricts = new Map<string, boolean>();
+  private loadingTehsils = new Map<string, boolean>();
+  private loadingUcs = new Map<string, boolean>();
 
   constructor(private http: HttpClient) {}
 
@@ -98,6 +98,7 @@ export class LocationService {
 
   /**
    * Get all provinces
+   * GET /api/Location/provinces
    */
   getProvinces(): Observable<ApiResponse<Province[]>> {
     // Check if already loading
@@ -150,12 +151,23 @@ export class LocationService {
   }
 
   /**
-   * Get districts by province code
+   * Get districts by province name
+   * GET /api/Location/districts/{provinceName}
    */
-  getDistrictsByProvince(provinceCode: number): Observable<ApiResponse<District[]>> {
+  getDistrictsByProvince(provinceName: string): Observable<ApiResponse<District[]>> {
+    if (!provinceName) {
+      return of({
+        isSuccess: false,
+        message: 'Province name is required',
+        data: [],
+        errors: ['Province name is required'],
+        statusCode: ApiStatusCodes.BAD_REQUEST
+      });
+    }
+
     // Check if already loading
-    if (this.loadingDistricts.get(provinceCode)) {
-      const cached = this.districtsCache.get(provinceCode) || [];
+    if (this.loadingDistricts.get(provinceName)) {
+      const cached = this.districtsCache.get(provinceName) || [];
       return of({
         isSuccess: true,
         message: 'Districts loading...',
@@ -166,8 +178,8 @@ export class LocationService {
     }
 
     // Check cache
-    if (this.districtsCache.has(provinceCode)) {
-      const cachedData = this.districtsCache.get(provinceCode)!;
+    if (this.districtsCache.has(provinceName)) {
+      const cachedData = this.districtsCache.get(provinceName)!;
       return of({
         isSuccess: true,
         message: 'Districts retrieved from cache',
@@ -177,18 +189,18 @@ export class LocationService {
       });
     }
 
-    this.loadingDistricts.set(provinceCode, true);
-    const url = this.buildUrl('location.getDistrictsByProvince', { provinceCode });
+    this.loadingDistricts.set(provinceName, true);
+    const url = this.buildUrl('location.getDistrictsByProvince', { provinceName });
     
     return this.http.get<ApiResponse<District[]>>(url).pipe(
       tap(response => {
-        this.loadingDistricts.set(provinceCode, false);
+        this.loadingDistricts.set(provinceName, false);
         if (ApiResponseHelper.isSuccess(response) && response.data) {
-          this.districtsCache.set(provinceCode, response.data);
+          this.districtsCache.set(provinceName, response.data);
         }
       }),
       catchError(error => {
-        this.loadingDistricts.set(provinceCode, false);
+        this.loadingDistricts.set(provinceName, false);
         const errorResponse: ApiResponse<District[]> = {
           isSuccess: false,
           message: error.message || 'Failed to load districts',
@@ -202,12 +214,23 @@ export class LocationService {
   }
 
   /**
-   * Get tehsils by district code
+   * Get tehsils by district name
+   * GET /api/Location/tehsils/{districtName}
    */
-  getTehsilsByDistrict(districtCode: number): Observable<ApiResponse<Tehsil[]>> {
+  getTehsilsByDistrict(districtName: string): Observable<ApiResponse<Tehsil[]>> {
+    if (!districtName) {
+      return of({
+        isSuccess: false,
+        message: 'District name is required',
+        data: [],
+        errors: ['District name is required'],
+        statusCode: ApiStatusCodes.BAD_REQUEST
+      });
+    }
+
     // Check if already loading
-    if (this.loadingTehsils.get(districtCode)) {
-      const cached = this.tehsilsCache.get(districtCode) || [];
+    if (this.loadingTehsils.get(districtName)) {
+      const cached = this.tehsilsCache.get(districtName) || [];
       return of({
         isSuccess: true,
         message: 'Tehsils loading...',
@@ -218,8 +241,8 @@ export class LocationService {
     }
 
     // Check cache
-    if (this.tehsilsCache.has(districtCode)) {
-      const cachedData = this.tehsilsCache.get(districtCode)!;
+    if (this.tehsilsCache.has(districtName)) {
+      const cachedData = this.tehsilsCache.get(districtName)!;
       return of({
         isSuccess: true,
         message: 'Tehsils retrieved from cache',
@@ -229,18 +252,18 @@ export class LocationService {
       });
     }
 
-    this.loadingTehsils.set(districtCode, true);
-    const url = this.buildUrl('location.getTehsilsByDistrict', { districtCode });
+    this.loadingTehsils.set(districtName, true);
+    const url = this.buildUrl('location.getTehsilsByDistrict', { districtName });
     
     return this.http.get<ApiResponse<Tehsil[]>>(url).pipe(
       tap(response => {
-        this.loadingTehsils.set(districtCode, false);
+        this.loadingTehsils.set(districtName, false);
         if (ApiResponseHelper.isSuccess(response) && response.data) {
-          this.tehsilsCache.set(districtCode, response.data);
+          this.tehsilsCache.set(districtName, response.data);
         }
       }),
       catchError(error => {
-        this.loadingTehsils.set(districtCode, false);
+        this.loadingTehsils.set(districtName, false);
         const errorResponse: ApiResponse<Tehsil[]> = {
           isSuccess: false,
           message: error.message || 'Failed to load tehsils',
@@ -254,12 +277,23 @@ export class LocationService {
   }
 
   /**
-   * Get UCs by tehsil code
+   * Get UCs by tehsil name
+   * GET /api/Location/ucs/{tehsilName}
    */
-  getUcsByTehsil(tehsilCode: number): Observable<ApiResponse<Uc[]>> {
+  getUcsByTehsil(tehsilName: string): Observable<ApiResponse<Uc[]>> {
+    if (!tehsilName) {
+      return of({
+        isSuccess: false,
+        message: 'Tehsil name is required',
+        data: [],
+        errors: ['Tehsil name is required'],
+        statusCode: ApiStatusCodes.BAD_REQUEST
+      });
+    }
+
     // Check if already loading
-    if (this.loadingUcs.get(tehsilCode)) {
-      const cached = this.ucsCache.get(tehsilCode) || [];
+    if (this.loadingUcs.get(tehsilName)) {
+      const cached = this.ucsCache.get(tehsilName) || [];
       return of({
         isSuccess: true,
         message: 'UCs loading...',
@@ -270,8 +304,8 @@ export class LocationService {
     }
 
     // Check cache
-    if (this.ucsCache.has(tehsilCode)) {
-      const cachedData = this.ucsCache.get(tehsilCode)!;
+    if (this.ucsCache.has(tehsilName)) {
+      const cachedData = this.ucsCache.get(tehsilName)!;
       return of({
         isSuccess: true,
         message: 'UCs retrieved from cache',
@@ -281,18 +315,18 @@ export class LocationService {
       });
     }
 
-    this.loadingUcs.set(tehsilCode, true);
-    const url = this.buildUrl('location.getUcsByTehsil', { tehsilCode });
+    this.loadingUcs.set(tehsilName, true);
+    const url = this.buildUrl('location.getUcsByTehsil', { tehsilName });
     
     return this.http.get<ApiResponse<Uc[]>>(url).pipe(
       tap(response => {
-        this.loadingUcs.set(tehsilCode, false);
+        this.loadingUcs.set(tehsilName, false);
         if (ApiResponseHelper.isSuccess(response) && response.data) {
-          this.ucsCache.set(tehsilCode, response.data);
+          this.ucsCache.set(tehsilName, response.data);
         }
       }),
       catchError(error => {
-        this.loadingUcs.set(tehsilCode, false);
+        this.loadingUcs.set(tehsilName, false);
         const errorResponse: ApiResponse<Uc[]> = {
           isSuccess: false,
           message: error.message || 'Failed to load UCs',
@@ -307,6 +341,7 @@ export class LocationService {
 
   /**
    * Get full location hierarchy
+   * GET /api/Location/hierarchy
    */
   getLocationHierarchy(): Observable<ApiResponse<LocationHierarchy>> {
     const url = this.buildUrl('location.getHierarchy');
@@ -330,7 +365,7 @@ export class LocationService {
   }
 
   /**
-   * Cache hierarchy data
+   * Cache hierarchy data using names as keys
    */
   private cacheHierarchyData(hierarchy: LocationHierarchy): void {
     // Cache provinces
@@ -342,7 +377,7 @@ export class LocationService {
       }))
     );
 
-    // Cache districts, tehsils, and UCs
+    // Cache districts, tehsils, and UCs using names as keys
     hierarchy.provinces.forEach(province => {
       const districts = province.districts.map(d => ({
         id: d.id,
@@ -350,7 +385,8 @@ export class LocationService {
         district: d.district,
         provcode: d.provcode
       }));
-      this.districtsCache.set(province.provcode, districts);
+      // Use province name as key
+      this.districtsCache.set(province.province, districts);
 
       province.districts.forEach(district => {
         const tehsils = district.tehsils.map(t => ({
@@ -359,7 +395,8 @@ export class LocationService {
           tehsilcode: t.tehsilcode,
           tehsil: t.tehsil
         }));
-        this.tehsilsCache.set(district.distcode, tehsils);
+        // Use district name as key
+        this.tehsilsCache.set(district.district, tehsils);
 
         district.tehsils.forEach(tehsil => {
           const ucs = tehsil.ucs.map(u => ({
@@ -370,17 +407,29 @@ export class LocationService {
             ucno: u.ucno,
             uc: u.uc
           }));
-          this.ucsCache.set(tehsil.tehsilcode, ucs);
+          // Use tehsil name as key
+          this.ucsCache.set(tehsil.tehsil, ucs);
         });
       });
     });
   }
 
   /**
-   * Get province by code
+   * Get province by name
+   * GET /api/Location/province/{provinceName}
    */
-  getProvinceByCode(provinceCode: number): Observable<ApiResponse<Province>> {
-    const url = this.buildUrl('location.getProvinceByCode', { provinceCode });
+  getProvinceByName(provinceName: string): Observable<ApiResponse<Province>> {
+    if (!provinceName) {
+      return of({
+        isSuccess: false,
+        message: 'Province name is required',
+        data: null as any,
+        errors: ['Province name is required'],
+        statusCode: ApiStatusCodes.BAD_REQUEST
+      });
+    }
+
+    const url = this.buildUrl('location.getProvinceByName', { provinceName });
     return this.http.get<ApiResponse<Province>>(url).pipe(
       catchError(error => {
         const errorResponse: ApiResponse<Province> = {
@@ -396,10 +445,21 @@ export class LocationService {
   }
 
   /**
-   * Get district by code
+   * Get district by name
+   * GET /api/Location/district/{districtName}
    */
-  getDistrictByCode(districtCode: number): Observable<ApiResponse<District>> {
-    const url = this.buildUrl('location.getDistrictByCode', { districtCode });
+  getDistrictByName(districtName: string): Observable<ApiResponse<District>> {
+    if (!districtName) {
+      return of({
+        isSuccess: false,
+        message: 'District name is required',
+        data: null as any,
+        errors: ['District name is required'],
+        statusCode: ApiStatusCodes.BAD_REQUEST
+      });
+    }
+
+    const url = this.buildUrl('location.getDistrictByName', { districtName });
     return this.http.get<ApiResponse<District>>(url).pipe(
       catchError(error => {
         const errorResponse: ApiResponse<District> = {
@@ -415,10 +475,21 @@ export class LocationService {
   }
 
   /**
-   * Get tehsil by code
+   * Get tehsil by name
+   * GET /api/Location/tehsil/{tehsilName}
    */
-  getTehsilByCode(tehsilCode: number): Observable<ApiResponse<Tehsil>> {
-    const url = this.buildUrl('location.getTehsilByCode', { tehsilCode });
+  getTehsilByName(tehsilName: string): Observable<ApiResponse<Tehsil>> {
+    if (!tehsilName) {
+      return of({
+        isSuccess: false,
+        message: 'Tehsil name is required',
+        data: null as any,
+        errors: ['Tehsil name is required'],
+        statusCode: ApiStatusCodes.BAD_REQUEST
+      });
+    }
+
+    const url = this.buildUrl('location.getTehsilByName', { tehsilName });
     return this.http.get<ApiResponse<Tehsil>>(url).pipe(
       catchError(error => {
         const errorResponse: ApiResponse<Tehsil> = {
@@ -455,24 +526,24 @@ export class LocationService {
   }
 
   /**
-   * Get cached districts for a province
+   * Get cached districts for a province by name
    */
-  getCachedDistricts(provinceCode: number): District[] | null {
-    return this.districtsCache.get(provinceCode) || null;
+  getCachedDistricts(provinceName: string): District[] | null {
+    return this.districtsCache.get(provinceName) || null;
   }
 
   /**
-   * Get cached tehsils for a district
+   * Get cached tehsils for a district by name
    */
-  getCachedTehsils(districtCode: number): Tehsil[] | null {
-    return this.tehsilsCache.get(districtCode) || null;
+  getCachedTehsils(districtName: string): Tehsil[] | null {
+    return this.tehsilsCache.get(districtName) || null;
   }
 
   /**
-   * Get cached UCs for a tehsil
+   * Get cached UCs for a tehsil by name
    */
-  getCachedUcs(tehsilCode: number): Uc[] | null {
-    return this.ucsCache.get(tehsilCode) || null;
+  getCachedUcs(tehsilName: string): Uc[] | null {
+    return this.ucsCache.get(tehsilName) || null;
   }
 
   /**
@@ -483,23 +554,23 @@ export class LocationService {
   }
 
   /**
-   * Check if districts are cached for a province
+   * Check if districts are cached for a province by name
    */
-  hasCachedDistricts(provinceCode: number): boolean {
-    return this.districtsCache.has(provinceCode);
+  hasCachedDistricts(provinceName: string): boolean {
+    return this.districtsCache.has(provinceName);
   }
 
   /**
-   * Check if tehsils are cached for a district
+   * Check if tehsils are cached for a district by name
    */
-  hasCachedTehsils(districtCode: number): boolean {
-    return this.tehsilsCache.has(districtCode);
+  hasCachedTehsils(districtName: string): boolean {
+    return this.tehsilsCache.has(districtName);
   }
 
   /**
-   * Check if UCs are cached for a tehsil
+   * Check if UCs are cached for a tehsil by name
    */
-  hasCachedUcs(tehsilCode: number): boolean {
-    return this.ucsCache.has(tehsilCode);
+  hasCachedUcs(tehsilName: string): boolean {
+    return this.ucsCache.has(tehsilName);
   }
 }

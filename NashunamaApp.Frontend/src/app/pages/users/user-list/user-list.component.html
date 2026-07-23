@@ -25,39 +25,35 @@
         </span>
       </div>
     </div>
-    <!-- Add this to the page header section -->
-<div class="flex items-center gap-3">
-  <button class="btn btn-info btn-sm" (click)="exportUsers()" [disabled]="loading">
-    <i class="fas fa-file-excel mr-2"></i>Export
-  </button>
-  <button class="btn btn-primary btn-sm" (click)="refresh()" [disabled]="loading">
-    <i class="fas fa-sync-alt" [class.animate-spin]="loading"></i>
-    <span>Refresh</span>
-  </button>
-</div>
     
+    <div class="flex items-center gap-3">
+      <button class="btn btn-info btn-sm" (click)="exportUsers()" [disabled]="loading || loadingExport">
+        @if (loadingExport) {
+          <i class="fas fa-spinner fa-spin mr-2"></i>
+        } @else {
+          <i class="fas fa-file-excel mr-2"></i>
+        }
+        {{ loadingExport ? 'Exporting...' : 'Export' }}
+      </button>
+      <button class="btn btn-primary btn-sm" (click)="refresh()" [disabled]="loading">
+        <i class="fas fa-sync-alt" [class.animate-spin]="loading"></i>
+        <span>Refresh</span>
+      </button>
+    </div>
   </div>
 
-  <!-- Alerts -->
-  <div *ngIf="success" class="alert alert-success mb-4">
-    <div class="flex items-center gap-2">
-      <i class="fas fa-check-circle"></i>
-      <span>{{ success }}</span>
-    </div>
-    <button class="text-success-700 hover:text-success-900" (click)="success = null" aria-label="Close success alert" title="Close">
-      <i class="fas fa-times"></i>
-    </button>
-  </div>
-
-  <div *ngIf="error" class="alert alert-danger mb-4">
-    <div class="flex items-center gap-2">
-      <i class="fas fa-exclamation-circle"></i>
-      <span>{{ error }}</span>
-    </div>
-    <button class="text-error-700 hover:text-error-900" (click)="clearError()" aria-label="Close error alert" title="Close">
-      <i class="fas fa-times"></i>
-    </button>
-  </div>
+  
+<!-- Alert Component -->
+@if (showAlert) {
+  <app-alert 
+    [isOpen]="showAlert"
+    [variant]="alertVariant" 
+    [title]="alertTitle" 
+    [message]="alertMessage"
+    (closeAlert)="clearAlert()"
+    class="mb-4">
+  </app-alert>
+}
 
   <!-- Stats Cards -->
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6" *ngIf="totalItems > 0">
@@ -111,70 +107,69 @@
   </div>
 
   <!-- Filters -->
- <!-- Filters -->
-<div class="card mb-6">
-  <div class="card-body">
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
-      <!-- Search -->
-      <div class="relative">
-        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"></i>
-        <input 
-          type="text" 
-          class="form-control pl-9"
-          placeholder="Search users..."
-          [(ngModel)]="searchTerm"
-          (input)="onSearchChange(searchTerm)">
-      </div>
+  <div class="card mb-6">
+    <div class="card-body">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+        <!-- Search -->
+        <div class="relative">
+          <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"></i>
+          <input 
+            type="text" 
+            class="form-control pl-9"
+            placeholder="Search users..."
+            [(ngModel)]="searchTerm"
+            (input)="onSearchChange(searchTerm)">
+        </div>
 
-      <!-- Province -->
-      <div>
-        <select id="province-filter" class="form-select" [(ngModel)]="selectedProvinceCode" (change)="onProvinceChange(selectedProvinceCode)" aria-label="Filter by province">
-          <option [ngValue]="null">All Provinces</option>
-          <option *ngFor="let p of provinces" [ngValue]="p.provcode">{{ p.province }}</option>
-        </select>
-      </div>
+        <!-- Province -->
+        <div>
+          <select id="province-filter" class="form-select" [(ngModel)]="selectedProvinceName" (change)="onProvinceChange(selectedProvinceName)" aria-label="Filter by province">
+            <option [ngValue]="null">All Provinces</option>
+            <option *ngFor="let p of provinces" [ngValue]="p.province">{{ p.province }}</option>
+          </select>
+        </div>
 
-      <!-- District -->
-      <div>
-        <select id="district-filter" class="form-select" [(ngModel)]="selectedDistrictCode" (change)="onDistrictChange(selectedDistrictCode)" aria-label="Filter by district" [disabled]="!selectedProvinceCode">
-          <option [ngValue]="null">All Districts</option>
-          <option *ngFor="let d of districts" [ngValue]="d.distcode">{{ d.district }}</option>
-        </select>
-      </div>
+        <!-- District -->
+        <div>
+          <select id="district-filter" class="form-select" [(ngModel)]="selectedDistrictName" (change)="onDistrictChange(selectedDistrictName)" aria-label="Filter by district" [disabled]="!selectedProvinceName">
+            <option [ngValue]="null">All Districts</option>
+            <option *ngFor="let d of districts" [ngValue]="d.district">{{ d.district }}</option>
+          </select>
+        </div>
 
-      <!-- Tehsil -->
-      <div>
-        <select id="tehsil-filter" class="form-select" [(ngModel)]="selectedTehsilCode" (change)="onTehsilChange(selectedTehsilCode)" aria-label="Filter by tehsil" [disabled]="!selectedDistrictCode">
-          <option [ngValue]="null">All Tehsils</option>
-          <option *ngFor="let t of tehsils" [ngValue]="t.tehsilcode">{{ t.tehsil }}</option>
-        </select>
-      </div>
+        <!-- Tehsil -->
+        <div>
+          <select id="tehsil-filter" class="form-select" [(ngModel)]="selectedTehsilName" (change)="onTehsilChange(selectedTehsilName)" aria-label="Filter by tehsil" [disabled]="!selectedDistrictName">
+            <option [ngValue]="null">All Tehsils</option>
+            <option *ngFor="let t of tehsils" [ngValue]="t.tehsil">{{ t.tehsil }}</option>
+          </select>
+        </div>
 
-      <!-- User Type -->
-      <div>
-        <select id="user-type-filter" class="form-select" [(ngModel)]="userType" (change)="onFilterChange()" aria-label="Filter by user type">
-          <option value="">All Types</option>
-          <option *ngFor="let type of userTypes" [value]="type">{{ type }}</option>
-        </select>
-      </div>
+        <!-- User Type -->
+        <div>
+          <select id="user-type-filter" class="form-select" [(ngModel)]="userType" (change)="onFilterChange()" aria-label="Filter by user type">
+            <option value="">All Types</option>
+            <option *ngFor="let type of userTypes" [value]="type">{{ type }}</option>
+          </select>
+        </div>
 
-      <!-- Status -->
-      <div>
-        <select id="status-filter" class="form-select" [(ngModel)]="isActive" (change)="onFilterChange()" aria-label="Filter by status">
-          <option [ngValue]="null">All Status</option>
-          <option [ngValue]="true">Active</option>
-          <option [ngValue]="false">Inactive</option>
-        </select>
+        <!-- Status -->
+        <div>
+          <select id="status-filter" class="form-select" [(ngModel)]="isActive" (change)="onFilterChange()" aria-label="Filter by status">
+            <option [ngValue]="null">All Status</option>
+            <option [ngValue]="true">Active</option>
+            <option [ngValue]="false">Inactive</option>
+          </select>
+        </div>
       </div>
-    </div>
-    <div class="flex justify-end mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
-      <button class="btn btn-secondary btn-sm" (click)="resetFilters()">
-        <i class="fas fa-undo-alt"></i>
-        <span>Reset Filters</span>
-      </button>
+      <div class="flex justify-end mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
+        <button class="btn btn-secondary btn-sm" (click)="resetFilters()" [disabled]="loading">
+          <i class="fas fa-undo-alt"></i>
+          <span>Reset Filters</span>
+        </button>
+      </div>
     </div>
   </div>
-</div>
 
   <!-- DataTable Component -->
   <app-data-table
@@ -188,6 +183,7 @@
     [serverSidePaging]="true"
     [serverSideSearch]="true"
     [totalItems]="totalItems"
+    [loading]="loading"
     (view)="onView($event)"
     (edit)="onEdit($event)"
     (delete)="onDelete($event)"
@@ -280,7 +276,7 @@
     </div>
 
     <div class="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-200 dark:border-gray-800">
-      <button class="btn btn-outline btn-sm" (click)="closeProfileModal()">
+      <button class="btn btn-outline btn-sm" (click)="closeProfileModal()" [disabled]="loading">
         <i class="fas fa-times mr-1"></i> Close
       </button>
     </div>
@@ -322,33 +318,77 @@
         </div>
       </div>
 
-      <!-- Transfer Form -->
+      <!-- Transfer Form with Dropdowns -->
       <div class="grid grid-cols-1 gap-4">
+        <!-- Province Dropdown -->
         <div>
           <label class="form-label">Province <span class="text-error-500">*</span></label>
-          <input type="text" class="form-control" [(ngModel)]="transferForm.province" placeholder="Enter province">
+          <select 
+            class="form-select" 
+            [(ngModel)]="transferProvinceName" 
+            (change)="onTransferProvinceChange(transferProvinceName)"
+            [disabled]="loadingTransfer">
+            <option [ngValue]="null">Select Province</option>
+            <option *ngFor="let p of transferProvinces" [ngValue]="p.province">{{ p.province }}</option>
+          </select>
         </div>
+
+        <!-- District Dropdown -->
         <div>
           <label class="form-label">District <span class="text-error-500">*</span></label>
-          <input type="text" class="form-control" [(ngModel)]="transferForm.district" placeholder="Enter district">
+          <select 
+            class="form-select" 
+            [(ngModel)]="transferDistrictName" 
+            (change)="onTransferDistrictChange(transferDistrictName)"
+            [disabled]="!transferProvinceName || loadingTransfer">
+            <option [ngValue]="null">Select District</option>
+            <option *ngFor="let d of transferDistricts" [ngValue]="d.district">{{ d.district }}</option>
+          </select>
         </div>
+
+        <!-- Tehsil Dropdown -->
         <div>
           <label class="form-label">Tehsil</label>
-          <input type="text" class="form-control" [(ngModel)]="transferForm.tehsil" placeholder="Enter tehsil">
+          <select 
+            class="form-select" 
+            [(ngModel)]="transferTehsilName" 
+            (change)="onTransferTehsilChange(transferTehsilName)"
+            [disabled]="!transferDistrictName || loadingTransfer">
+            <option [ngValue]="null">Select Tehsil</option>
+            <option *ngFor="let t of transferTehsils" [ngValue]="t.tehsil">{{ t.tehsil }}</option>
+          </select>
         </div>
+
+        <!-- Site Name Input -->
         <div>
           <label class="form-label">Site Name</label>
-          <input type="text" class="form-control" [(ngModel)]="transferForm.siteName" placeholder="Enter site name">
+          <input 
+            type="text" 
+            class="form-control" 
+            [(ngModel)]="transferForm.siteName" 
+            placeholder="Enter site name"
+            [disabled]="loadingTransfer">
         </div>
       </div>
     </div>
 
     <div class="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-200 dark:border-gray-800">
-      <button class="btn btn-outline btn-sm" (click)="closeTransferModal()">
+      <button 
+        class="btn btn-outline btn-sm" 
+        (click)="closeTransferModal()"
+        [disabled]="loadingTransfer">
         <i class="fas fa-times mr-1"></i> Cancel
       </button>
-      <button class="btn btn-primary btn-sm" (click)="handleTransferSubmit()">
-        <i class="fas fa-exchange-alt mr-1"></i> Transfer
+      <button 
+        class="btn btn-primary btn-sm" 
+        (click)="handleTransferSubmit()"
+        [disabled]="loadingTransfer">
+        @if (loadingTransfer) {
+          <i class="fas fa-spinner fa-spin mr-1"></i>
+        } @else {
+          <i class="fas fa-exchange-alt mr-1"></i>
+        }
+        {{ loadingTransfer ? 'Transferring...' : 'Transfer' }}
       </button>
     </div>
   </app-modal>
@@ -364,13 +404,23 @@
     </div>
     <p class="text-sm text-gray-600 dark:text-gray-400">{{ confirmModalData.message }}</p>
     <div class="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-200 dark:border-gray-800">
-      <button class="btn btn-outline btn-sm" (click)="closeConfirmModal()">
+      <button 
+        class="btn btn-outline btn-sm" 
+        (click)="closeConfirmModal()"
+        [disabled]="loadingStatus || loadingBlock">
         <i class="fas fa-times mr-1"></i> Cancel
       </button>
-      <button class="btn btn-sm" 
-              [ngClass]="confirmModalData.isDanger ? 'btn-danger' : 'btn-primary'"
-              (click)="handleConfirmAction()">
-        <i class="fas fa-check mr-1"></i> {{ confirmModalData.confirmText }}
+      <button 
+        class="btn btn-sm" 
+        [ngClass]="confirmModalData.isDanger ? 'btn-danger' : 'btn-primary'"
+        (click)="handleConfirmAction()"
+        [disabled]="loadingStatus || loadingBlock">
+        @if (loadingStatus || loadingBlock) {
+          <i class="fas fa-spinner fa-spin mr-1"></i>
+        } @else {
+          <i class="fas fa-check mr-1"></i>
+        }
+        {{ (loadingStatus || loadingBlock) ? 'Processing...' : confirmModalData.confirmText }}
       </button>
     </div>
   </app-modal>
