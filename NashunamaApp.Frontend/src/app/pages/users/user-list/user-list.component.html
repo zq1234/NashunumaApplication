@@ -11,7 +11,7 @@
           Showing {{ startRecord }} - {{ endRecord }} of {{ totalItems }} users
         </p>
       </div>
-      <!-- Top Counter Badge - Placed in the card header -->
+      <!-- Top Counter Badge -->
       <div class="flex items-center gap-2 ml-4 px-4 py-2 bg-brand-50 dark:bg-brand-900/20 rounded-full border border-brand-200 dark:border-brand-800">
         <i class="fas fa-database text-brand-500 text-sm"></i>
         <span class="text-sm font-medium text-brand-700 dark:text-brand-300">Total:</span>
@@ -42,18 +42,17 @@
     </div>
   </div>
 
-  
-<!-- Alert Component -->
-@if (showAlert) {
-  <app-alert 
-    [isOpen]="showAlert"
-    [variant]="alertVariant" 
-    [title]="alertTitle" 
-    [message]="alertMessage"
-    (closeAlert)="clearAlert()"
-    class="mb-4">
-  </app-alert>
-}
+  <!-- Alert Component -->
+  @if (showAlert) {
+    <app-alert 
+      [isOpen]="showAlert"
+      [variant]="alertVariant" 
+      [title]="alertTitle" 
+      [message]="alertMessage"
+      (closeAlert)="clearAlert()"
+      class="mb-4">
+    </app-alert>
+  }
 
   <!-- Stats Cards -->
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6" *ngIf="totalItems > 0">
@@ -190,7 +189,9 @@
     (pageChange)="onPageChange($event)">
   </app-data-table>
 
-  <!-- Profile Modal using app-modal -->
+  <!-- ============================================ -->
+  <!-- PROFILE MODAL with Alert for errors -->
+  <!-- ============================================ -->
   <app-modal 
     [isOpen]="isProfileModalOpen" 
     (close)="closeProfileModal()" 
@@ -199,6 +200,18 @@
       <i class="fas fa-user-circle text-brand-500 text-2xl"></i>
       <h3 class="text-xl font-semibold text-gray-900 dark:text-white">User Profile</h3>
     </div>
+
+    <!-- Alert inside Profile Modal -->
+    @if (profileError) {
+      <app-alert 
+        [isOpen]="true"
+        variant="error" 
+        title="Error" 
+        [message]="profileError"
+        (closeAlert)="profileError = null"
+        class="mb-4">
+      </app-alert>
+    }
     
     <div *ngIf="selectedUser" class="space-y-6">
       <!-- Profile Header -->
@@ -282,7 +295,9 @@
     </div>
   </app-modal>
 
-  <!-- Transfer Location Modal using app-modal -->
+  <!-- ============================================ -->
+  <!-- TRANSFER LOCATION MODAL with Alert for errors -->
+  <!-- ============================================ -->
   <app-modal 
     [isOpen]="isTransferModalOpen" 
     (close)="closeTransferModal()" 
@@ -291,6 +306,28 @@
       <i class="fas fa-exchange-alt text-brand-500 text-xl"></i>
       <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Transfer Location</h3>
     </div>
+
+    <!-- Alert inside Transfer Modal -->
+    @if (transferError) {
+      <app-alert 
+        [isOpen]="true"
+        variant="error" 
+        title="Error" 
+        [message]="transferError"
+        (closeAlert)="transferError = null"
+        class="mb-4">
+      </app-alert>
+    }
+    @if (transferSuccess) {
+      <app-alert 
+        [isOpen]="true"
+        variant="success" 
+        title="Success" 
+        [message]="transferSuccess"
+        (closeAlert)="transferSuccess = null"
+        class="mb-4">
+      </app-alert>
+    }
     
     <div *ngIf="selectedUser" class="space-y-6">
       <!-- Current Location -->
@@ -393,7 +430,9 @@
     </div>
   </app-modal>
 
-  <!-- Confirm Modal using app-modal -->
+  <!-- ============================================ -->
+  <!-- CONFIRM MODAL with Alert for errors -->
+  <!-- ============================================ -->
   <app-modal 
     [isOpen]="isConfirmModalOpen" 
     (close)="closeConfirmModal()" 
@@ -402,6 +441,19 @@
       <i class="fas fa-exclamation-triangle text-2xl" [class.text-error-500]="confirmModalData.isDanger" [class.text-warning-500]="!confirmModalData.isDanger"></i>
       <h3 class="text-xl font-semibold text-gray-900 dark:text-white">{{ confirmModalData.title }}</h3>
     </div>
+
+    <!-- Alert inside Confirm Modal -->
+    @if (confirmError) {
+      <app-alert 
+        [isOpen]="true"
+        variant="error" 
+        title="Error" 
+        [message]="confirmError"
+        (closeAlert)="confirmError = null"
+        class="mb-4">
+      </app-alert>
+    }
+
     <p class="text-sm text-gray-600 dark:text-gray-400">{{ confirmModalData.message }}</p>
     <div class="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-200 dark:border-gray-800">
       <button 

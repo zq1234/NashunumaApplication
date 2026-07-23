@@ -237,9 +237,11 @@ namespace NashunumaApp.Infrastructure.Repositories
                     user.SiteId = siteId;
                     user.SiteName = siteName;
                 }
-
-                user.Istransferred = 1;
-                user.ChangeType = "Location Transfer";
+                decimal currentTransferCount = user.Istransferred ?? 0;
+                user.Istransferred = currentTransferCount + 1;
+                decimal SiteTransferCount = user.TransferCountForSite ?? 0;
+                user.TransferCountForSite = SiteTransferCount + 1;
+                //user.ChangeType = "Location Transfer";
 
                 await _context.SaveChangesAsync();
                 return true;

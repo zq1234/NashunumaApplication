@@ -72,6 +72,7 @@ public partial class NthUser
     public decimal? EditProfile { get; set; }
 
     public decimal? Istransferred { get; set; }
+    public decimal? TransferCountForSite { get; set; }
 
     public string? ChangeType { get; set; }
 

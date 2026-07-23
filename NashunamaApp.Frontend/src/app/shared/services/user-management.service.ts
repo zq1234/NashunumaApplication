@@ -1,15 +1,17 @@
 // src/app/shared/services/user-management.service.ts
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { BehaviorSubject, Observable, throwError } from 'rxjs';
-import { catchError, finalize } from 'rxjs/operators';
+
+import { catchError, finalize, tap } from 'rxjs/operators';
+import { BehaviorSubject, Observable, of, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { ApiResponse, PaginatedResponse } from '@core/models/api-response.model';
+import { ApiResponse, PaginatedResponse, ApiResponseHelper, ApiStatusCodes } from '@core/models/api-response.model';
 import { 
   UserDto, 
   UserFilterParams,
   UserSearchParams,
-  UserHelper} from '@core/models/user.model';
+  UserHelper
+} from '@core/models/user.model';
 import { 
   UpdateUserLocationDto, 
   LocationStatsDto, 
@@ -29,6 +31,10 @@ export class UserManagementService {
   private loadingSubject = new BehaviorSubject<boolean>(false);
   public loading$ = this.loadingSubject.asObservable();
 
+  // Cache
+  private usersCache = new Map<string, { data: UserDto[], totalCount: number, timestamp: number }>();
+  private cacheDuration = 5 * 60 * 1000; // 5 minutes
+
   constructor(private http: HttpClient) {}
 
   /**
@@ -39,26 +45,65 @@ export class UserManagementService {
   }
 
   /**
-   * Handle error responses
+   * Generate cache key from filters
+   */
+  private getCacheKey(params: UserFilterParams): string {
+    return JSON.stringify(params);
+  }
+
+  /**
+   * Check if cache is valid
+   */
+  private isCacheValid(cacheEntry: { timestamp: number }): boolean {
+    return Date.now() - cacheEntry.timestamp < this.cacheDuration;
+  }
+
+  /**
+   * Handle error responses and return formatted ApiResponse
    */
   private handleError(error: any): Observable<never> {
     console.error('API Error:', error);
     let errorMessage = 'An error occurred. Please try again.';
+    let errors: string[] = [errorMessage];
+    let statusCode = error.status || ApiStatusCodes.INTERNAL_SERVER_ERROR;
     
     if (error.error) {
       if (typeof error.error === 'string') {
         errorMessage = error.error;
+        errors = [errorMessage];
       } else if (error.error.message) {
         errorMessage = error.error.message;
+        errors = [errorMessage];
       } else if (error.error.errors) {
-        const validationErrors = Object.values(error.error.errors).flat();
-        errorMessage = validationErrors.join(', ');
+        // Handle validation errors from ASP.NET
+        if (typeof error.error.errors === 'object') {
+          const validationErrors = Object.values(error.error.errors).flat();
+          errors = validationErrors as string[];
+          errorMessage = errors.join(', ');
+        } else if (Array.isArray(error.error.errors)) {
+          errors = error.error.errors;
+          errorMessage = errors.join(', ');
+        }
+      } else if (error.error.data) {
+        errorMessage = error.error.data;
+        errors = [errorMessage];
       }
     } else if (error.message) {
       errorMessage = error.message;
+      errors = [errorMessage];
     }
 
-    return throwError(() => new Error(errorMessage));
+    // Create a proper ApiResponse error
+    const errorResponse: ApiResponse<any> = {
+      isSuccess: false,
+      message: errorMessage,
+      data: null,
+      errors: errors,
+      statusCode: statusCode
+    };
+
+    // Throw the formatted error
+    return throwError(() => errorResponse);
   }
 
   /**
@@ -79,6 +124,28 @@ export class UserManagementService {
    * GET /api/UserManagement/users
    */
   getPagedUsers(params: UserFilterParams): Observable<ApiResponse<PaginatedResponse<UserDto>>> {
+    // Check cache
+    const cacheKey = this.getCacheKey(params);
+    const cached = this.usersCache.get(cacheKey);
+    if (cached && this.isCacheValid(cached)) {
+      const response: ApiResponse<PaginatedResponse<UserDto>> = {
+        isSuccess: true,
+        message: 'Users retrieved from cache',
+        data: {
+          items: cached.data,
+          pageNumber: params.pageNumber,
+          pageSize: params.pageSize,
+          totalCount: cached.totalCount,
+          totalPages: Math.ceil(cached.totalCount / params.pageSize),
+          hasPrevious: params.pageNumber > 1,
+          hasNext: params.pageNumber < Math.ceil(cached.totalCount / params.pageSize)
+        },
+        errors: null,
+        statusCode: ApiStatusCodes.OK
+      };
+      return of(response);
+    }
+
     this.setLoading(true);
     
     let httpParams = new HttpParams()
@@ -109,6 +176,16 @@ export class UserManagementService {
     
     return this.http.get<ApiResponse<PaginatedResponse<UserDto>>>(url, { params: httpParams })
       .pipe(
+        tap(response => {
+          if (ApiResponseHelper.isSuccess(response) && response.data) {
+            // Cache the response
+            this.usersCache.set(cacheKey, {
+              data: response.data.items,
+              totalCount: response.data.totalCount,
+              timestamp: Date.now()
+            });
+          }
+        }),
         catchError(this.handleError),
         finalize(() => this.setLoading(false))
       );
@@ -139,6 +216,10 @@ export class UserManagementService {
     
     return this.http.put<ApiResponse<UserDto>>(url, locationDto)
       .pipe(
+        tap(() => {
+          // Clear cache after successful transfer
+          this.usersCache.clear();
+        }),
         catchError(this.handleError),
         finalize(() => this.setLoading(false))
       );
@@ -154,6 +235,10 @@ export class UserManagementService {
     
     return this.http.patch<ApiResponse<boolean>>(url, isActive)
       .pipe(
+        tap(() => {
+          // Clear cache after successful status change
+          this.usersCache.clear();
+        }),
         catchError(this.handleError),
         finalize(() => this.setLoading(false))
       );
@@ -169,6 +254,10 @@ export class UserManagementService {
     
     return this.http.post<ApiResponse<boolean>>(url, {})
       .pipe(
+        tap(() => {
+          // Clear cache after successful block
+          this.usersCache.clear();
+        }),
         catchError(this.handleError),
         finalize(() => this.setLoading(false))
       );
@@ -314,7 +403,19 @@ export class UserManagementService {
       params, 
       responseType: 'blob' 
     }).pipe(
+      catchError((error) => {
+        this.setLoading(false);
+        // For blob responses, we need to handle errors differently
+        throw error;
+      }),
       finalize(() => this.setLoading(false))
     ) as Observable<Blob>;
+  }
+
+  /**
+   * Clear user cache
+   */
+  clearUserCache(): void {
+    this.usersCache.clear();
   }
 }

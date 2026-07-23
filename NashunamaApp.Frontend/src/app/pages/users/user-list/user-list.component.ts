@@ -48,6 +48,12 @@ export class UserListComponent implements OnInit, OnDestroy {
   alertMessage = '';
   showAlert = false;
   
+  // Modal-specific errors
+  profileError: string | null = null;
+  transferError: string | null = null;
+  transferSuccess: string | null = null;
+  confirmError: string | null = null;
+  
   // Filters
   searchTerm = '';
   selectedProvinceName: string | null = null;
@@ -133,6 +139,10 @@ export class UserListComponent implements OnInit, OnDestroy {
     this.destroy$.next();
     this.destroy$.complete();
   }
+
+  // ============================================
+  // Search Debounce Setup
+  // ============================================
 
   private setupSearchDebounce(): void {
     this.searchSubject.pipe(
@@ -313,6 +323,8 @@ export class UserListComponent implements OnInit, OnDestroy {
   transferLocation(user: UserDto): void {
     this.selectedUser = user;
     this.transferForm = LocationHelper.toUpdateDto(user);
+    this.transferError = null;
+    this.transferSuccess = null;
     
     this.transferProvinceName = user.province || null;
     this.transferDistrictName = user.district || null;
@@ -342,7 +354,7 @@ export class UserListComponent implements OnInit, OnDestroy {
         }
       },
       error: (error) => {
-        this.showError('Error loading districts for transfer: ' + error.message);
+        this.transferError = 'Error loading districts: ' + error.message;
       }
     });
   }
@@ -361,7 +373,7 @@ export class UserListComponent implements OnInit, OnDestroy {
         }
       },
       error: (error) => {
-        this.showError('Error loading tehsils for transfer: ' + error.message);
+        this.transferError = 'Error loading tehsils: ' + error.message;
       }
     });
   }
@@ -372,6 +384,7 @@ export class UserListComponent implements OnInit, OnDestroy {
     this.transferTehsilName = null;
     this.transferDistricts = [];
     this.transferTehsils = [];
+    this.transferError = null;
     
     this.transferForm = {
       ...this.transferForm,
@@ -389,6 +402,7 @@ export class UserListComponent implements OnInit, OnDestroy {
     this.transferDistrictName = districtName;
     this.transferTehsilName = null;
     this.transferTehsils = [];
+    this.transferError = null;
     
     this.transferForm = {
       ...this.transferForm,
@@ -418,18 +432,24 @@ export class UserListComponent implements OnInit, OnDestroy {
     this.transferDistricts = [];
     this.transferTehsils = [];
     this.transferForm = LocationHelper.createDefaultUpdateDto();
+    this.transferError = null;
+    this.transferSuccess = null;
   }
 
   handleTransferSubmit(): void {
     if (!this.selectedUser) return;
     
+    // Clear previous messages
+    this.transferError = null;
+    this.transferSuccess = null;
+    
     const location = LocationHelper.fromUser(this.selectedUser);
     if (!location.province) {
-      this.showError('Please select a province');
+      this.transferError = 'Please select a province';
       return;
     }
     if (!location.district) {
-      this.showError('Please select a district');
+      this.transferError = 'Please select a district';
       return;
     }
     
@@ -440,15 +460,19 @@ export class UserListComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (response: ApiResponse<UserDto>) => {
           if (ApiResponseHelper.isSuccess(response)) {
-            this.showSuccess(response.message || 'Location transferred successfully');
-            this.closeTransferModal();
-            this.loadUsers();
+            this.transferSuccess = response.message || 'Location transferred successfully';
+            // Close modal after success
+            setTimeout(() => {
+              this.closeTransferModal();
+              this.loadUsers();
+            }, 1500);
           } else {
-            this.showError(response.message || 'Failed to transfer location');
+            const errorMsg = response.errors?.length ? response.errors.join(', ') : response.message;
+            this.transferError = errorMsg || 'Failed to transfer location';
           }
         },
         error: (error) => {
-          this.showError('Error transferring location: ' + error.message);
+          this.transferError = 'Error transferring location: ' + error.message;
         }
       });
   }
@@ -458,8 +482,8 @@ export class UserListComponent implements OnInit, OnDestroy {
   // ============================================
 
   loadUsers(): void {
-    this.loading = true;
     this.clearAlert();
+    this.loading = true;
 
     const filters: UserFilterParams = {
       pageNumber: this.pageNumber,
@@ -483,7 +507,8 @@ export class UserListComponent implements OnInit, OnDestroy {
             }));
             this.totalItems = response.data.totalCount;
           } else {
-            this.showError(response.message || 'Failed to load users');
+            const errorMsg = response.errors?.length ? response.errors.join(', ') : response.message;
+            this.showError(errorMsg || 'Failed to load users');
           }
         },
         error: (error) => {
@@ -562,12 +587,14 @@ export class UserListComponent implements OnInit, OnDestroy {
 
   viewProfile(user: UserDto): void {
     this.selectedUser = user;
+    this.profileError = null;
     this.isProfileModalOpen = true;
   }
 
   closeProfileModal(): void {
     this.isProfileModalOpen = false;
     this.selectedUser = null;
+    this.profileError = null;
   }
 
   // ============================================
@@ -579,6 +606,7 @@ export class UserListComponent implements OnInit, OnDestroy {
     const action = isActive ? 'deactivate' : 'activate';
     
     this.selectedUser = user;
+    this.confirmError = null;
     this.confirmModalData = {
       title: `${action.charAt(0).toUpperCase() + action.slice(1)} User`,
       message: `Are you sure you want to ${action} user "${user.personName}"?`,
@@ -591,6 +619,7 @@ export class UserListComponent implements OnInit, OnDestroy {
 
   blockUser(user: UserDto): void {
     this.selectedUser = user;
+    this.confirmError = null;
     this.confirmModalData = {
       title: 'Block User',
       message: `Are you sure you want to block user "${user.personName}"? This action cannot be undone.`,
@@ -604,6 +633,7 @@ export class UserListComponent implements OnInit, OnDestroy {
   closeConfirmModal(): void {
     this.isConfirmModalOpen = false;
     this.selectedUser = null;
+    this.confirmError = null;
   }
 
   handleConfirmAction(): void {
@@ -611,6 +641,7 @@ export class UserListComponent implements OnInit, OnDestroy {
 
     if (this.confirmModalData.action === 'toggle') {
       this.loadingStatus = true;
+      this.confirmError = null;
       const isActive = this.selectedUser.isactive === '1' || this.selectedUser.isactive === 'true';
       
       this.userService.toggleUserStatus(this.selectedUser.username, !isActive)
@@ -622,15 +653,17 @@ export class UserListComponent implements OnInit, OnDestroy {
               this.closeConfirmModal();
               this.loadUsers();
             } else {
-              this.showError(response.message || 'Failed to update user status');
+              const errorMsg = response.errors?.length ? response.errors.join(', ') : response.message;
+              this.confirmError = errorMsg || 'Failed to update user status';
             }
           },
           error: (error) => {
-            this.showError('Error updating user status: ' + error.message);
+            this.confirmError = 'Error updating user status: ' + error.message;
           }
         });
     } else if (this.confirmModalData.action === 'block') {
       this.loadingBlock = true;
+      this.confirmError = null;
       
       this.userService.blockUser(this.selectedUser.username)
         .pipe(finalize(() => this.loadingBlock = false))
@@ -641,11 +674,12 @@ export class UserListComponent implements OnInit, OnDestroy {
               this.closeConfirmModal();
               this.loadUsers();
             } else {
-              this.showError(response.message || 'Failed to block user');
+              const errorMsg = response.errors?.length ? response.errors.join(', ') : response.message;
+              this.confirmError = errorMsg || 'Failed to block user';
             }
           },
           error: (error) => {
-            this.showError('Error blocking user: ' + error.message);
+            this.confirmError = 'Error blocking user: ' + error.message;
           }
         });
     }
@@ -681,6 +715,8 @@ export class UserListComponent implements OnInit, OnDestroy {
 
   exportUsers(): void {
     this.loadingExport = true;
+    this.clearAlert();
+    
     const filters = {
       searchTerm: this.searchTerm || undefined,
       province: this.provinceDisplay || undefined,
