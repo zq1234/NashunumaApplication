@@ -9,7 +9,7 @@ import { SignupFormComponent } from '../../../shared/components/auth/signup-form
     SignupFormComponent,
   ],
   templateUrl: './sign-up.component.html',
-  styles: ``
+  styles: [`@import '../auth-page.scss'`]
 })
 export class SignUpComponent {
 

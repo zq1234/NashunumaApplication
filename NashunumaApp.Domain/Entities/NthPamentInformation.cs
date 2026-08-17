@@ -67,7 +67,7 @@ public partial class NthPamentInformation
 
     public decimal? VisitId { get; set; }
 
-    /// <summary>
+    
     /// Mother,Child,Adolescent
     /// </summary>
     public string PaymentType { get; set; }

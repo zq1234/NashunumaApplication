@@ -1,4 +1,6 @@
 ﻿// DTOs/Auth/LoginResponseDto.cs
+using NashunumaApp.Application.DTOs.Stock;
+
 namespace NashunumaApp.Application.DTOs.Auth
 {
     public class LoginResponseDto
@@ -17,5 +19,7 @@ namespace NashunumaApp.Application.DTOs.Auth
         public string Tehsil { get; set; } = string.Empty;
         public string MobileNumber { get; set; } = string.Empty;
         public bool IsAdmin { get; set; }
+        public bool HasMissingStockEntries { get; set; }
+        public List<MissingStockDateDto> MissingStockDates { get; set; }
     }
 }

@@ -414,5 +414,57 @@ namespace NashunumaApp.Infrastructure.Repositories
                 throw new Exception($"Error searching food stocks: {ex.Message}", ex);
             }
         }
+        
+        /// Gets stock by site ID and date
+        /// </summary>
+        public async Task<NthSnfStock> GetBySiteIdAndDateAsync(string siteId, string enteredOn)
+        {
+            try
+            {
+                return await _context.Foodstock
+                    .Where(f => f.SiteId == siteId && f.EnteredOn == enteredOn)
+                    .FirstOrDefaultAsync();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error retrieving stock by site and date: {ex.Message}", ex);
+            }
+        }
+
+        
+        /// Gets all stock records for a specific site
+        /// </summary>
+        public async Task<List<NthSnfStock>> GetBySiteIdAsync(string siteId)
+        {
+            try
+            {
+                return await _context.Foodstock
+                    .Where(f => f.SiteId == siteId)
+                    .OrderByDescending(f => f.EnteredOn)
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error retrieving stocks by site: {ex.Message}", ex);
+            }
+        }
+
+        /// Gets all existing stock dates for a specific site
+
+        public async Task<List<string>> GetExistingStockDatesAsync(string siteId)
+        {
+            try
+            {
+                return await _context.Foodstock
+                    .Where(f => f.SiteId == siteId && f.EnteredOn != null)
+                    .Select(f => f.EnteredOn)
+                    .Distinct()
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error retrieving existing stock dates: {ex.Message}", ex);
+            }
+        }
     }
 }

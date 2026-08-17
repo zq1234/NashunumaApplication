@@ -20,7 +20,7 @@ namespace NashunumaApp.API.Controllers
             _logger = logger;
         }
 
-        /// <summary>
+        
         /// Get all provinces
         /// </summary>
         [HttpGet("provinces")]
@@ -44,7 +44,7 @@ namespace NashunumaApp.API.Controllers
             }
         }
 
-        /// <summary>
+        
         /// Get districts by province name
         /// </summary>
         [HttpGet("districts/{provinceName}")]
@@ -68,7 +68,7 @@ namespace NashunumaApp.API.Controllers
             }
         }
 
-        /// <summary>
+        
         /// Get tehsils by district name
         /// </summary>
         [HttpGet("tehsils/{districtName}")]
@@ -92,7 +92,7 @@ namespace NashunumaApp.API.Controllers
             }
         }
 
-        /// <summary>
+        
         /// Get UCs by tehsil name
         /// </summary>
         [HttpGet("ucs/{tehsilName}")]
@@ -116,7 +116,7 @@ namespace NashunumaApp.API.Controllers
             }
         }
 
-        /// <summary>
+        
         /// Get full location hierarchy (Provinces -> Districts -> Tehsils -> UCs)
         /// </summary>
         [HttpGet("hierarchy")]
@@ -140,7 +140,7 @@ namespace NashunumaApp.API.Controllers
             }
         }
 
-        /// <summary>
+        
         /// Get province by name
         /// </summary>
         [HttpGet("province/{provinceName}")]
@@ -164,7 +164,7 @@ namespace NashunumaApp.API.Controllers
             }
         }
 
-        /// <summary>
+        
         /// Get district by name
         /// </summary>
         [HttpGet("district/{districtName}")]
@@ -188,7 +188,7 @@ namespace NashunumaApp.API.Controllers
             }
         }
 
-        /// <summary>
+        
         /// Get tehsil by name
         /// </summary>
         [HttpGet("tehsil/{tehsilName}")]

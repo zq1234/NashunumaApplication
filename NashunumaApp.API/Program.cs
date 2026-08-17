@@ -1,4 +1,5 @@
 using Microsoft.OpenApi.Models;
+using NashunumaApp.API.Extensions;
 using NashunumaApp.API.Middleware;
 using NashunumaApp.Application.Interfaces;
 using NashunumaApp.Application.Mappings;
@@ -9,8 +10,8 @@ using NashunumaApp.Infrastructure.Logging;
 using NashunumaApp.Infrastructure.Persistence.Interceptors;
 using NashunumaApp.Infrastructure.Repositories;
 using NashunumaApp.Infrastructure.Services;
+using NashunumaApp.Shared.Logging;
 using Serilog;
-using Serilog.Exceptions;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -18,54 +19,14 @@ using System.Text.Json.Serialization;
 var builder = WebApplication.CreateBuilder(args);
 
 // ============================================================
-// 1. CONFIGURE SERILOG (MUST BE FIRST)
+// 1. CONFIGURE SERILOG 
 // ============================================================
-builder.Host.UseSerilog((context, services, configuration) =>
-{
-    configuration
-        .ReadFrom.Configuration(context.Configuration)
-        .ReadFrom.Services(services)
-        .Enrich.FromLogContext()
-        .Enrich.WithEnvironmentName()
-        .Enrich.WithMachineName()
-        .Enrich.WithThreadId()
-        .Enrich.WithProcessId()
-        .Enrich.WithExceptionDetails()
-        .Enrich.WithProperty("Application", "NashunumaApp")
-        .Enrich.WithProperty("Environment", context.HostingEnvironment.EnvironmentName);
-
-    // Console sink with colored output
-    configuration.WriteTo.Console(
-        outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}"
-    );
-
-    // File sink - rolling by day
-    configuration.WriteTo.File(
-        path: "Logs/log-.txt",
-        rollingInterval: RollingInterval.Day,
-        outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}",
-        retainedFileCountLimit: 31,
-        fileSizeLimitBytes: 10 * 1024 * 1024, // 10MB
-        rollOnFileSizeLimit: true,
-        shared: true
-    );
-
-    // Error file sink - only errors
-    configuration.WriteTo.File(
-        path: "Logs/error-.txt",
-        rollingInterval: RollingInterval.Day,
-        outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}",
-        retainedFileCountLimit: 31,
-        fileSizeLimitBytes: 10 * 1024 * 1024,
-        rollOnFileSizeLimit: true,
-        shared: true,
-        restrictedToMinimumLevel: Serilog.Events.LogEventLevel.Error
-    );
-});
+builder.AddSerilog();
 
 try
 {
-    Log.Information(" Starting NashunumaApp API...");
+    Log.Information(LoggingConstants.MessageApplicationStartup);
+    Log.Information(LoggingConstants.MessageApplicationVersion, Assembly.GetExecutingAssembly().GetName().Version);
 
     // ============================================================
     // 2. CONFIGURE CONTROLLERS
@@ -104,11 +65,11 @@ try
         });
 
         // JWT Authentication for Swagger
-        c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+        c.AddSecurityDefinition(LoggingConstants.AuthScheme, new OpenApiSecurityScheme
         {
             Name = "Authorization",
             Type = SecuritySchemeType.Http,
-            Scheme = "Bearer",
+            Scheme = LoggingConstants.AuthScheme,
             BearerFormat = "JWT",
             In = ParameterLocation.Header,
             Description = "Enter your Bearer token. Example: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
@@ -122,7 +83,7 @@ try
                     Reference = new OpenApiReference
                     {
                         Type = ReferenceType.SecurityScheme,
-                        Id = "Bearer"
+                        Id = LoggingConstants.AuthSecurityId
                     }
                 },
                 Array.Empty<string>()
@@ -155,12 +116,14 @@ try
     builder.Services.AddScoped<ILoggingService, SerilogLogger>();
     builder.Services.AddScoped<DbLoggingInterceptor>();
     builder.Services.AddScoped<AuditInterceptor>();
+
     // Application Services
     builder.Services.AddScoped<IAuthService, AuthService>();
     builder.Services.AddScoped<IFoodStockService, FoodStockService>();
     builder.Services.AddScoped<IUserManagementService, UserManagementService>();
     builder.Services.AddScoped<ILocationRepository, LocationRepository>();
     builder.Services.AddScoped<ILocationService, LocationService>();
+
     // AutoMapper
     builder.Services.AddAutoMapper(typeof(MappingProfile));
 
@@ -168,11 +131,11 @@ try
     // 5. CONFIGURE CORS
     // ============================================================
     var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
-        ?? new[] { "http://localhost:4200", "https://localhost:4200" };
+        ?? LoggingConstants.DefaultAllowedOrigins;
 
     builder.Services.AddCors(options =>
     {
-        options.AddPolicy("AllowAngular", policy =>
+        options.AddPolicy(LoggingConstants.CorsPolicyAllowAngular, policy =>
         {
             policy.WithOrigins(allowedOrigins)
                   .AllowAnyHeader()
@@ -181,7 +144,7 @@ try
                   .WithExposedHeaders("X-Pagination", "X-Total-Count", "Content-Disposition");
         });
 
-        options.AddPolicy("AllowAll", policy =>
+        options.AddPolicy(LoggingConstants.CorsPolicyAllowAll, policy =>
         {
             policy.AllowAnyOrigin()
                   .AllowAnyHeader()
@@ -199,40 +162,7 @@ try
     // ============================================================
 
     // Use Serilog Request Logging
-    app.UseSerilogRequestLogging(options =>
-    {
-        options.MessageTemplate =
-            "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000}ms | " +
-            "User: {UserId} | IP: {RemoteIP} | Correlation: {CorrelationId}";
-
-        options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
-        {
-            var userId = httpContext.User?.FindFirst("sub")?.Value ??
-                         httpContext.User?.Identity?.Name ??
-                         "Anonymous";
-
-            diagnosticContext.Set("UserId", userId);
-            diagnosticContext.Set("RemoteIP",
-                httpContext.Connection.RemoteIpAddress?.ToString());
-            diagnosticContext.Set("CorrelationId",
-                httpContext.TraceIdentifier);
-            diagnosticContext.Set("UserAgent",
-                httpContext.Request.Headers["User-Agent"].FirstOrDefault());
-            diagnosticContext.Set("RequestPath",
-                httpContext.Request.Path);
-            diagnosticContext.Set("RequestMethod",
-                httpContext.Request.Method);
-        };
-
-        options.GetLevel = (httpContext, elapsed, ex) =>
-        {
-            if (ex != null || httpContext.Response.StatusCode >= 500)
-                return Serilog.Events.LogEventLevel.Error;
-            if (httpContext.Response.StatusCode >= 400)
-                return Serilog.Events.LogEventLevel.Warning;
-            return Serilog.Events.LogEventLevel.Information;
-        };
-    });
+    app.UseSerilogRequestLogging();
 
     // Swagger Pipeline
     if (app.Environment.IsDevelopment())
@@ -240,9 +170,9 @@ try
         app.UseSwagger();
         app.UseSwaggerUI(c =>
         {
-            c.SwaggerEndpoint("/swagger/v1/swagger.json", "Nashunuma App API v1");
-            c.RoutePrefix = "swagger";
-            c.DocumentTitle = "Nashunuma App API Documentation";
+            c.SwaggerEndpoint(LoggingConstants.SwaggerEndpoint, "Nashunuma App API v1");
+            c.RoutePrefix = LoggingConstants.SwaggerRoutePrefix;
+            c.DocumentTitle = LoggingConstants.SwaggerDocumentTitle;
             c.DisplayRequestDuration();
             c.EnableTryItOutByDefault();
             c.DefaultModelsExpandDepth(2);
@@ -260,13 +190,13 @@ try
     // Use CORS based on environment
     if (app.Environment.IsDevelopment())
     {
-        app.UseCors("AllowAll");
-        Log.Information(" Development Mode: CORS AllowAll enabled");
+        app.UseCors(LoggingConstants.CorsPolicyAllowAll);
+        Log.Information(LoggingConstants.MessageCorsAllowAll);
     }
     else
     {
-        app.UseCors("AllowAngular");
-        Log.Information("Production Mode: CORS restricted to allowed origins");
+        app.UseCors(LoggingConstants.CorsPolicyAllowAngular);
+        Log.Information(LoggingConstants.MessageCorsRestricted);
     }
 
     // Exception Handling Middleware (with logging)
@@ -278,18 +208,27 @@ try
     app.MapControllers();
 
     // Health Check Endpoint
-    app.MapGet("/health", () => Results.Ok(new
+    app.MapGet(LoggingConstants.HealthCheckEndpoint, () => Results.Ok(new
     {
-        Status = "Healthy",
+        Status = LoggingConstants.HealthCheckStatus,
         Timestamp = DateTime.UtcNow,
-        Environment = app.Environment.EnvironmentName
+        Environment = app.Environment.EnvironmentName,
+        Application = LoggingConstants.ApplicationName
     }));
 
     // ============================================================
     // 8. DATABASE INITIALIZATION AND SEEDING
     // ============================================================
-    Log.Information($" Environment: {app.Environment.EnvironmentName}");
-    Log.Information($" Swagger UI: https://localhost:7058/swagger");
+    Log.Information(LoggingConstants.MessageEnvironment, app.Environment.EnvironmentName);
+    Log.Information(LoggingConstants.MessageJwtEnabled);
+
+    if (app.Environment.IsDevelopment())
+    {
+        Log.Information(LoggingConstants.MessageSwaggerUI);
+    }
+
+    Log.Information(LoggingConstants.MessageApplicationStarted);
+    Log.Information(LoggingConstants.MessageStartedAt, DateTime.Now.ToString(LoggingConstants.DefaultDateTime));
 
     // ============================================================
     // 9. RUN APPLICATION
@@ -298,10 +237,13 @@ try
 }
 catch (Exception ex)
 {
-    Log.Fatal(ex, " Application terminated unexpectedly");
+    Log.Fatal(ex, LoggingConstants.MessageApplicationTerminated);
+    Log.Fatal(LoggingConstants.ErrorDetails, ex.GetType().Name, ex.Message);
+    Log.Fatal(LoggingConstants.ErrorStackTrace, ex.StackTrace);
     throw;
 }
 finally
 {
+    Log.Information(LoggingConstants.MessageApplicationShutdown);
     Log.CloseAndFlush();
 }

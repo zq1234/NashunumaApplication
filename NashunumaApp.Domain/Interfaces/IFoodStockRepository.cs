@@ -30,5 +30,8 @@ namespace NashunumaApp.Domain.Interfaces
             string searchTerm,
             int pageNumber = 1,
             int pageSize = 10);
+        Task<NthSnfStock> GetBySiteIdAndDateAsync(string siteId, string enteredOn);
+        Task<List<NthSnfStock>> GetBySiteIdAsync(string siteId);
+        Task<List<string>> GetExistingStockDatesAsync(string siteId);
     }
 }

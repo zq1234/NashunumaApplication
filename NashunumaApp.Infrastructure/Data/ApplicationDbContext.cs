@@ -399,7 +399,7 @@ public partial class ApplicationDbContext : IdentityDbContext<ApplicationUser>
                 .HasColumnName("ISTRANSFERRED");
             entity.Property(e => e.TransferCountForSite)
                 .HasColumnType("NUMBER")
-                .HasColumnName("TRANSFERCOUNTFORSITE");
+                .HasColumnName("TRANSFER_COUNT_FOR_SITE");
             entity.Property(e => e.Lastlogindatetime)
                 .HasMaxLength(50)
                 .HasColumnName("LASTLOGINDATETIME");

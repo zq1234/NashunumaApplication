@@ -22,6 +22,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" Version="7.1.2" />
+		<PackageReference Include="Serilog.Filters.Expressions" Version="2.1.0" />
 		<PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
 		<PackageReference Include="Swashbuckle.AspNetCore.Annotations" Version="6.5.0" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.0">
@@ -46,5 +47,6 @@
 		<ProjectReference Include="..\NashunumaApp.Application\NashunumaApp.Application.csproj" />
 		<ProjectReference Include="..\NashunumaApp.Infrastructure\NashunumaApp.Infrastructure.csproj" />
 		<ProjectReference Include="..\NashunumaApp.Domain\NashunumaApp.Domain.csproj" />
+		<ProjectReference Include="..\NashunumaApp.Shared\NashunumaApp.Shared.csproj" />
 	</ItemGroup>
 </Project>

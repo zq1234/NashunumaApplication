@@ -51,7 +51,7 @@ public partial class NthMotherInformation
 
     public string Lastdeliverydate { get; set; }
 
-    /// <summary>
+    
     /// 1 = miscarriage, 2 = abortion, 3= death. 4=still birth, 5=mother death
     /// </summary>
     public string Deliverystatus { get; set; }

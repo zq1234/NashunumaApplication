@@ -182,7 +182,7 @@ namespace NashunumaApp.Infrastructure.Repositories
             }
         }
 
-        /// <summary>
+        
         /// Get complete location hierarchy: Provinces -> Districts -> Tehsils
         /// </summary>
         public async Task<LocationHierarchyDto> GetLocationHierarchy()

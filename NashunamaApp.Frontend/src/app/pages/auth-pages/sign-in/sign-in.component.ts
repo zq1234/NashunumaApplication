@@ -6,15 +6,15 @@ import { SigninFormComponent } from '../../../shared/components/auth/signin-form
   selector: 'app-sign-in',
   standalone: true,
   imports: [SigninFormComponent],
-  template: `
-    <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div class="flex items-center justify-center min-h-screen p-4">
-        <div class="w-full max-w-md">
+ template: `
+    <div class="auth-page">
+      <div class="auth-container">
+        <div class="auth-card">
           <app-signin-form />
         </div>
       </div>
     </div>
   `,
-  styles: ``
+     styles: [`@import '../auth-page.scss'`]
 })
 export class SignInComponent {}
