@@ -60,6 +60,8 @@ export interface FoodStock {
 }
 
 export interface CreateFoodStockDto {
+  Auth?: string | null;
+  auth?: string | null;
   openingStockBoxesMamta?: string | null;
   receivedStockBoxesMamta?: string | null;
   distributedBoxesMamta?: string | null;

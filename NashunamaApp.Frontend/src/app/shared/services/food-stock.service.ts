@@ -55,6 +55,8 @@ export class FoodStockService {
       if (filter.searchTerm) {
         params = params.set('searchTerm', filter.searchTerm);
       }
+
+  
       if (filter.siteName) {
         params = params.set('siteName', filter.siteName);
       }
@@ -125,7 +127,62 @@ export class FoodStockService {
         catchError(this.handleError<PaginatedResponse<FoodStock>>('getFoodStocks'))
       );
   }
+/**
+   * Get missing stock dates for current user's site
+   */
+  getMissingStockDates(): Observable<ApiResponse<any>> {
+    const auth = localStorage.getItem(`${environment.storage.prefix}${environment.auth.tokenKey}`) ?? '';
+    const params = new HttpParams().set('Auth', auth);
 
+    return this.http.get<ApiResponse<any>>(`${this.apiUrl}/missing-dates`, { params })
+      .pipe(
+        catchError(this.handleError<any>('getMissingStockDates'))
+      );
+  }
+
+  private buildSavePayload(foodStock: CreateFoodStockDto | UpdateFoodStockDto): any {
+    const authToken = localStorage.getItem(`${environment.storage.prefix}${environment.auth.tokenKey}`) ?? '';
+
+    const authValue = authToken || foodStock.Auth || foodStock.auth || '';
+
+    return {
+      Auth: authValue,
+      auth: authValue,
+      OpeningStockBoxesMamta: foodStock.openingStockBoxesMamta ?? '',
+      ReceivedStockBoxesMamta: foodStock.receivedStockBoxesMamta ?? '',
+      DistributedBoxesMamta: foodStock.distributedBoxesMamta ?? '',
+      ClosingStockBoxesMamta: foodStock.closingStockBoxesMamta ?? '',
+      Remarks: foodStock.remarks ?? '',
+      EnteredBy: foodStock.enteredBy ?? '',
+      SiteId: foodStock.siteId ?? '',
+      OpeningStockSachetsMamta: foodStock.openingStockSachetsMamta ?? '',
+      ClosingStockSachetsMamta: foodStock.closingStockSachetsMamta ?? '',
+      DistributedSachetsMamta: foodStock.distributedSachetsMamta ?? '',
+      OpeningStockSachetsWawa: foodStock.openingStockSachetsWawa ?? '',
+      ClosingStockSachetsWawa: foodStock.closingStockSachetsWawa ?? '',
+      DistributedSachetsWawa: foodStock.distributedSachetsWawa ?? '',
+      OpeningStockBoxesWawa: foodStock.openingStockBoxesWawa ?? '',
+      ReceivedStockBoxesWawa: foodStock.receivedStockBoxesWawa ?? '',
+      DistributedBoxesWawa: foodStock.distributedBoxesWawa ?? '',
+      ClosingStockBoxesWawa: foodStock.closingStockBoxesWawa ?? '',
+      Unit: foodStock.unit ?? '',
+      RutfReceived: foodStock.rutfReceived ?? '',
+      RutfOpening: foodStock.rutfOpening ?? '',
+      RutfDistributed: foodStock.rutfDistributed ?? '',
+      RutfClosing: foodStock.rutfClosing ?? '',
+      IfaReceived: foodStock.ifaReceived ?? '',
+      IfaOpening: foodStock.ifaOpening ?? '',
+      IfaDistributed: foodStock.ifaDistributed ?? '',
+      IfaClosing: foodStock.ifaClosing ?? '',
+      EnteredOn: foodStock.enteredOn ?? '',
+      MmsReceived: foodStock.mmsReceived ?? '',
+      MmsOpening: foodStock.mmsOpening ?? '',
+      MmsDistributed: foodStock.mmsDistributed ?? '',
+      MmsClosing: foodStock.mmsClosing ?? '',
+      // Manual update flag - include to let backend treat the save as a manual update when set
+      IsManualUpdate: (foodStock as any).isManualUpdate ?? (foodStock as any).IsManualUpdate ?? ''
+    };
+  }
   // ============================================================
   // GET ALL FOOD STOCKS (Without Pagination)
   // ============================================================
@@ -212,15 +269,14 @@ export class FoodStockService {
    */
   createFoodStock(foodStock: CreateFoodStockDto): Observable<ApiResponse<FoodStock>> {
     this.loadingSubject.next(true);
+    const payload = this.buildSavePayload(foodStock);
 
-    return this.http.post<ApiResponse<FoodStock>>(this.apiUrl, foodStock)
+    return this.http.post<ApiResponse<FoodStock>>(`${this.apiUrl}/save`, payload)
       .pipe(
         tap((response: ApiResponse<FoodStock>) => {
           this.loadingSubject.next(false);
           if (response.isSuccess && response.data) {
-            // Invalidate cache
             this.invalidateCache();
-            // Update current list
             const currentItems = this.foodStockSubject.value;
             this.foodStockSubject.next([response.data, ...currentItems]);
           }
@@ -241,15 +297,14 @@ export class FoodStockService {
    */
   updateFoodStock(id: number, foodStock: UpdateFoodStockDto): Observable<ApiResponse<FoodStock>> {
     this.loadingSubject.next(true);
+    const payload = this.buildSavePayload(foodStock);
 
-    return this.http.put<ApiResponse<FoodStock>>(`${this.apiUrl}/${id}`, foodStock)
+    return this.http.put<ApiResponse<FoodStock>>(`${this.apiUrl}/update/${id}`, payload)
       .pipe(
         tap((response: ApiResponse<FoodStock>) => {
           this.loadingSubject.next(false);
           if (response.isSuccess && response.data) {
-            // Invalidate cache
             this.invalidateCache();
-            // Update current list
             const currentItems = this.foodStockSubject.value;
             const index = currentItems.findIndex(item => item.id === id);
             if (index !== -1) {

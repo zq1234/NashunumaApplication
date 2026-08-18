@@ -4,11 +4,19 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FoodStockService } from '@shared/services/food-stock.service';
 import { FoodStock } from '@core/models/food-stock.model';
+import { PageBreadcrumbComponent } from '@shared/components/common/page-breadcrumb/page-breadcrumb.component';
+import { ComponentCardComponent } from '@shared/components/common/component-card/component-card.component';
+import { ButtonComponent } from '@shared/components/ui/button/button.component';
 
 @Component({
   selector: 'app-food-stock-detail',
   standalone: true,
-  imports: [CommonModule],
+  imports: [
+    CommonModule,
+    PageBreadcrumbComponent,
+    ComponentCardComponent,
+    ButtonComponent
+  ],
   templateUrl: './food-stock-detail.component.html',
   styleUrls: ['./food-stock-detail.component.scss']
 })
@@ -54,12 +62,12 @@ export class FoodStockDetailComponent implements OnInit {
   }
 
   goBack(): void {
-    this.router.navigate(['/food-stock']);
+    this.router.navigate(['/foodstock']);
   }
 
   onEdit(): void {
     if (this.stock?.id) {
-      this.router.navigate(['/food-stock/edit', this.stock.id]);
+      this.router.navigate(['/foodstock/edit', this.stock.id]);
     }
   }
 

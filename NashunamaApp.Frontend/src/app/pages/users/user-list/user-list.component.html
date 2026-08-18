@@ -1,17 +1,16 @@
-<div class="card">
-<div class="page-container">
-  <!-- Page Header with Counter Badge -->
-  <div class="page-header">
+<div class="space-y-6">
+  <app-page-breadcrumb pageTitle="User Management" />
+
+  <div class="flex flex-wrap items-center justify-between gap-3">
     <div class="flex items-center gap-4">
       <div>
-        <h1 class="page-title">
+        <h1 class="text-2xl font-semibold text-gray-800 dark:text-white/90">
           <i class="fas fa-users text-brand-500 mr-3"></i>User Management
         </h1>
-        <p class="page-subtitle" *ngIf="hasItems">
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400" *ngIf="hasItems">
           Showing {{ startRecord }} - {{ endRecord }} of {{ totalItems }} users
         </p>
       </div>
-      <!-- Top Counter Badge -->
       <div class="flex items-center gap-2 ml-4 px-4 py-2 bg-brand-50 dark:bg-brand-900/20 rounded-full border border-brand-200 dark:border-brand-800">
         <i class="fas fa-database text-brand-500 text-sm"></i>
         <span class="text-sm font-medium text-brand-700 dark:text-brand-300">Total:</span>
@@ -25,20 +24,20 @@
         </span>
       </div>
     </div>
-    
+
     <div class="flex items-center gap-3">
-      <button class="btn btn-info btn-sm" (click)="exportUsers()" [disabled]="loading || loadingExport">
+      <app-button size="sm" variant="outline" (btnClick)="exportUsers()" [disabled]="loading || loadingExport">
         @if (loadingExport) {
           <i class="fas fa-spinner fa-spin mr-2"></i>
         } @else {
           <i class="fas fa-file-excel mr-2"></i>
         }
         {{ loadingExport ? 'Exporting...' : 'Export' }}
-      </button>
-      <button class="btn btn-primary btn-sm" (click)="refresh()" [disabled]="loading">
+      </app-button>
+      <app-button size="sm" (btnClick)="refresh()" [disabled]="loading">
         <i class="fas fa-sync-alt" [class.animate-spin]="loading"></i>
         <span>Refresh</span>
-      </button>
+      </app-button>
     </div>
   </div>
 
@@ -106,69 +105,67 @@
   </div>
 
   <!-- Filters -->
-  <div class="card mb-6">
-    <div class="card-body">
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
-        <!-- Search -->
-        <div class="relative">
-          <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"></i>
-          <input 
-            type="text" 
-            class="form-control pl-9"
-            placeholder="Search users..."
-            [(ngModel)]="searchTerm"
-            (input)="onSearchChange(searchTerm)">
-        </div>
-
-        <!-- Province -->
-        <div>
-          <select id="province-filter" class="form-select" [(ngModel)]="selectedProvinceName" (change)="onProvinceChange(selectedProvinceName)" aria-label="Filter by province">
-            <option [ngValue]="null">All Provinces</option>
-            <option *ngFor="let p of provinces" [ngValue]="p.province">{{ p.province }}</option>
-          </select>
-        </div>
-
-        <!-- District -->
-        <div>
-          <select id="district-filter" class="form-select" [(ngModel)]="selectedDistrictName" (change)="onDistrictChange(selectedDistrictName)" aria-label="Filter by district" [disabled]="!selectedProvinceName">
-            <option [ngValue]="null">All Districts</option>
-            <option *ngFor="let d of districts" [ngValue]="d.district">{{ d.district }}</option>
-          </select>
-        </div>
-
-        <!-- Tehsil -->
-        <div>
-          <select id="tehsil-filter" class="form-select" [(ngModel)]="selectedTehsilName" (change)="onTehsilChange(selectedTehsilName)" aria-label="Filter by tehsil" [disabled]="!selectedDistrictName">
-            <option [ngValue]="null">All Tehsils</option>
-            <option *ngFor="let t of tehsils" [ngValue]="t.tehsil">{{ t.tehsil }}</option>
-          </select>
-        </div>
-
-        <!-- User Type -->
-        <div>
-          <select id="user-type-filter" class="form-select" [(ngModel)]="userType" (change)="onFilterChange()" aria-label="Filter by user type">
-            <option value="">All Types</option>
-            <option *ngFor="let type of userTypes" [value]="type">{{ type }}</option>
-          </select>
-        </div>
-
-        <!-- Status -->
-        <div>
-          <select id="status-filter" class="form-select" [(ngModel)]="isActive" (change)="onFilterChange()" aria-label="Filter by status">
-            <option [ngValue]="null">All Status</option>
-            <option [ngValue]="true">Active</option>
-            <option [ngValue]="false">Inactive</option>
-          </select>
-        </div>
+  <app-component-card title="Filters" desc="Search and refine the user records in the list.">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+      <!-- Search -->
+      <div class="relative">
+        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"></i>
+        <input 
+          type="text" 
+          class="form-control pl-9"
+          placeholder="Search users..."
+          [(ngModel)]="searchTerm"
+          (input)="onSearchChange(searchTerm)">
       </div>
-      <div class="flex justify-end mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
-        <button class="btn btn-secondary btn-sm" (click)="resetFilters()" [disabled]="loading">
-          <i class="fas fa-undo-alt"></i>
-          <span>Reset Filters</span>
-        </button>
+
+      <!-- Province -->
+      <div>
+        <select id="province-filter" class="form-select" [(ngModel)]="selectedProvinceName" (change)="onProvinceChange(selectedProvinceName)" aria-label="Filter by province">
+          <option [ngValue]="null">All Provinces</option>
+          <option *ngFor="let p of provinces" [ngValue]="p.province">{{ p.province }}</option>
+        </select>
+      </div>
+
+      <!-- District -->
+      <div>
+        <select id="district-filter" class="form-select" [(ngModel)]="selectedDistrictName" (change)="onDistrictChange(selectedDistrictName)" aria-label="Filter by district" [disabled]="!selectedProvinceName">
+          <option [ngValue]="null">All Districts</option>
+          <option *ngFor="let d of districts" [ngValue]="d.district">{{ d.district }}</option>
+        </select>
+      </div>
+
+      <!-- Tehsil -->
+      <div>
+        <select id="tehsil-filter" class="form-select" [(ngModel)]="selectedTehsilName" (change)="onTehsilChange(selectedTehsilName)" aria-label="Filter by tehsil" [disabled]="!selectedDistrictName">
+          <option [ngValue]="null">All Tehsils</option>
+          <option *ngFor="let t of tehsils" [ngValue]="t.tehsil">{{ t.tehsil }}</option>
+        </select>
+      </div>
+
+      <!-- User Type -->
+      <div>
+        <select id="user-type-filter" class="form-select" [(ngModel)]="userType" (change)="onFilterChange()" aria-label="Filter by user type">
+          <option value="">All Types</option>
+          <option *ngFor="let type of userTypes" [value]="type">{{ type }}</option>
+        </select>
+      </div>
+
+      <!-- Status -->
+      <div>
+        <select id="status-filter" class="form-select" [(ngModel)]="isActive" (change)="onFilterChange()" aria-label="Filter by status">
+          <option [ngValue]="null">All Status</option>
+          <option [ngValue]="true">Active</option>
+          <option [ngValue]="false">Inactive</option>
+        </select>
       </div>
     </div>
-  </div>
+    <div class="flex justify-end mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
+      <button class="btn btn-secondary btn-sm" (click)="resetFilters()" [disabled]="loading">
+        <i class="fas fa-undo-alt"></i>
+        <span>Reset Filters</span>
+      </button>
+    </div>
+  </app-component-card>
 
   <!-- DataTable Component -->
   <app-data-table
@@ -361,7 +358,8 @@
         <div>
           <label class="form-label">Province <span class="text-error-500">*</span></label>
           <select 
-            class="form-select" 
+            class="form-select"
+            title="Province"
             [(ngModel)]="transferProvinceName" 
             (change)="onTransferProvinceChange(transferProvinceName)"
             [disabled]="loadingTransfer">
@@ -374,7 +372,8 @@
         <div>
           <label class="form-label">District <span class="text-error-500">*</span></label>
           <select 
-            class="form-select" 
+            class="form-select"
+            title="District"
             [(ngModel)]="transferDistrictName" 
             (change)="onTransferDistrictChange(transferDistrictName)"
             [disabled]="!transferProvinceName || loadingTransfer">
@@ -387,7 +386,8 @@
         <div>
           <label class="form-label">Tehsil</label>
           <select 
-            class="form-select" 
+            class="form-select"
+            title="Tehsil"
             [(ngModel)]="transferTehsilName" 
             (change)="onTransferTehsilChange(transferTehsilName)"
             [disabled]="!transferDistrictName || loadingTransfer">
@@ -476,5 +476,4 @@
       </button>
     </div>
   </app-modal>
-</div>
 </div>

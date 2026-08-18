@@ -8,6 +8,10 @@ import { FoodStock, FoodStockFilter } from '../../../core/models/food-stock.mode
 import { ApiResponse, PaginatedResponse } from '../../../core/models/api-response.model';
 import { DataTableComponent, DataTableColumn } from '@shared/components/data-table/data-table.component';
 import { ModalComponent } from '@shared/components/ui/modal/modal.component';
+import { PageBreadcrumbComponent } from '@shared/components/common/page-breadcrumb/page-breadcrumb.component';
+import { ComponentCardComponent } from '@shared/components/common/component-card/component-card.component';
+import { ButtonComponent } from '@shared/components/ui/button/button.component';
+import { AuthService } from '@shared/services/auth.service';
 
 @Component({
   selector: 'app-food-stock-list',
@@ -17,7 +21,10 @@ import { ModalComponent } from '@shared/components/ui/modal/modal.component';
     FormsModule,
     RouterModule,
     DataTableComponent,
-    ModalComponent
+    ModalComponent,
+    PageBreadcrumbComponent,
+    ComponentCardComponent,
+    ButtonComponent
   ],
   templateUrl: './food-stock-list.component.html',
   styleUrls: ['./food-stock-list.component.scss']
@@ -72,11 +79,13 @@ export class FoodStockListComponent implements OnInit, OnDestroy {
 
   constructor(
     private foodStockService: FoodStockService,
-    private router: Router
+    public router: Router,
+    private authService: AuthService
   ) {}
 
   ngOnInit(): void {
     this.setupSearchDebounce();
+    this.authService.refreshMissingDates();
     this.loadFoodStocks();
     this.loadSummary();
     
@@ -218,15 +227,13 @@ export class FoodStockListComponent implements OnInit, OnDestroy {
 
   // Handle view from datatable
   onView(item: FoodStock): void {
-   
-      this.router.navigate(['/foodstock', item.id]);
-    
+    this.router.navigate(['/foodstock', item.id]);
   }
 
   // Handle edit from datatable
   onEdit(item: FoodStock): void {
     console.log('Edit food stock:', item);
-    this.router.navigate(['/food-stock/edit', item.id]);
+    this.router.navigate(['/foodstock/edit', item.id]);
   }
 
   // Handle delete from datatable

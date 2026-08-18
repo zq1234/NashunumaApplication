@@ -8,6 +8,11 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { ModalComponent } from '../../shared/components/ui/modal/modal.component';
+import { PageBreadcrumbComponent } from '../../shared/components/common/page-breadcrumb/page-breadcrumb.component';
+import { ComponentCardComponent } from '../../shared/components/common/component-card/component-card.component';
+import { InputFieldComponent } from '../../shared/components/form/input/input-field.component';
+import { LabelComponent } from '../../shared/components/form/label/label.component';
+import { ButtonComponent } from '../../shared/components/ui/button/button.component';
 
 interface CalendarEvent extends EventInput {
   extendedProps: {
@@ -21,7 +26,12 @@ interface CalendarEvent extends EventInput {
     FormsModule,
     KeyValuePipe,
     FullCalendarModule,
-    ModalComponent
+    ModalComponent,
+    PageBreadcrumbComponent,
+    ComponentCardComponent,
+    InputFieldComponent,
+    LabelComponent,
+    ButtonComponent
   ],
   templateUrl: './calender.component.html',
   styles: ``

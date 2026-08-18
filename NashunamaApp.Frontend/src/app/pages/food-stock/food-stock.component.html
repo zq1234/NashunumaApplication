@@ -1,0 +1,74 @@
+<div class="food-stock">
+  <h3>Food Stock - Add / Edit</h3>
+
+  <form [formGroup]="form" (ngSubmit)="save()">
+    <div class="row">
+      <label for="EnteredOn">Date (EnteredOn) *</label>
+      <input id="EnteredOn" type="date" formControlName="EnteredOn" />
+    </div>
+
+    <div class="row">
+      <label for="Unit">Unit</label>
+      <input id="Unit" formControlName="Unit" />
+
+      <label for="Remarks">Remarks</label>
+      <input id="Remarks" formControlName="Remarks" />
+    </div>
+
+    <h4>MAMTA</h4>
+    <div class="grid">
+      <input id="OpeningStockBoxesMamta" placeholder="OpeningStockBoxesMamta" formControlName="OpeningStockBoxesMamta" />
+      <input id="ReceivedStockBoxesMamta" placeholder="ReceivedStockBoxesMamta" formControlName="ReceivedStockBoxesMamta" />
+      <input id="DistributedBoxesMamta" placeholder="DistributedBoxesMamta" formControlName="DistributedBoxesMamta" />
+      <input id="ClosingStockBoxesMamta" placeholder="ClosingStockBoxesMamta" formControlName="ClosingStockBoxesMamta" />
+
+      <input id="OpeningStockSachetsMamta" placeholder="OpeningStockSachetsMamta" formControlName="OpeningStockSachetsMamta" />
+      <input id="DistributedSachetsMamta" placeholder="DistributedSachetsMamta" formControlName="DistributedSachetsMamta" />
+      <input id="ClosingStockSachetsMamta" placeholder="ClosingStockSachetsMamta" formControlName="ClosingStockSachetsMamta" />
+    </div>
+
+    <h4>WAWA</h4>
+    <div class="grid">
+      <input id="OpeningStockBoxesWawa" placeholder="OpeningStockBoxesWawa (required)" formControlName="OpeningStockBoxesWawa" />
+      <input id="ReceivedStockBoxesWawa" placeholder="ReceivedStockBoxesWawa" formControlName="ReceivedStockBoxesWawa" />
+      <input id="DistributedBoxesWawa" placeholder="DistributedBoxesWawa" formControlName="DistributedBoxesWawa" />
+      <input id="ClosingStockBoxesWawa" placeholder="ClosingStockBoxesWawa" formControlName="ClosingStockBoxesWawa" />
+
+      <input id="OpeningStockSachetsWawa" placeholder="OpeningStockSachetsWawa" formControlName="OpeningStockSachetsWawa" />
+      <input id="DistributedSachetsWawa" placeholder="DistributedSachetsWawa" formControlName="DistributedSachetsWawa" />
+      <input id="ClosingStockSachetsWawa" placeholder="ClosingStockSachetsWawa" formControlName="ClosingStockSachetsWawa" />
+    </div>
+
+    <h4>RUTF</h4>
+    <div class="grid small">
+      <input id="RutfOpening" placeholder="RutfOpening" formControlName="RutfOpening" />
+      <input id="RutfReceived" placeholder="RutfReceived" formControlName="RutfReceived" />
+      <input id="RutfDistributed" placeholder="RutfDistributed" formControlName="RutfDistributed" />
+      <input id="RutfClosing" placeholder="RutfClosing" formControlName="RutfClosing" />
+    </div>
+
+    <h4>IFA</h4>
+    <div class="grid small">
+      <input id="IfaOpening" placeholder="IfaOpening" formControlName="IfaOpening" />
+      <input id="IfaReceived" placeholder="IfaReceived" formControlName="IfaReceived" />
+      <input id="IfaDistributed" placeholder="IfaDistributed" formControlName="IfaDistributed" />
+      <input id="IfaClosing" placeholder="IfaClosing" formControlName="IfaClosing" />
+    </div>
+
+    <h4>MMS</h4>
+    <div class="grid small">
+      <input id="MmsOpening" placeholder="MmsOpening" formControlName="MmsOpening" />
+      <input id="MmsReceived" placeholder="MmsReceived" formControlName="MmsReceived" />
+      <input id="MmsDistributed" placeholder="MmsDistributed" formControlName="MmsDistributed" />
+      <input id="MmsClosing" placeholder="MmsClosing" formControlName="MmsClosing" />
+    </div>
+
+    <div class="actions">
+      <button type="submit">Save</button>
+      <button type="button" (click)="form.reset()">Clear</button>
+      <button type="button" (click)="checkDateExists()">Check Date Exists</button>
+    </div>
+
+    <div class="status">{{ statusMessage }}</div>
+  </form>
+</div>

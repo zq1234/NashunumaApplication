@@ -22,6 +22,7 @@ namespace NashunumaApp.Infrastructure.Repositories
             int pageNumber,
             int pageSize,
             string? searchTerm = null,
+            string? siteId = null,
             string? province = null,
             string? district = null,
             string? tehsil = null)
@@ -56,6 +57,12 @@ namespace NashunumaApp.Infrastructure.Repositories
                         (x.site.HeadName != null && x.site.HeadName.ToLower().Contains(searchTerm)) ||
                         (x.site.Contact != null && x.site.Contact.ToLower().Contains(searchTerm))
                     );
+                }
+
+                // Apply site filter first (restrict to specific site if provided)
+                if (!string.IsNullOrWhiteSpace(siteId))
+                {
+                    baseQuery = baseQuery.Where(x => x.stock.SiteId == siteId || x.site.Id.ToString() == siteId);
                 }
 
                 // Apply location filters

@@ -18,6 +18,8 @@ import {
   UserDto,
   mapLoginResponseToUser
 } from '@core/models/auth.model';
+import { FoodStockService } from '@shared/services/food-stock.service';
+import { MissingStockNotificationDto, normalizeMissingStockNotification } from '@core/models/missing-stock.model';
 import { ApiResponse } from '@core/models/api-response.model';
 
 @Injectable({
@@ -40,9 +42,16 @@ export class AuthService {
   private loadingSubject = new BehaviorSubject<boolean>(false);
   public loading$ = this.loadingSubject.asObservable();
 
+  // Missing stock notification
+  private missingStockSubject = new BehaviorSubject<MissingStockNotificationDto | null>(null);
+  public missingStockNotification$ = this.missingStockSubject.asObservable();
+  // In-memory queue for auto-entry of missing dates
+  private missingQueue: string[] = [];
+
   constructor(
     private http: HttpClient,
-    private router: Router
+    private router: Router,
+    private foodStockService: FoodStockService
   ) {
     this.loadStoredUser();
   }
@@ -281,6 +290,106 @@ export class AuthService {
     // Update subjects
     this.currentUserSubject.next(user);
     this.isAuthenticatedSubject.next(true);
+
+    // After login, fetch missing stock dates for user's site and emit notification.
+    // Do not suppress the reminder with cached session state so it always appears on refresh.
+    try {
+      this.foodStockService.getMissingStockDates().subscribe({
+        next: (resp) => {
+          if (resp?.isSuccess) {
+            const normalized = normalizeMissingStockNotification(resp.data);
+            this.missingStockSubject.next(normalized as MissingStockNotificationDto | null);
+          } else {
+            this.missingStockSubject.next(null);
+          }
+        },
+        error: () => {
+          this.missingStockSubject.next(null);
+        }
+      });
+    } catch (e) {
+      // On any error, avoid blocking login flow
+      this.missingStockSubject.next(null);
+    }
+  }
+
+  /**
+   * Keep the data source intact so all UI consumers stay in sync with the latest
+   * backend response. Dismiss actions should only hide the current modal/dropdown,
+   * not wipe the shared notification state.
+   */
+  acknowledgeMissingNotification(): void {
+    const current = this.missingStockSubject.value;
+    if (current) {
+      this.missingStockSubject.next({ ...current });
+    }
+  }
+
+  private getMissingStockPauseKey(): string {
+    const userId = this.currentUserSubject.value?.id ?? 'guest';
+    return `missing_stock_pause_until_${userId}`;
+  }
+
+  /**
+   * Pause the popup for a specific number of hours.
+   * This does not clear the shared notification data, so the sidebar and header continue to show pending tasks.
+   */
+  pauseMissingNotification(hours: number): void {
+    const safeHours = Math.max(1, Math.min(24, Number(hours) || 1));
+    const until = Date.now() + (safeHours * 60 * 60 * 1000);
+    localStorage.setItem(this.getMissingStockPauseKey(), until.toString());
+  }
+
+  isMissingStockPopupPaused(): boolean {
+    const until = Number(localStorage.getItem(this.getMissingStockPauseKey()) ?? '0');
+    if (!until || Number.isNaN(until)) {
+      return false;
+    }
+
+    return Date.now() < until;
+  }
+
+  /**
+   * Refresh the missing stock notification by calling the API every time.
+   * The popup itself will decide whether to hide itself based on the pause timer.
+   */
+  refreshMissingDates(): void {
+    this.foodStockService.getMissingStockDates().subscribe({
+      next: (resp) => {
+        if (resp?.isSuccess) {
+          const normalized = normalizeMissingStockNotification(resp.data);
+          this.missingStockSubject.next(normalized as MissingStockNotificationDto | null);
+        } else {
+          this.missingStockSubject.next(null);
+        }
+      },
+      error: () => {
+        this.missingStockSubject.next(null);
+      }
+    });
+  }
+
+  /**
+   * Start an automatic sequence to prompt entry for the given dates.
+   * Dates should be in the same string format used by the API (dd-MM-yyyy).
+   */
+  startMissingSequence(dates: string[]): void {
+    this.missingQueue = Array.isArray(dates) ? [...dates] : [];
+  }
+
+  /**
+   * Pop and return the next missing date from the queue. Returns null when queue is empty.
+   */
+  popNextMissingDate(): string | null {
+    if (!this.missingQueue || this.missingQueue.length === 0) return null;
+    return this.missingQueue.shift() || null;
+  }
+
+  /**
+   * Peek remaining missing dates (readonly copy)
+   */
+  getPendingMissingDates(): string[] {
+    return [...this.missingQueue];
   }
 
   /**

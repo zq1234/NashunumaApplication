@@ -10,6 +10,7 @@ namespace NashunumaApp.Domain.Interfaces
             int pageNumber,
             int pageSize,
             string? searchTerm = null,
+            string? siteId = null,
             string? province = null,
             string? district = null,
             string? tehsil = null);

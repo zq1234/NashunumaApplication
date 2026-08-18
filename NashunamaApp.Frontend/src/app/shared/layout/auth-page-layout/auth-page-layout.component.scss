@@ -19,13 +19,22 @@
   left: -50px;
   right: -50px;
   bottom: -50px;
-  background-image: url('/assets/images/bg.png');
+  background-image: url('/images/logo/bg.png');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
   z-index: 0;
   animation: backgroundZoom 30s ease-in-out infinite alternate;
   will-change: transform;
+}
+
+.auth-page-wrapper::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(26, 81, 118, 0.5), rgba(15, 23, 42, 0.35));
+  z-index: 1;
+  pointer-events: none;
 }
 
 @keyframes backgroundZoom {
@@ -45,18 +54,33 @@
   bottom: 0;
   background: linear-gradient(
     135deg,
-    rgba(255, 255, 255, 0.85) 0%,
-    rgba(255, 255, 255, 0.6) 100%
+    rgba(255, 255, 255, 0.8) 0%,
+    rgba(255, 255, 255, 0.62) 100%
   );
-  z-index: 0;
+  z-index: 2;
+  backdrop-filter: blur(1px);
   
   .dark & {
     background: linear-gradient(
       135deg,
       rgba(0, 0, 0, 0.7) 0%,
-      rgba(0, 0, 0, 0.4) 100%
+      rgba(0, 0, 0, 0.45) 100%
     );
   }
+}
+
+.auth-page-wrapper::after {
+  content: 'Nashunama';
+  position: fixed;
+  right: 2rem;
+  bottom: 2rem;
+  font-size: clamp(2.5rem, 5vw, 5rem);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.09);
+  z-index: 1;
+  pointer-events: none;
+  text-transform: uppercase;
 }
 
 /* Grid Shape styling */
@@ -76,6 +100,10 @@
 /* Ensure content is above background */
 :host ::ng-deep .z-1 {
   z-index: 2;
+}
+
+:host ::ng-deep .z-3 {
+  z-index: 3;
 }
 
 /* Dark mode improvements */

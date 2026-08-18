@@ -35,7 +35,10 @@ namespace NashunumaApp.API.Controllers
                 _logger.LogInformation("Getting paged food stocks - Page: {PageNumber}, PageSize: {PageSize}, SearchTerm: {SearchTerm}",
                     pageNumber, pageSize, searchTerm ?? "null");
 
-                var result = await _foodStockService.GetPagedFoodStocksAsync(pageNumber, pageSize, searchTerm);
+                var siteId = GetUserSiteId();
+                _logger.LogDebug("Using SiteId from claims: {SiteId}", siteId ?? "null");
+
+                var result = await _foodStockService.GetPagedFoodStocksAsync(pageNumber, pageSize, searchTerm, siteId);
 
                 if (result.IsSuccess)
                 {

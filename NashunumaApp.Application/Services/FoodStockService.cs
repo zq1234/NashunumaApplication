@@ -29,7 +29,8 @@ namespace NashunumaApp.Application.Services
         public async Task<ApiResponse<PaginatedResponse<FoodStockDto>>> GetPagedFoodStocksAsync(
             int pageNumber,
             int pageSize,
-            string? searchTerm = null)
+            string? searchTerm = null,
+            string? siteId = null)
         {
             try
             {
@@ -44,7 +45,8 @@ namespace NashunumaApp.Application.Services
                 var result = await _foodStockRepository.GetPagedFoodStocksWithSiteAsync(
                     pageNumber,
                     pageSize,
-                    searchTerm
+                    searchTerm,
+                    siteId
                 );
 
                 // Extract items and total count
@@ -304,6 +306,12 @@ namespace NashunumaApp.Application.Services
                     // Check all dates from the day after the last existing date to the target date
                     for (var date = expectedDate; date < targetDate.Date; date = date.AddDays(1))
                     {
+                        // Skip weekends (Saturday and Sunday) when considering missing previous dates
+                        if (date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday)
+                        {
+                            continue;
+                        }
+
                         if (!parsedExistingDates.Any(d => d.Date == date.Date))
                         {
                             missingDates.Add(date);
@@ -340,6 +348,7 @@ namespace NashunumaApp.Application.Services
                 // Create new stock entity
                 var stock = new NthSnfStock
                 {
+
                     OpeningStockBoxesMamta = ParseString(request.OpeningStockBoxesMamta),
                     ReceivedStockBoxesMamta = ParseString(request.ReceivedStockBoxesMamta),
                     DistributedBoxesMamta = ParseString(request.DistributedBoxesMamta),
@@ -493,6 +502,12 @@ namespace NashunumaApp.Application.Services
                         siteId);
                     for (var date = startDate; date <= endDate; date = date.AddDays(1))
                     {
+                        // Skip weekends when reporting missing dates
+                        if (date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday)
+                        {
+                            continue;
+                        }
+
                         missingDates.Add(new MissingStockDateDto
                         {
                             Date = date.ToString("dd-MM-yyyy"),
@@ -506,6 +521,12 @@ namespace NashunumaApp.Application.Services
                     // Check each date in the range
                     for (var date = startDate; date <= endDate; date = date.AddDays(1))
                     {
+                        // Skip weekends when reporting missing dates
+                        if (date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday)
+                        {
+                            continue;
+                        }
+
                         var dateStr = date.ToString("dd-MM-yyyy");
                         if (!parsedDates.Any(d => d.ToString("dd-MM-yyyy") == dateStr))
                         {

@@ -1,5 +1,5 @@
 
-import { Component, Input, Output, EventEmitter, ElementRef, ViewChild } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ElementRef, ViewChild, SimpleChanges } from '@angular/core';
 import flatpickr from 'flatpickr';
 import { LabelComponent } from '../label/label.component';
 import "flatpickr/dist/flatpickr.css";
@@ -15,6 +15,7 @@ export class DatePickerComponent {
   @Input() id!: string;
   @Input() mode: 'single' | 'multiple' | 'range' | 'time' = 'single';
   @Input() defaultDate?: string | Date | string[] | Date[];
+  @Input() value?: string | null;
   @Input() label?: string;
   @Input() placeholder?: string;
   @Output() dateChange = new EventEmitter<any>();
@@ -29,11 +30,24 @@ export class DatePickerComponent {
       static: true,
       monthSelectorType: 'static',
       dateFormat: 'Y-m-d',
-      defaultDate: this.defaultDate,
+      defaultDate: this.value ?? this.defaultDate,
       onChange: (selectedDates, dateStr, instance) => {
         this.dateChange.emit({ selectedDates, dateStr, instance });
       }
     });
+
+    if (this.value) {
+      this.dateInput.nativeElement.value = this.value;
+    }
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['value'] && this.dateInput?.nativeElement) {
+      this.dateInput.nativeElement.value = this.value ?? '';
+      if (this.flatpickrInstance) {
+        this.flatpickrInstance.setDate(this.value ?? '', false);
+      }
+    }
   }
 
   ngOnDestroy() {

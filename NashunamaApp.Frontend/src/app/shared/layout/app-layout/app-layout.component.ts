@@ -1,9 +1,11 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { AuthService } from '@shared/services/auth.service';
 import { SidebarService } from '../../services/sidebar.service';
 import { CommonModule } from '@angular/common';
 import { AppSidebarComponent } from '../app-sidebar/app-sidebar.component';
 import { BackdropComponent } from '../backdrop/backdrop.component';
-import { RouterModule } from '@angular/router';
+import { NavigationEnd, Router, RouterModule } from '@angular/router';
+import { MissingStockNotificationComponent } from '@shared/components/missing-stock-notification/missing-stock-notification.component';
 import { AppHeaderComponent } from '../app-header/app-header.component';
 
 @Component({
@@ -11,6 +13,7 @@ import { AppHeaderComponent } from '../app-header/app-header.component';
   imports: [
     CommonModule,
     RouterModule,
+    MissingStockNotificationComponent,
     AppHeaderComponent,
     AppSidebarComponent,
     BackdropComponent
@@ -18,15 +21,34 @@ import { AppHeaderComponent } from '../app-header/app-header.component';
   templateUrl: './app-layout.component.html',
 })
 
-export class AppLayoutComponent {
+export class AppLayoutComponent implements OnInit, OnDestroy {
   readonly isExpanded$;
   readonly isHovered$;
   readonly isMobileOpen$;
 
-  constructor(public sidebarService: SidebarService) {
+  constructor(
+    public sidebarService: SidebarService,
+    private authService: AuthService,
+    private router: Router
+  ) {
     this.isExpanded$ = this.sidebarService.isExpanded$;
     this.isHovered$ = this.sidebarService.isHovered$;
     this.isMobileOpen$ = this.sidebarService.isMobileOpen$;
+  }
+
+  ngOnInit(): void {
+    // Load the missing-date reminder once at layout initialization and again after route changes.
+    // A dismissed reminder remains dismissed for the current session.
+    this.authService.refreshMissingDates();
+
+    this.router.events.subscribe((event) => {
+      if (event instanceof NavigationEnd) {
+        this.authService.refreshMissingDates();
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
   }
 
   get containerClasses() {

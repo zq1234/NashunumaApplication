@@ -1,0 +1,44 @@
+<app-modal [isOpen]="canShowPopup" (close)="dismiss()" className="max-w-[560px] p-5 lg:p-6">
+  <div class="mb-5 flex items-start gap-3">
+    <div class="flex h-11 w-11 items-center justify-center rounded-full bg-warning-50 text-warning-500 dark:bg-warning-500/10">
+      <i class="fas fa-exclamation-circle text-xl"></i>
+    </div>
+    <div class="flex-1">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-white">You have pending stock entries</h3>
+      <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">{{ notification?.message }}</p>
+    </div>
+  </div>
+
+  <div class="mb-5">
+    <ul class="space-y-2">
+      <li *ngFor="let d of notification?.missingDates" class="flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-800 dark:bg-gray-800/50">
+        <span class="text-sm text-gray-700 dark:text-gray-300">{{ d.displayDate || d.date }}</span>
+        <app-button size="sm" variant="outline" (btnClick)="quickEnter(d.date)">Enter</app-button>
+      </li>
+    </ul>
+  </div>
+
+  <div class="space-y-3 border-t border-gray-200 pt-4 dark:border-gray-800">
+    <div class="flex items-center justify-between gap-2">
+      <span class="text-xs font-medium uppercase tracking-[0.15em] text-gray-500 dark:text-gray-400">Pause popup</span>
+      <div class="flex items-center gap-2">
+        <input
+          type="number"
+          min="1"
+          max="24"
+          step="1"
+          value="1"
+          class="h-9 w-20 rounded-lg border border-gray-200 bg-white px-2 text-sm text-gray-700 outline-none ring-0 focus:border-brand-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
+          #pauseHoursInput
+        />
+        <span class="text-xs text-gray-500 dark:text-gray-400">hours</span>
+        <app-button size="sm" variant="outline" (btnClick)="pauseForHours(pauseHoursInput.value)">Pause</app-button>
+      </div>
+    </div>
+
+    <div class="flex justify-end gap-3">
+      <app-button size="sm" variant="outline" (btnClick)="dismiss()">Dismiss</app-button>
+      <app-button size="sm" (btnClick)="enterMissing()">Enter All (auto)</app-button>
+    </div>
+  </div>
+</app-modal>

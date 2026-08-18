@@ -2,6 +2,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { PageBreadcrumbComponent } from '../../shared/components/common/page-breadcrumb/page-breadcrumb.component';
+import { ComponentCardComponent } from '../../shared/components/common/component-card/component-card.component';
 import { UserMetaCardComponent } from '../../shared/components/user-profile/user-meta-card/user-meta-card.component';
 import { UserInfoCardComponent } from '../../shared/components/user-profile/user-info-card/user-info-card.component';
 import { UserAddressCardComponent } from '../../shared/components/user-profile/user-address-card/user-address-card.component';
@@ -15,6 +16,7 @@ import { Subject, takeUntil } from 'rxjs';
   imports: [
     CommonModule,
     PageBreadcrumbComponent,
+    ComponentCardComponent,
     UserMetaCardComponent,
     UserInfoCardComponent,
     UserAddressCardComponent

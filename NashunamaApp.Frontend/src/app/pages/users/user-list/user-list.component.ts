@@ -12,6 +12,9 @@ import { ApiResponse, PaginatedResponse, ApiResponseHelper } from '@core/models/
 import { DataTableComponent, DataTableColumn } from '@shared/components/data-table/data-table.component';
 import { ModalComponent } from '@shared/components/ui/modal/modal.component';
 import { AlertComponent } from '@shared/components/ui/alert/alert.component';
+import { PageBreadcrumbComponent } from '@shared/components/common/page-breadcrumb/page-breadcrumb.component';
+import { ComponentCardComponent } from '@shared/components/common/component-card/component-card.component';
+import { ButtonComponent } from '@shared/components/ui/button/button.component';
 
 @Component({
   selector: 'app-user-list',
@@ -22,7 +25,10 @@ import { AlertComponent } from '@shared/components/ui/alert/alert.component';
     RouterModule,
     DataTableComponent,
     ModalComponent,
-    AlertComponent
+    AlertComponent,
+    PageBreadcrumbComponent,
+    ComponentCardComponent,
+    ButtonComponent
   ],
   templateUrl: './user-list.component.html',
   styleUrls: ['./user-list.component.scss']

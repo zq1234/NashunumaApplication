@@ -49,4 +49,8 @@
 		<ProjectReference Include="..\NashunumaApp.Domain\NashunumaApp.Domain.csproj" />
 		<ProjectReference Include="..\NashunumaApp.Shared\NashunumaApp.Shared.csproj" />
 	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="wwwroot\js\" />
+	</ItemGroup>
 </Project>

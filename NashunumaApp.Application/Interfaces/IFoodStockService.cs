@@ -7,7 +7,7 @@ namespace NashunumaApp.Application.Interfaces
 {
     public interface IFoodStockService
     {
-        Task<ApiResponse<PaginatedResponse<FoodStockDto>>> GetPagedFoodStocksAsync(int pageNumber,int pageSize,string? searchTerm = null);
+        Task<ApiResponse<PaginatedResponse<FoodStockDto>>> GetPagedFoodStocksAsync(int pageNumber,int pageSize,string? searchTerm = null, string? siteId = null);
         Task<ApiResponse<FoodStockDto>> GetFoodStockByIdAsync(decimal id);
         Task<ApiResponse<Domain.Common.DTOs.FoodStockSummaryDto>> GetSummaryStatsAsync();
 

@@ -65,12 +65,29 @@ export const routes: Routes = [
             title: 'Food Stock'
           },
           {
+            path: 'create',
+            loadComponent: () =>
+              import('./pages/food-stock/food-stock-form/food-stock-form.component').then(
+                m => m.FoodStockFormComponent
+              ),
+            title: 'Create Food Stock'
+          },
+          {
             path: ':id',
             loadComponent: () =>
               import(
                 './pages/food-stock/food-stock-detail/food-stock-detail.component'
               ).then(m => m.FoodStockDetailComponent),
             title: 'Food Stock Details'
+          }
+          ,
+          {
+            path: 'edit/:id',
+            loadComponent: () =>
+              import('./pages/food-stock/food-stock-form/food-stock-form.component').then(
+                m => m.FoodStockFormComponent
+              ),
+            title: 'Edit Food Stock'
           }
         ]
       },

@@ -217,9 +217,8 @@
                 @if (nav.path) {
                 <a
                   [routerLink]="nav.path"
-                  routerLinkActive="menu-item-active"
                   class="menu-item group"
-                  [ngClass]="{ 'menu-item-inactive': !isActive(nav.path) }"
+                  [ngClass]="{ 'menu-item-active': isActive(nav.path), 'menu-item-inactive': !isActive(nav.path) }"
                 >
                   <span
                     class="menu-item-icon-size"
@@ -423,9 +422,8 @@
                 @if (nav.path) {
                 <a
                   [routerLink]="nav.path"
-                  routerLinkActive="menu-item-active"
                   class="menu-item group"
-                  [ngClass]="{ 'menu-item-inactive': !isActive(nav.path) }"
+                  [ngClass]="{ 'menu-item-active': isActive(nav.path), 'menu-item-inactive': !isActive(nav.path) }"
                 >
                   <span
                     class="menu-item-icon-size"
@@ -451,6 +449,38 @@
           </ul>
         </div>
         <!-- end other section -->
+
+        <div class="mt-2 rounded-2xl border border-orange-200 bg-orange-50 p-3 dark:border-orange-500/30 dark:bg-orange-500/10">
+          <button
+            type="button"
+            (click)="togglePendingTasks()"
+            class="mb-2 flex w-full items-center justify-between gap-2 text-left"
+          >
+            <span class="text-[10px] font-semibold uppercase tracking-[0.15em] text-orange-700 dark:text-orange-300">Pending Tasks</span>
+            <span class="rounded-full bg-orange-500 px-2 py-0.5 text-[10px] font-bold text-white">{{ pendingTasksCount }}</span>
+          </button>
+
+          @if (pendingTasksOpen) {
+            @if (pendingDates.length) {
+              <ul class="space-y-2">
+                @for (item of pendingDates; track item.date) {
+                  <li>
+                    <button
+                      type="button"
+                      (click)="goToPendingDate(item.date)"
+                      class="flex w-full items-center justify-between gap-2 rounded-lg border border-orange-200 bg-white/80 px-2.5 py-2 text-left text-xs text-gray-700 transition hover:bg-white dark:border-orange-500/25 dark:bg-gray-900/40 dark:text-gray-200"
+                    >
+                      <span>{{ item.displayDate || item.date }}</span>
+                      <span class="rounded bg-orange-100 px-1.5 py-0.5 text-[10px] font-medium text-orange-700 dark:bg-orange-500/20 dark:text-orange-200">Open</span>
+                    </button>
+                  </li>
+                }
+              </ul>
+            } @else {
+              <p class="text-xs text-orange-700 dark:text-orange-300">No pending tasks</p>
+            }
+          }
+        </div>
       </div>
     </nav>
     @if ((isExpanded$ | async) || (isHovered$ | async) || (isMobileOpen$ | async)) {
