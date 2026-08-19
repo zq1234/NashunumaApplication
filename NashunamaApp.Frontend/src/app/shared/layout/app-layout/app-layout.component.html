@@ -1,4 +1,4 @@
-<div class="min-h-screen xl:flex">
+<div class="min-h-screen bg-slate-100 text-slate-800 xl:flex">
   <div>
     <app-sidebar></app-sidebar>
     <app-backdrop></app-backdrop>
@@ -14,9 +14,11 @@
     <!-- app header start -->
     <app-header/>
     <!-- app header end -->
-    <div class="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6">
+    <div class="mx-auto max-w-[1600px] p-4 md:p-6">
       <app-missing-stock-notification></app-missing-stock-notification>
-      <router-outlet></router-outlet>
+      <div class="space-y-5">
+        <router-outlet></router-outlet>
+      </div>
     </div>
   </div>
 </div>

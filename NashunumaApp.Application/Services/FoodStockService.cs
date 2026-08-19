@@ -256,6 +256,56 @@ namespace NashunumaApp.Application.Services
                 var existingStock = await _foodStockRepository.GetBySiteIdAndDateAsync(request.SiteId, enteredOn);
                 if (existingStock != null)
                 {
+                    // If request explicitly marks this as a manual update, update the existing record
+                    if (!string.IsNullOrEmpty(request.IsManualUpdate) && (request.IsManualUpdate == "1" || request.IsManualUpdate.Equals("true", StringComparison.OrdinalIgnoreCase)))
+                    {
+                        _logger.LogInformation("Manual update requested for existing stock - SiteId: {SiteId} on Date: {EnteredOn}", request.SiteId, enteredOn);
+
+                        // Update fields on the existing entity
+                        existingStock.OpeningStockBoxesMamta = ParseString(request.OpeningStockBoxesMamta);
+                        existingStock.ReceivedStockBoxesMamta = ParseString(request.ReceivedStockBoxesMamta);
+                        existingStock.DistributedBoxesMamta = ParseString(request.DistributedBoxesMamta);
+                        existingStock.ClosingStockBoxesMamta = ParseString(request.ClosingStockBoxesMamta);
+                        existingStock.OpeningStockSachetsMamta = ParseString(request.OpeningStockSachetsMamta);
+                        existingStock.ClosingStockSachetsMamta = ParseString(request.ClosingStockSachetsMamta);
+                        existingStock.DistributedSachetsMamta = ParseString(request.DistributedSachetsMamta);
+
+                        existingStock.OpeningStockBoxesWawa = ParseString(request.OpeningStockBoxesWawa);
+                        existingStock.ReceivedStockBoxesWawa = ParseString(request.ReceivedStockBoxesWawa);
+                        existingStock.DistributedBoxesWawa = ParseString(request.DistributedBoxesWawa);
+                        existingStock.ClosingStockBoxesWawa = ParseString(request.ClosingStockBoxesWawa);
+                        existingStock.OpeningStockSachetsWawa = ParseString(request.OpeningStockSachetsWawa);
+                        existingStock.ClosingStockSachetsWawa = ParseString(request.ClosingStockSachetsWawa);
+                        existingStock.DistributedSachetsWawa = ParseString(request.DistributedSachetsWawa);
+
+                        existingStock.Unit = ParseString(request.Unit);
+
+                        existingStock.RutfReceived = ParseString(request.RutfReceived);
+                        existingStock.RutfOpening = ParseString(request.RutfOpening);
+                        existingStock.RutfDistributed = ParseString(request.RutfDistributed);
+                        existingStock.RutfClosing = ParseString(request.RutfClosing);
+
+                        existingStock.IfaReceived = ParseString(request.IfaReceived);
+                        existingStock.IfaOpening = ParseString(request.IfaOpening);
+                        existingStock.IfaDistributed = ParseString(request.IfaDistributed);
+                        existingStock.IfaClosing = ParseString(request.IfaClosing);
+
+                        existingStock.MmsReceived = ParseString(request.MmsReceived);
+                        existingStock.MmsOpening = ParseString(request.MmsOpening);
+                        existingStock.MmsDistributed = ParseString(request.MmsDistributed);
+                        existingStock.MmsClosing = ParseString(request.MmsClosing);
+
+                        existingStock.Remarks = ParseString(request.Remarks);
+                        existingStock.EnteredBy = ParseString(request.EnteredBy) ?? existingStock.EnteredBy;
+                        existingStock.ActivityTime = DateTime.Now.ToString("dd-MM-yyyy HH:mm:ss");
+                        existingStock.IsManualUpdate = "1";
+
+                        await _foodStockRepository.SaveChangesAsync();
+
+                        var mappedUpdated = _mapper.Map<FoodStockDto>(existingStock);
+                        return ApiResponse<FoodStockDto>.Success(mappedUpdated, "Stock Information updated successfully (manual update)");
+                    }
+
                     _logger.LogWarning("Stock already exists for SiteId: {SiteId} on Date: {EnteredOn}",
                         request.SiteId, enteredOn);
                     return ApiResponse<FoodStockDto>.Failure(
@@ -348,43 +398,55 @@ namespace NashunumaApp.Application.Services
                 // Create new stock entity
                 var stock = new NthSnfStock
                 {
-
+                     // Mamta fields
                     OpeningStockBoxesMamta = ParseString(request.OpeningStockBoxesMamta),
                     ReceivedStockBoxesMamta = ParseString(request.ReceivedStockBoxesMamta),
                     DistributedBoxesMamta = ParseString(request.DistributedBoxesMamta),
                     ClosingStockBoxesMamta = ParseString(request.ClosingStockBoxesMamta),
-                    Remarks = ParseString(request.Remarks),
-                    EnteredBy = ParseString(request.EnteredBy),
-                    SiteId = ParseString(request.SiteId),
                     OpeningStockSachetsMamta = ParseString(request.OpeningStockSachetsMamta),
                     ClosingStockSachetsMamta = ParseString(request.ClosingStockSachetsMamta),
                     DistributedSachetsMamta = ParseString(request.DistributedSachetsMamta),
-                    OpeningStockSachetsWawa = ParseString(request.OpeningStockSachetsWawa),
-                    ClosingStockSachetsWawa = ParseString(request.ClosingStockSachetsWawa),
-                    DistributedSachetsWawa = ParseString(request.DistributedSachetsWawa),
+
+                    // Wawa fields
                     OpeningStockBoxesWawa = ParseString(request.OpeningStockBoxesWawa),
                     ReceivedStockBoxesWawa = ParseString(request.ReceivedStockBoxesWawa),
                     DistributedBoxesWawa = ParseString(request.DistributedBoxesWawa),
                     ClosingStockBoxesWawa = ParseString(request.ClosingStockBoxesWawa),
+                    OpeningStockSachetsWawa = ParseString(request.OpeningStockSachetsWawa),
+                    ClosingStockSachetsWawa = ParseString(request.ClosingStockSachetsWawa),
+                    DistributedSachetsWawa = ParseString(request.DistributedSachetsWawa),
+
+                    // Unit
                     Unit = ParseString(request.Unit),
 
-                    // Latest additions
+                    // RUTF fields
                     RutfReceived = ParseString(request.RutfReceived),
                     RutfOpening = ParseString(request.RutfOpening),
                     RutfDistributed = ParseString(request.RutfDistributed),
                     RutfClosing = ParseString(request.RutfClosing),
+
+                    // IFA fields
                     IfaReceived = ParseString(request.IfaReceived),
                     IfaOpening = ParseString(request.IfaOpening),
                     IfaDistributed = ParseString(request.IfaDistributed),
                     IfaClosing = ParseString(request.IfaClosing),
+
+                    // MMS fields
                     MmsReceived = ParseString(request.MmsReceived),
                     MmsOpening = ParseString(request.MmsOpening),
                     MmsDistributed = ParseString(request.MmsDistributed),
                     MmsClosing = ParseString(request.MmsClosing),
 
-                    EnteredOn = enteredOn,
-                    ActivityTime = DateTime.Now.ToString("dd-MM-yyyy HH:mm:ss"),
-                    IsManualUpdate = "1"
+                    // Common fields
+                    Remarks = ParseString(request.Remarks),
+                    SiteId = ParseString(request.SiteId),
+
+                    // System fields 
+                    EnteredOn = enteredOn, 
+                    EnteredBy = request.EnteredBy,
+                    ActivityTime = DateTime.Now.ToString("dd-MM-yyyy HH:mm:ss"), 
+                    IsManualUpdate = "1" 
+
                 };
 
                 _logger.LogDebug("Created stock entity for SiteId: {SiteId} with OpeningStockBoxesWawa: {OpeningStock}",

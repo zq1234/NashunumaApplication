@@ -1,15 +1,7 @@
 <div>
   <app-page-breadcrumb [pageTitle]="isEdit ? 'Edit Food Stock' : 'Create Food Stock'" />
 
-  <div class="mb-6 flex flex-wrap items-center justify-end gap-3">
-    <app-button size="sm" variant="outline" (btnClick)="cancel()">Cancel</app-button>
-    <app-button size="sm" (btnClick)="save()" [disabled]="loading">
-      <span class="flex items-center gap-2">
-        <i class="fas fa-save"></i>
-        <span>{{ loading ? 'Saving...' : 'Save' }}</span>
-      </span>
-    </app-button>
-  </div>
+  
 
   <div *ngIf="error" class="mb-6 rounded-xl border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-700 dark:border-error-500/40 dark:bg-error-500/10 dark:text-error-300">
     {{ error }}
@@ -36,10 +28,10 @@
         ></app-date-picker>
       </div>
 
-      <div>
+      <!-- <div>
         <app-label for="enteredBy">Entered By</app-label>
         <app-input-field id="enteredBy" type="text" [value]="stock.enteredBy || ''" (valueChange)="stock.enteredBy = $event.toString()"></app-input-field>
-      </div>
+      </div> -->
 
       <div>
         <app-label for="remarks">Remarks</app-label>
@@ -178,5 +170,14 @@
         <app-input-field id="mmsClosing" type="text" [value]="stock.mmsClosing || ''" (valueChange)="stock.mmsClosing = $event.toString()"></app-input-field>
       </div>
     </div>
+    <div class="mb-6 flex flex-wrap items-center justify-end gap-3">
+    <app-button size="sm" variant="outline" (btnClick)="cancel()">Cancel</app-button>
+    <app-button size="sm" (btnClick)="save()" [disabled]="loading">
+      <span class="flex items-center gap-2">
+        <i class="fas fa-save"></i>
+        <span>{{ loading ? 'Saving...' : 'Save' }}</span>
+      </span>
+    </app-button>
+  </div>
   </app-component-card>
 </div>

@@ -60,6 +60,8 @@ export class FoodStockListComponent implements OnInit, OnDestroy {
   // Modal states
   isDeleteModalOpen = false;
   selectedItem: FoodStock | null = null;
+  isDetailModalOpen = false;
+  selectedDetailStock: FoodStock | null = null;
   deleteConfirmText = '';
   
   // Column Definitions for DataTableComponent
@@ -194,31 +196,49 @@ export class FoodStockListComponent implements OnInit, OnDestroy {
     return opening + received - distributed;
   }
 
-  formatDate(dateString: string | null): string {
-    if (!dateString) return '-';
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('en-PK', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric'
-      });
-    } catch {
-      return dateString;
+  private parseFlexibleDate(dateString: string | null): Date | null {
+    if (!dateString) return null;
+
+    const value = dateString.trim();
+    if (!value) return null;
+
+    const isoMatch = value.match(/^\d{4}-\d{2}-\d{2}(?:[T\s].*)?$/i);
+    if (isoMatch) {
+      const normalized = value.includes('T') || value.includes(' ') ? value : `${value}T00:00:00`;
+      const parsed = new Date(normalized);
+      return Number.isNaN(parsed.getTime()) ? null : parsed;
     }
+
+    const dmyMatch = value.match(/^\d{1,2}[/-]\d{1,2}[/-]\d{4}$/);
+    if (dmyMatch) {
+      const [day, month, year] = value.split(/[/-]/).map(part => Number(part));
+      const parsed = new Date(year, month - 1, day);
+      return Number.isNaN(parsed.getTime()) ? null : parsed;
+    }
+
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  formatDate(dateString: string | null): string {
+    const date = this.parseFlexibleDate(dateString);
+    if (!date) return dateString || '-';
+
+    return date.toLocaleDateString('en-PK', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
   }
 
   formatTime(dateString: string | null): string {
-    if (!dateString) return '-';
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleTimeString('en-PK', {
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    } catch {
-      return dateString;
-    }
+    const date = this.parseFlexibleDate(dateString);
+    if (!date) return dateString || '-';
+
+    return date.toLocaleTimeString('en-PK', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   }
 
   onSearchChange(term: string): void {
@@ -227,7 +247,17 @@ export class FoodStockListComponent implements OnInit, OnDestroy {
 
   // Handle view from datatable
   onView(item: FoodStock): void {
-    this.router.navigate(['/foodstock', item.id]);
+    this.openDetailModal(item);
+  }
+
+  openDetailModal(item: FoodStock): void {
+    this.selectedDetailStock = item;
+    this.isDetailModalOpen = true;
+  }
+
+  closeDetailModal(): void {
+    this.isDetailModalOpen = false;
+    this.selectedDetailStock = null;
   }
 
   // Handle edit from datatable
@@ -371,5 +401,39 @@ export class FoodStockListComponent implements OnInit, OnDestroy {
 
   get endRecord(): number {
     return Math.min(this.pageNumber * this.pageSize, this.totalItems);
+  }
+
+  getDetailValue(value: string | number | null | undefined): string {
+    return value === null || value === undefined || value === '' ? '0' : String(value);
+  }
+
+  getNumber(value: string | number | null | undefined): number {
+    const parsed = Number(value ?? 0);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  formatDetailDate(value: string | null | undefined): string {
+    if (!value) return '-';
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return value;
+
+    return parsed.toLocaleDateString('en-PK', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
+  }
+
+  formatDetailTime(value: string | null | undefined): string {
+    if (!value) return '-';
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return value;
+
+    return parsed.toLocaleTimeString('en-PK', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   }
 }

@@ -393,6 +393,79 @@ export class AuthService {
   }
 
   /**
+   * Save a single missing stock date using a minimal payload.
+   * This will call the FoodStockService.createFoodStock endpoint with the
+   * required fields. Returns an observable-like Promise resolving true on success.
+   */
+  async saveMissingDate(dateStr: string, openingBoxesWawa: string = '0'): Promise<{ ok: boolean; message?: string }> {
+    if (!dateStr) {
+      return { ok: false, message: 'Missing date value is required.' };
+    }
+
+    const user = this.getCurrentUser();
+    const siteId = user?.siteId?.toString() ?? '';
+    const enteredBy = user?.username ?? user?.fullName ?? '';
+
+    if (!siteId) {
+      console.warn('Cannot auto-save missing date: SiteId not available');
+      return { ok: false, message: 'SiteId is not available for this user.' };
+    }
+
+    const payload: any = {
+      SiteId: siteId,
+      EnteredOn: dateStr,
+      OpeningStockBoxesWawa: openingBoxesWawa,
+      EnteredBy: enteredBy,
+      // mark as manual update so backend can treat this as user-entered
+      IsManualUpdate: '1'
+    };
+
+    return new Promise<{ ok: boolean; message?: string }>((resolve) => {
+      this.foodStockService.createFoodStock(payload).subscribe({
+        next: (resp) => {
+          if (resp?.isSuccess) {
+            resolve({ ok: true, message: resp.message });
+          } else {
+            console.warn('saveMissingDate failed:', resp?.message);
+            resolve({ ok: false, message: resp?.message || 'Save failed' });
+          }
+        },
+        error: (err) => {
+          console.error('saveMissingDate error:', err);
+          // extract server message if present
+          const msg = err?.error?.message || err?.message || String(err);
+          resolve({ ok: false, message: msg });
+        }
+      });
+    });
+  }
+
+  /**
+   * Process the in-memory missing queue by attempting to save each missing date
+   * using a minimal payload. The method runs sequentially and stops on the
+   * first failure. It returns a promise that resolves with a summary object.
+   */
+  async processMissingQueue(openingBoxesWawa: string = '0'):
+    Promise<{ processed: number; succeeded: number; failed: number }> {
+    const total = this.missingQueue.length;
+    let succeeded = 0;
+    let failed = 0;
+
+    while (this.missingQueue.length > 0) {
+      const date = this.popNextMissingDate();
+      if (!date) break;
+      // attempt save
+      // eslint-disable-next-line no-await-in-loop
+      const res = await this.saveMissingDate(date, openingBoxesWawa);
+      if (res && res.ok) succeeded++; else failed++;
+      // stop if a save failed to allow the user to intervene
+      if (!res || !res.ok) break;
+    }
+
+    return { processed: total, succeeded, failed };
+  }
+
+  /**
    * Update tokens during refresh
    */
   private updateTokens(tokenResponse: TokenResponseDto): void {

@@ -26,8 +26,7 @@ export interface DataTableColumn {
     CommonModule,
     FormsModule
   ],
-  templateUrl: './data-table.component.html',
-  styleUrls: ['./data-table.component.scss']
+  templateUrl: './data-table.component.html'
 })
 export class DataTableComponent implements OnChanges, OnInit {
   

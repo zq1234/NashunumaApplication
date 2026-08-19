@@ -283,7 +283,12 @@ namespace NashunumaApp.API.Controllers
                     request.EnteredBy = username;
                     _logger.LogDebug("Set EnteredBy from authenticated user: {Username}", username);
                 }
-
+                if (request.EnteredBy != username)
+                {
+                    _logger.LogWarning("User {Username} attempted to save stock for unauthorized user: {Username}",
+                        username ?? "unknown", request.SiteId);
+                    return Forbid("You don't have permission to save stock for this user");
+                }
                 var result = await _foodStockService.SaveStockInformationAsync(request);
 
                 if (!result.IsSuccess)

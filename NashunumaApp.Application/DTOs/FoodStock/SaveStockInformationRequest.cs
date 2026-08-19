@@ -35,6 +35,7 @@ namespace NashunumaApp.Application.DTOs.Stock
         public string MmsOpening { get; set; }
         public string MmsDistributed { get; set; }
         public string MmsClosing { get; set; }
+        public string IsManualUpdate { get; set; }
     }
 }
 

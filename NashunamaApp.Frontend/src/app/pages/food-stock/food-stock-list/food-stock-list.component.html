@@ -134,6 +134,99 @@
     </app-data-table>
   </div>
 
+  <app-modal [isOpen]="isDetailModalOpen" (close)="closeDetailModal()" className="max-w-6xl p-4 md:p-6">
+    <div *ngIf="selectedDetailStock as stock" class="space-y-5">
+      <div class="flex items-start justify-between gap-4 border-b border-gray-200 pb-4 dark:border-gray-800">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-[0.14em] text-brand-600 dark:text-brand-300">Stock overview</p>
+          <h3 class="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">{{ stock.siteName || 'Site record' }}</h3>
+        </div>
+        <button type="button" class="rounded-full border border-gray-200 p-2 text-gray-500 transition hover:bg-gray-100 hover:text-gray-700 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800" (click)="closeDetailModal()" aria-label="Close detail modal">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 gap-3 md:grid-cols-4">
+        <div class="rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900/30">
+          <p class="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">Entered By</p>
+          <p class="mt-2 text-sm font-semibold text-gray-800 dark:text-white/90">{{ stock.enteredBy || '-' }}</p>
+        </div>
+        <div class="rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900/30">
+          <p class="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">Entered On</p>
+          <p class="mt-2 text-sm font-semibold text-gray-800 dark:text-white/90">{{ formatDetailDate(stock.enteredOn) }}</p>
+        </div>
+        <div class="rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900/30">
+          <p class="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">Activity Time</p>
+          <p class="mt-2 text-sm font-semibold text-gray-800 dark:text-white/90">{{ formatDetailTime(stock.activityTime || stock.enteredOn) }}</p>
+        </div>
+        <div class="rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900/30">
+          <p class="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">Status</p>
+          <span class="mt-2 inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium" [ngClass]="stock.isManualUpdate === '1' ? 'bg-warning-50 text-warning-700 dark:bg-warning-500/10 dark:text-warning-300' : 'bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-300'">
+            {{ stock.isManualUpdate === '1' ? 'Manual Update' : 'Updated' }}
+          </span>
+        </div>
+      </div>
+
+      <div class="overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700">
+        <div class="grid grid-cols-2 bg-gradient-to-r from-amber-700 to-amber-600 px-4 py-3 text-sm font-semibold text-white md:grid-cols-5">
+          <div class="text-center">Category</div>
+          <div class="text-center">Received</div>
+          <div class="text-center">Opening</div>
+          <div class="text-center">Distributed</div>
+          <div class="text-center">Closing</div>
+        </div>
+
+        <div class="grid grid-cols-2 divide-y divide-gray-200 border-b border-gray-200 text-sm text-gray-700 dark:divide-gray-700 dark:border-gray-700 md:grid-cols-5">
+          <div class="bg-[#9D2D52] px-3 py-3 font-semibold text-white">Mamta</div>
+          <div class="px-3 py-3 text-center dark:text-white/90">{{ getDetailValue(stock.receivedStockBoxesMamta) }}</div>
+          <div class="px-3 py-3 text-center dark:text-white/90">{{ getDetailValue(stock.openingStockBoxesMamta) }}</div>
+          <div class="px-3 py-3 text-center dark:text-white/90">{{ getDetailValue(stock.distributedBoxesMamta) }}</div>
+          <div class="px-3 py-3 text-center dark:text-white/90">{{ getDetailValue(stock.closingStockBoxesMamta) }}</div>
+
+          <div class="bg-[#CBC02C] px-3 py-3 font-semibold text-slate-900">Wawa</div>
+          <div class="px-3 py-3 text-center dark:text-white/90">{{ getDetailValue(stock.receivedStockBoxesWawa) }}</div>
+          <div class="px-3 py-3 text-center dark:text-white/90">{{ getDetailValue(stock.openingStockBoxesWawa) }}</div>
+          <div class="px-3 py-3 text-center dark:text-white/90">{{ getDetailValue(stock.distributedBoxesWawa) }}</div>
+          <div class="px-3 py-3 text-center dark:text-white/90">{{ getDetailValue(stock.closingStockBoxesWawa) }}</div>
+
+          <div class="bg-[#4D589C] px-3 py-3 font-semibold text-white">RUTF</div>
+          <div class="px-3 py-3 text-center dark:text-white/90">{{ getDetailValue(stock.rutfReceived) }}</div>
+          <div class="px-3 py-3 text-center dark:text-white/90">{{ getDetailValue(stock.rutfOpening) }}</div>
+          <div class="px-3 py-3 text-center dark:text-white/90">{{ getDetailValue(stock.rutfDistributed) }}</div>
+          <div class="px-3 py-3 text-center dark:text-white/90">{{ getDetailValue(stock.rutfClosing) }}</div>
+
+          <div class="bg-slate-200 px-3 py-3 font-semibold text-slate-800 dark:bg-slate-700 dark:text-white">IFA</div>
+          <div class="px-3 py-3 text-center dark:text-white/90">{{ getDetailValue(stock.ifaReceived) }}</div>
+          <div class="px-3 py-3 text-center dark:text-white/90">{{ getDetailValue(stock.ifaOpening) }}</div>
+          <div class="px-3 py-3 text-center dark:text-white/90">{{ getDetailValue(stock.ifaDistributed) }}</div>
+          <div class="px-3 py-3 text-center dark:text-white/90">{{ getDetailValue(stock.ifaClosing) }}</div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div class="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/30">
+          <p class="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Site Information</p>
+          <div class="space-y-2 text-sm text-gray-700 dark:text-gray-200">
+            <div class="flex justify-between gap-3"><span>Province</span><strong>{{ stock.province || '-' }}</strong></div>
+            <div class="flex justify-between gap-3"><span>District</span><strong>{{ stock.district || '-' }}</strong></div>
+            <div class="flex justify-between gap-3"><span>Tehsil</span><strong>{{ stock.tehsil || '-' }}</strong></div>
+            <div class="flex justify-between gap-3"><span>Mobile Site</span><strong>{{ stock.isMobileSite === '1' ? 'Yes' : 'No' }}</strong></div>
+          </div>
+        </div>
+
+        <div class="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/30">
+          <p class="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Remarks</p>
+          <textarea class="h-28 w-full resize-none rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" [value]="stock.remarks || ''" readonly></textarea>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-3 border-t border-gray-200 pt-4 dark:border-gray-800">
+        <app-button size="sm" variant="outline" (btnClick)="closeDetailModal()">Close</app-button>
+        <app-button size="sm" (btnClick)="onEdit(selectedDetailStock)">Edit Stock</app-button>
+      </div>
+    </div>
+  </app-modal>
+
   <app-modal [isOpen]="isDeleteModalOpen" (close)="closeDeleteModal()" className="max-w-[450px] p-6 lg:p-8">
     <div class="flex items-center gap-3 mb-4">
       <i class="fas fa-exclamation-triangle text-2xl text-error-500"></i>
