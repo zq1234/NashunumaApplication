@@ -1,15 +1,26 @@
 <div class="data-table-container">
   
   <!-- Header -->
-  <div class="table-header">
+  <div class="table-header" *ngIf="showHeader">
     <div class="header-left">
-      <div class="header-icon-wrapper">
-        <i class="fas fa-table"></i>
+      <!-- Page Size -->
+      <div class="page-size-wrapper">
+        <label for="data-table-page-size">Rows:</label>
+        <app-select
+          [(ngModel)]="pageSize"
+          [options]="pageSizeOptions.map(s => ({ value: s, label: s }))"
+          (valueChange)="pageSizeChanged($event)"
+          [className]="'page-size'"
+        ></app-select>
       </div>
-      <h2 class="header-title">{{ title }}</h2>
+      <!-- <div class="header-icon-wrapper"> -->
+        <!-- <i class="fas fa-table"></i> -->
+      <!-- </div> -->
+      <!-- <h2 class="header-title">{{ title }}</h2> -->
       <span class="record-chip">
         {{ totalItems }} records
       </span>
+
     </div>
 
     <div class="header-right" *ngIf="showSearch">
@@ -39,7 +50,7 @@
   </div>
 
   <!-- Table -->
-  <div *ngIf="!loading" class="table-wrapper">
+  <div *ngIf="!loading" class="table-wrapper" tabindex="0">
     <table class="data-table">
       <thead>
         <tr>
@@ -67,8 +78,8 @@
         <tr *ngFor="let row of pagedData" class="data-row">
           <!-- Dynamic Columns -->
           <td *ngFor="let col of columns" class="data-cell">
-            <!-- Status Badge -->
-            <span *ngIf="isStatusField(col.field)" 
+            <!-- Status Badge (skip when column is a toggle) -->
+            <span *ngIf="isStatusField(col.field) && getColumnType(col) !== 'toggle'" 
                   class="status-badge"
                   [ngClass]="getStatusClass(row[col.field])">
               <span class="status-dot"></span>
@@ -94,6 +105,19 @@
               {{ formatDate(row[col.field]) }}
             </span>
             
+            <!-- Toggle -->
+            <ng-container *ngIf="getColumnType(col) === 'toggle' && !isBadgeField(col.field)">
+              <div class="toggle-with-label" style="display:flex;align-items:center;gap:0.5rem">
+                <app-switch
+                  [label]="''"
+                  [checked]="isActiveValue(row)"
+                  [disabled]="toggleDisabled || row.__togglePending === true"
+                  (valueChange)="onToggle(row)"
+                ></app-switch>
+                <span class="toggle-label">{{ getStatusText(row[col.field]) }}</span>
+              </div>
+            </ng-container>
+
             <!-- Default Text -->
             <span *ngIf="getColumnType(col) === 'text' && !isStatusField(col.field) && !isBadgeField(col.field)"
                   class="text-cell"
@@ -110,7 +134,7 @@
       class="icon-btn view-btn"
       (click)="view.emit(row)"
       title="View">
-      <i class="fas fa-eye"></i>view
+      <i class="fas fa-eye"></i>
     </button>
 
     <button
@@ -118,7 +142,7 @@
       class="icon-btn edit-btn"
       (click)="edit.emit(row)"
       title="Edit">
-      <i class="fas fa-pen"></i>edit
+      <i class="fas fa-pen"></i>
     </button>
 
     <button
@@ -126,10 +150,25 @@
       class="icon-btn delete-btn"
       (click)="delete.emit(row)"
       title="Delete">
-      <i class="fas fa-trash"></i>delete
+      <i class="fas fa-trash"></i>
     </button>
   </div>
 </td>
+
+          <!-- Block / Unblock button alongside actions -->
+          <!-- <td *ngIf="showActions && (blockField)" class="actions-cell block-cell">
+            <div class="actions-wrapper">
+              <button
+                type="button"
+                class="icon-btn block-btn"
+                (click)="onBlockToggle(row)"
+                [disabled]="blockDisabled"
+                title="Block/Unblock">
+                <i class="fas" [class.fa-user-lock]="isBlocked(row)" [class.fa-user-slash]="!isBlocked(row)"></i>
+                {{ isBlocked(row) ? 'Unblock' : 'Block' }}
+              </button>
+            </div>
+          </td> -->
         </tr>
 
         <!-- No Data Row -->
@@ -155,20 +194,7 @@
     </div>
 
     <div class="footer-right">
-      <!-- Page Size -->
-      <div class="page-size-wrapper">
-        <label for="data-table-page-size">Rows:</label>
-        <select 
-          id="data-table-page-size"
-          class="page-size-select"
-          [(ngModel)]="pageSize"
-          (change)="pageSizeChanged()"
-          aria-label="Select number of rows per page">
-          <option *ngFor="let size of pageSizeOptions" [value]="size">
-            {{ size }}
-          </option>
-        </select>
-      </div>
+      
 
       <!-- Pagination -->
       <div class="pagination-wrapper">

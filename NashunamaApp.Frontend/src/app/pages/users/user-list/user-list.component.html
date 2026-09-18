@@ -3,15 +3,15 @@
 
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div class="flex items-center gap-4">
-      <div>
+      <!-- <div>
         <h1 class="text-2xl font-semibold text-gray-800 dark:text-white/90">
           <i class="fas fa-users text-brand-500 mr-3"></i>User Management
         </h1>
         <p class="mt-1 text-sm text-gray-500 dark:text-gray-400" *ngIf="hasItems">
           Showing {{ startRecord }} - {{ endRecord }} of {{ totalItems }} users
         </p>
-      </div>
-      <div class="flex items-center gap-2 ml-4 px-4 py-2 bg-brand-50 dark:bg-brand-900/20 rounded-full border border-brand-200 dark:border-brand-800">
+      </div> -->
+      <!-- <div class="flex items-center gap-2 ml-4 px-4 py-2 bg-brand-50 dark:bg-brand-900/20 rounded-full border border-brand-200 dark:border-brand-800">
         <i class="fas fa-database text-brand-500 text-sm"></i>
         <span class="text-sm font-medium text-brand-700 dark:text-brand-300">Total:</span>
         <span class="text-lg font-bold text-brand-600 dark:text-brand-400">{{ totalItems }}</span>
@@ -22,15 +22,15 @@
         <span class="text-sm text-brand-400 dark:text-brand-500">
           <i class="fas fa-user-slash mr-1"></i>{{ getInactiveCount() }}
         </span>
-      </div>
+      </div> -->
     </div>
 
     <div class="flex items-center gap-3">
       <app-button size="sm" variant="outline" (btnClick)="exportUsers()" [disabled]="loading || loadingExport">
         @if (loadingExport) {
-          <i class="fas fa-spinner fa-spin mr-2"></i>
+        <i class="fas fa-spinner fa-spin mr-2"></i>
         } @else {
-          <i class="fas fa-file-excel mr-2"></i>
+        <i class="fas fa-file-excel mr-2"></i>
         }
         {{ loadingExport ? 'Exporting...' : 'Export' }}
       </app-button>
@@ -43,14 +43,13 @@
 
   <!-- Alert Component -->
   @if (showAlert) {
-    <app-alert 
-      [isOpen]="showAlert"
-      [variant]="alertVariant" 
-      [title]="alertTitle" 
-      [message]="alertMessage"
-      (closeAlert)="clearAlert()"
-      class="mb-4">
-    </app-alert>
+  <app-alert [isOpen]="showAlert"
+             [variant]="alertVariant"
+             [title]="alertTitle"
+             [message]="alertMessage"
+             (closeAlert)="clearAlert()"
+             class="mb-4">
+  </app-alert>
   }
 
   <!-- Stats Cards -->
@@ -110,12 +109,11 @@
       <!-- Search -->
       <div class="relative">
         <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"></i>
-        <input 
-          type="text" 
-          class="form-control pl-9"
-          placeholder="Search users..."
-          [(ngModel)]="searchTerm"
-          (input)="onSearchChange(searchTerm)">
+        <input type="text"
+               class="form-control pl-9"
+               placeholder="Search users..."
+               [(ngModel)]="searchTerm"
+               (input)="onSearchChange(searchTerm)">
       </div>
 
       <!-- Province -->
@@ -168,50 +166,52 @@
   </app-component-card>
 
   <!-- DataTable Component -->
-  <app-data-table
-    [data]="users"
-    [columns]="columns"
-    [title]="'User Records'"
-    [showSearch]="false"
-    [showActions]="true"
-    [pageSizeOptions]="pageSizeOptions"
-    [defaultPageSize]="pageSize"
-    [serverSidePaging]="true"
-    [serverSideSearch]="true"
-    [totalItems]="totalItems"
-    [loading]="loading"
-    (view)="onView($event)"
-    (edit)="onEdit($event)"
-    (delete)="onDelete($event)"
-    (pageChange)="onPageChange($event)">
+  <app-data-table [data]="users"
+                  [columns]="columns"
+                  [title]="'User Records'"
+                  [showSearch]="false"
+                  [showActions]="true"
+                  [pageSizeOptions]="pageSizeOptions"
+                  [defaultPageSize]="pageSize"
+                  [serverSidePaging]="true"
+                  [serverSideSearch]="true"
+                  [totalItems]="totalItems"
+                  [loading]="loading"
+                  [toggleField]="'isactive'"
+                  [toggleIdField]="'username'"
+                  [toggleDisabled]="loadingStatus"
+                  [blockField]="'isblocked'"
+                  [blockDisabled]="loadingBlock"
+                  (view)="onView($event)"
+                  (edit)="onEdit($event)"
+                  (delete)="onDelete($event)"
+                  (toggle)="onToggleUserStatus($event)"
+                  (block)="onBlockToggle($event)"
+                  (pageChange)="onPageChange($event)">
   </app-data-table>
 
   <!-- ============================================ -->
-  <!-- PROFILE MODAL with Alert for errors -->
+  <!-- PROFILE MODAL -->
   <!-- ============================================ -->
-  <app-modal 
-    [isOpen]="isProfileModalOpen" 
-    (close)="closeProfileModal()" 
-    className="max-w-[700px] p-6 lg:p-8">
+  <app-modal [isOpen]="isProfileModalOpen"
+             (close)="closeProfileModal()"
+             className="max-w-[700px] p-6 lg:p-8">
     <div class="flex items-center gap-3 mb-6">
       <i class="fas fa-user-circle text-brand-500 text-2xl"></i>
       <h3 class="text-xl font-semibold text-gray-900 dark:text-white">User Profile</h3>
     </div>
 
-    <!-- Alert inside Profile Modal -->
     @if (profileError) {
-      <app-alert 
-        [isOpen]="true"
-        variant="error" 
-        title="Error" 
-        [message]="profileError"
-        (closeAlert)="profileError = null"
-        class="mb-4">
-      </app-alert>
+    <app-alert [isOpen]="true"
+               variant="error"
+               title="Error"
+               [message]="profileError"
+               (closeAlert)="profileError = null"
+               class="mb-4">
+    </app-alert>
     }
-    
+
     <div *ngIf="selectedUser" class="space-y-6">
-      <!-- Profile Header -->
       <div class="flex flex-col sm:flex-row items-center sm:items-start gap-6 pb-6 border-b border-gray-200 dark:border-gray-800">
         <div class="flex-shrink-0 w-24 h-24 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white text-3xl font-medium shadow-lg">
           {{ selectedUser.personName.charAt(0) || 'U' }}
@@ -226,7 +226,6 @@
         </div>
       </div>
 
-      <!-- Profile Details -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -293,41 +292,36 @@
   </app-modal>
 
   <!-- ============================================ -->
-  <!-- TRANSFER LOCATION MODAL with Alert for errors -->
+  <!-- TRANSFER LOCATION MODAL -->
   <!-- ============================================ -->
-  <app-modal 
-    [isOpen]="isTransferModalOpen" 
-    (close)="closeTransferModal()" 
-    className="max-w-[600px] p-6 lg:p-8">
+  <app-modal [isOpen]="isTransferModalOpen"
+             (close)="closeTransferModal()"
+             className="max-w-[600px] p-6 lg:p-8">
     <div class="flex items-center gap-3 mb-6">
       <i class="fas fa-exchange-alt text-brand-500 text-xl"></i>
       <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Transfer Location</h3>
     </div>
 
-    <!-- Alert inside Transfer Modal -->
     @if (transferError) {
-      <app-alert 
-        [isOpen]="true"
-        variant="error" 
-        title="Error" 
-        [message]="transferError"
-        (closeAlert)="transferError = null"
-        class="mb-4">
-      </app-alert>
+    <app-alert [isOpen]="true"
+               variant="error"
+               title="Error"
+               [message]="transferError"
+               (closeAlert)="transferError = null"
+               class="mb-4">
+    </app-alert>
     }
     @if (transferSuccess) {
-      <app-alert 
-        [isOpen]="true"
-        variant="success" 
-        title="Success" 
-        [message]="transferSuccess"
-        (closeAlert)="transferSuccess = null"
-        class="mb-4">
-      </app-alert>
+    <app-alert [isOpen]="true"
+               variant="success"
+               title="Success"
+               [message]="transferSuccess"
+               (closeAlert)="transferSuccess = null"
+               class="mb-4">
+    </app-alert>
     }
-    
+
     <div *ngIf="selectedUser" class="space-y-6">
-      <!-- Current Location -->
       <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-800">
         <h5 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
           <i class="fas fa-map-marker-alt text-brand-500 mr-2"></i>Current Location
@@ -351,18 +345,16 @@
           </div>
         </div>
       </div>
-
       <!-- Transfer Form with Dropdowns -->
       <div class="grid grid-cols-1 gap-4">
         <!-- Province Dropdown -->
         <div>
           <label class="form-label">Province <span class="text-error-500">*</span></label>
-          <select 
-            class="form-select"
-            title="Province"
-            [(ngModel)]="transferProvinceName" 
-            (change)="onTransferProvinceChange(transferProvinceName)"
-            [disabled]="loadingTransfer">
+          <select class="form-select"
+                  title="Province"
+                  [(ngModel)]="transferProvinceName"
+                  (change)="onTransferProvinceChange(transferProvinceName)"
+                  [disabled]="loadingTransfer">
             <option [ngValue]="null">Select Province</option>
             <option *ngFor="let p of transferProvinces" [ngValue]="p.province">{{ p.province }}</option>
           </select>
@@ -371,12 +363,11 @@
         <!-- District Dropdown -->
         <div>
           <label class="form-label">District <span class="text-error-500">*</span></label>
-          <select 
-            class="form-select"
-            title="District"
-            [(ngModel)]="transferDistrictName" 
-            (change)="onTransferDistrictChange(transferDistrictName)"
-            [disabled]="!transferProvinceName || loadingTransfer">
+          <select class="form-select"
+                  title="District"
+                  [(ngModel)]="transferDistrictName"
+                  (change)="onTransferDistrictChange(transferDistrictName)"
+                  [disabled]="!transferProvinceName || loadingTransfer">
             <option [ngValue]="null">Select District</option>
             <option *ngFor="let d of transferDistricts" [ngValue]="d.district">{{ d.district }}</option>
           </select>
@@ -385,45 +376,40 @@
         <!-- Tehsil Dropdown -->
         <div>
           <label class="form-label">Tehsil</label>
-          <select 
-            class="form-select"
-            title="Tehsil"
-            [(ngModel)]="transferTehsilName" 
-            (change)="onTransferTehsilChange(transferTehsilName)"
-            [disabled]="!transferDistrictName || loadingTransfer">
+          <select class="form-select"
+                  title="Tehsil"
+                  [(ngModel)]="transferTehsilName"
+                  (change)="onTransferTehsilChange(transferTehsilName)"
+                  [disabled]="!transferDistrictName || loadingTransfer">
             <option [ngValue]="null">Select Tehsil</option>
             <option *ngFor="let t of transferTehsils" [ngValue]="t.tehsil">{{ t.tehsil }}</option>
           </select>
         </div>
 
-        <!-- Site Name Input -->
         <div>
           <label class="form-label">Site Name</label>
-          <input 
-            type="text" 
-            class="form-control" 
-            [(ngModel)]="transferForm.siteName" 
-            placeholder="Enter site name"
-            [disabled]="loadingTransfer">
+          <input type="text"
+                 class="form-control"
+                 [(ngModel)]="transferForm.siteName"
+                 placeholder="Enter site name"
+                 [disabled]="loadingTransfer">
         </div>
       </div>
     </div>
 
     <div class="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-200 dark:border-gray-800">
-      <button 
-        class="btn btn-outline btn-sm" 
-        (click)="closeTransferModal()"
-        [disabled]="loadingTransfer">
+      <button class="btn btn-outline btn-sm"
+              (click)="closeTransferModal()"
+              [disabled]="loadingTransfer">
         <i class="fas fa-times mr-1"></i> Cancel
       </button>
-      <button 
-        class="btn btn-primary btn-sm" 
-        (click)="handleTransferSubmit()"
-        [disabled]="loadingTransfer">
+      <button class="btn btn-primary btn-sm"
+              (click)="handleTransferSubmit()"
+              [disabled]="loadingTransfer">
         @if (loadingTransfer) {
-          <i class="fas fa-spinner fa-spin mr-1"></i>
+        <i class="fas fa-spinner fa-spin mr-1"></i>
         } @else {
-          <i class="fas fa-exchange-alt mr-1"></i>
+        <i class="fas fa-exchange-alt mr-1"></i>
         }
         {{ loadingTransfer ? 'Transferring...' : 'Transfer' }}
       </button>
@@ -431,46 +417,43 @@
   </app-modal>
 
   <!-- ============================================ -->
-  <!-- CONFIRM MODAL with Alert for errors -->
+  <!-- CONFIRM MODAL -->
   <!-- ============================================ -->
-  <app-modal 
-    [isOpen]="isConfirmModalOpen" 
-    (close)="closeConfirmModal()" 
-    className="max-w-[450px] p-6 lg:p-8">
+  <app-modal [isOpen]="isConfirmModalOpen"
+             (close)="closeConfirmModal()"
+             className="max-w-[450px] p-6 lg:p-8">
     <div class="flex items-center gap-3 mb-4">
-      <i class="fas fa-exclamation-triangle text-2xl" [class.text-error-500]="confirmModalData.isDanger" [class.text-warning-500]="!confirmModalData.isDanger"></i>
+      <i class="fas fa-exclamation-triangle text-2xl"
+         [class.text-error-500]="confirmModalData.isDanger"
+         [class.text-warning-500]="!confirmModalData.isDanger"></i>
       <h3 class="text-xl font-semibold text-gray-900 dark:text-white">{{ confirmModalData.title }}</h3>
     </div>
 
-    <!-- Alert inside Confirm Modal -->
     @if (confirmError) {
-      <app-alert 
-        [isOpen]="true"
-        variant="error" 
-        title="Error" 
-        [message]="confirmError"
-        (closeAlert)="confirmError = null"
-        class="mb-4">
-      </app-alert>
+    <app-alert [isOpen]="true"
+               variant="error"
+               title="Error"
+               [message]="confirmError"
+               (closeAlert)="confirmError = null"
+               class="mb-4">
+    </app-alert>
     }
 
     <p class="text-sm text-gray-600 dark:text-gray-400">{{ confirmModalData.message }}</p>
     <div class="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-200 dark:border-gray-800">
-      <button 
-        class="btn btn-outline btn-sm" 
-        (click)="closeConfirmModal()"
-        [disabled]="loadingStatus || loadingBlock">
+      <button class="btn btn-outline btn-sm"
+              (click)="closeConfirmModal()"
+              [disabled]="loadingStatus || loadingBlock">
         <i class="fas fa-times mr-1"></i> Cancel
       </button>
-      <button 
-        class="btn btn-sm" 
-        [ngClass]="confirmModalData.isDanger ? 'btn-danger' : 'btn-primary'"
-        (click)="handleConfirmAction()"
-        [disabled]="loadingStatus || loadingBlock">
+      <button class="btn btn-sm"
+              [ngClass]="confirmModalData.isDanger ? 'btn-danger' : 'btn-primary'"
+              (click)="handleConfirmAction()"
+              [disabled]="loadingStatus || loadingBlock">
         @if (loadingStatus || loadingBlock) {
-          <i class="fas fa-spinner fa-spin mr-1"></i>
+        <i class="fas fa-spinner fa-spin mr-1"></i>
         } @else {
-          <i class="fas fa-check mr-1"></i>
+        <i class="fas fa-check mr-1"></i>
         }
         {{ (loadingStatus || loadingBlock) ? 'Processing...' : confirmModalData.confirmText }}
       </button>

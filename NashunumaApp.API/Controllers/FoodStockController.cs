@@ -25,10 +25,7 @@ namespace NashunumaApp.API.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetFoodStocks(
-            [FromQuery] int pageNumber = 1,
-            [FromQuery] int pageSize = 10,
-            [FromQuery] string? searchTerm = null)
+        public async Task<IActionResult> GetFoodStocks([FromQuery] int pageNumber = 1,[FromQuery] int pageSize = 10,[FromQuery] string? searchTerm = null)
         {
             try
             {
@@ -95,9 +92,6 @@ namespace NashunumaApp.API.Controllers
             }
         }
 
-        
-        /// Gets summary statistics
-        /// </summary>
         [HttpGet("summary")]
         public async Task<IActionResult> GetSummaryStats()
         {
@@ -125,9 +119,6 @@ namespace NashunumaApp.API.Controllers
             }
         }
 
-        
-        /// Exports food stocks
-        /// </summary>
         [HttpGet("export")]
         public async Task<IActionResult> ExportFoodStocks(
             [FromQuery] string? searchTerm = null,
@@ -161,9 +152,6 @@ namespace NashunumaApp.API.Controllers
             }
         }
 
-        
-        /// Deletes a food stock
-        /// </summary>
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteFoodStock(int id)
         {
@@ -195,8 +183,6 @@ namespace NashunumaApp.API.Controllers
         }
 
         
-        /// Gets missing stock dates for the current user's site
-        /// </summary>
         [HttpGet("missing-dates")]
         public async Task<IActionResult> GetMissingStockDates()
         {
@@ -248,8 +234,6 @@ namespace NashunumaApp.API.Controllers
         }
 
         
-        /// Saves stock information for the current user's site
-        /// </summary>
         [HttpPost("save")]
         public async Task<IActionResult> SaveStockInformation([FromBody] SaveStockInformationRequest request)
         {
@@ -311,8 +295,6 @@ namespace NashunumaApp.API.Controllers
         }
 
         
-        /// Gets stock history for the current user's site
-        /// </summary>
         [HttpGet("history")]
         public async Task<IActionResult> GetSiteStockHistory()
         {
@@ -352,8 +334,6 @@ namespace NashunumaApp.API.Controllers
         }
 
         
-        /// Checks if stock exists for a specific date
-        /// </summary>
         [HttpGet("exists")]
         public async Task<IActionResult> CheckStockExists([FromQuery] string date)
         {

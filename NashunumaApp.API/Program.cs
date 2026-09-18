@@ -123,6 +123,7 @@ try
     builder.Services.AddScoped<IUserManagementService, UserManagementService>();
     builder.Services.AddScoped<ILocationRepository, LocationRepository>();
     builder.Services.AddScoped<ILocationService, LocationService>();
+    builder.Services.AddScoped<IMotherTrimisterService, MotherTrimisterService>();
 
     // AutoMapper
     builder.Services.AddAutoMapper(typeof(MappingProfile));

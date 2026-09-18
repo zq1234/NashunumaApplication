@@ -246,10 +246,14 @@ namespace NashunumaApp.Application.Services
                 _logger.LogDebug("Using entered date: {EnteredOn} for SiteId: {SiteId}", enteredOn, request.SiteId);
 
                 // Parse the entered date
-                if (!DateTime.TryParseExact(enteredOn, "dd-MM-yyyy", null, DateTimeStyles.None, out var targetDate))
+                var formats = new[] { "yyyy-MM-dd", "dd-MM-yyyy" };
+
+                if (!DateTime.TryParseExact( enteredOn,formats, CultureInfo.InvariantCulture, DateTimeStyles.None, out var targetDate))
                 {
-                    _logger.LogWarning("Invalid date format: {EnteredOn} for SiteId: {SiteId}", enteredOn, request.SiteId);
-                    return ApiResponse<FoodStockDto>.Failure("Invalid date format. Please use dd-MM-yyyy format.");
+                    _logger.LogWarning("Invalid date format: {EnteredOn} for SiteId: {SiteId}",enteredOn,request.SiteId);
+
+                    return ApiResponse<FoodStockDto>.Failure(
+                        "Invalid date format. Please use yyyy-MM-dd or dd-MM-yyyy.");
                 }
 
                 // Check if stock already exists for this date

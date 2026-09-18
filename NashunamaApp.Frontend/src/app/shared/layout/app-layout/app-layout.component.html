@@ -17,7 +17,9 @@
     <div class="mx-auto max-w-[1600px] p-4 md:p-6">
       <app-missing-stock-notification></app-missing-stock-notification>
       <div class="space-y-5">
-        <router-outlet></router-outlet>
+        <app-component-card>
+          <router-outlet></router-outlet>
+        </app-component-card>
       </div>
     </div>
   </div>

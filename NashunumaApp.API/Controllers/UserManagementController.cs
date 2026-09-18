@@ -83,6 +83,11 @@ namespace NashunumaApp.API.Controllers
         [HttpPatch("users/{username}/status")]
         public async Task<IActionResult> ToggleUserStatus(string username, [FromBody] bool isActive)
         {
+            
+            if (string.IsNullOrWhiteSpace(username) || username.Trim().ToLower() == "undefined")
+            {
+                return BadRequest(new { isSuccess = false, message = "Invalid username" });
+            }
             var modifiedBy = User.FindFirstValue("username") ?? User.FindFirstValue(ClaimTypes.Name) ?? "System";
 
             var result = await _userManagementService.ToggleUserStatusAsync(username, isActive, modifiedBy);
@@ -120,6 +125,26 @@ namespace NashunumaApp.API.Controllers
                 {
                     return BadRequest(result);
                 }
+                return BadRequest(result);
+            }
+
+            return Ok(result);
+        }
+
+        [HttpPatch("users/{username}/unblock")]
+        public async Task<IActionResult> UnblockUser(string username)
+        {
+            var modifiedBy = User.FindFirstValue("username")
+                             ?? User.FindFirstValue(ClaimTypes.Name)
+                             ?? "System";
+
+            var result = await _userManagementService.UnblockUserAsync(username, modifiedBy);
+
+            if (!result.IsSuccess)
+            {
+                if (result.Message.Contains("not found"))
+                    return NotFound(result);
+
                 return BadRequest(result);
             }
 

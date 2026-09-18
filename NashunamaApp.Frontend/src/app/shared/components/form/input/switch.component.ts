@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges } from '@angular/core';
 
 @Component({
   selector: 'app-switch',
@@ -30,10 +30,14 @@ import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
     </label>
   `
 })
-export class SwitchComponent {
+export class SwitchComponent implements OnInit, OnChanges {
 
   @Input() label!: string;
   @Input() defaultChecked: boolean = false;
+  /** Controlled checked input. If provided (not null), the component acts as a controlled input and
+   *  will not update its internal state on click — it will emit valueChange and rely on the parent
+   *  to update the checked value. */
+  @Input() checked: boolean | null = null;
   @Input() disabled: boolean = false;
   @Input() color: 'blue' | 'gray' = 'blue';
 
@@ -42,13 +46,23 @@ export class SwitchComponent {
   isChecked: boolean = false;
 
   ngOnInit() {
-    this.isChecked = this.defaultChecked;
+    this.isChecked = this.checked !== null ? this.checked : this.defaultChecked;
+  }
+
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes['checked'] && this.checked !== null) {
+      this.isChecked = this.checked;
+    }
   }
 
   handleToggle() {
     if (this.disabled) return;
-    this.isChecked = !this.isChecked;
-    this.valueChange.emit(this.isChecked);
+    const next = !this.isChecked;
+    // If controlled (checked input provided), do not update internal state here — parent will update
+    if (this.checked === null) {
+      this.isChecked = next;
+    }
+    this.valueChange.emit(next);
   }
 
   get switchColors() {

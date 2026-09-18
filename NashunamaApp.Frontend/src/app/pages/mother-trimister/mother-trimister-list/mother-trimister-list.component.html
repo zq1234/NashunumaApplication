@@ -1,0 +1,39 @@
+<div class="space-y-6">
+  <app-page-breadcrumb [pageTitle]="'MotherTrimister Records'"></app-page-breadcrumb>
+
+  <!-- <app-component-card> -->
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <!-- <h1 class="text-2xl font-semibold text-gray-800 dark:text-white/90">
+          <i class="fas fa-list text-brand-500 mr-3"></i>MotherTrimister Records
+        </h1> -->
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Showing {{ items.length }} of {{ totalCount }} records</p>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <div class="relative">
+          <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"></i>
+          <input type="text" class="h-11 w-full rounded-lg border border-gray-300 bg-transparent pl-9 pr-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800" 
+          placeholder="Search Batch Number" [(ngModel)]="batchNumber">
+        </div>
+        <button class="btn btn-primary" (click)="search()">Search</button>
+        <!-- <button class="btn btn-outline" (click)="load()">Refresh</button> -->
+      </div>
+    </div>
+
+    <div *ngIf="loading">Loading...</div>
+
+    <app-data-table
+      [data]="items"
+      [columns]="columns"
+      [loading]="loading"
+      [defaultPageSize]="pageSize"
+      [serverSidePaging]="true"
+      [totalItems]="totalCount"
+      [showActions]="false"
+      (pageChange)="onPageChange($event)"
+    ></app-data-table>
+
+    <!-- <div *ngIf="!loading && items.length === 0" class="text-sm text-muted mt-4">No records</div>
+  </app-component-card> -->
+</div>

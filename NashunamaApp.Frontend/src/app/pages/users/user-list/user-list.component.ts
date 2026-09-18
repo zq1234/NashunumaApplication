@@ -15,6 +15,7 @@ import { AlertComponent } from '@shared/components/ui/alert/alert.component';
 import { PageBreadcrumbComponent } from '@shared/components/common/page-breadcrumb/page-breadcrumb.component';
 import { ComponentCardComponent } from '@shared/components/common/component-card/component-card.component';
 import { ButtonComponent } from '@shared/components/ui/button/button.component';
+// import { SelectComponent } from '@shared/components/form/select/select.component';
 
 @Component({
   selector: 'app-user-list',
@@ -28,6 +29,7 @@ import { ButtonComponent } from '@shared/components/ui/button/button.component';
     AlertComponent,
     PageBreadcrumbComponent,
     ComponentCardComponent,
+    // SelectComponent,
     ButtonComponent
   ],
   templateUrl: './user-list.component.html',
@@ -37,7 +39,7 @@ export class UserListComponent implements OnInit, OnDestroy {
   // Data
   users: UserDto[] = [];
   totalItems = 0;
-  
+
   // UI State
   loading = false;
   loadingTransfer = false;
@@ -47,19 +49,19 @@ export class UserListComponent implements OnInit, OnDestroy {
   error: string | null = null;
   success: string | null = null;
   loadingLocations = false;
-  
+
   // Alert
   alertVariant: 'success' | 'error' | 'warning' | 'info' = 'info';
   alertTitle = '';
   alertMessage = '';
   showAlert = false;
-  
+
   // Modal-specific errors
   profileError: string | null = null;
   transferError: string | null = null;
   transferSuccess: string | null = null;
   confirmError: string | null = null;
-  
+
   // Filters
   searchTerm = '';
   selectedProvinceName: string | null = null;
@@ -67,36 +69,36 @@ export class UserListComponent implements OnInit, OnDestroy {
   selectedTehsilName: string | null = null;
   userType = '';
   isActive: boolean | null = null;
-  
+
   // Dropdown options for filters
   provinces: Province[] = [];
   districts: District[] = [];
   tehsils: Tehsil[] = [];
   userTypes: string[] = ['Admin', 'User', 'Manager', 'Coordinator', 'Supervisor'];
-  
+
   // Display values for filters
   provinceDisplay = '';
   districtDisplay = '';
   tehsilDisplay = '';
-  
+
   // Pagination
   pageNumber = 1;
   pageSize = 10;
-  pageSizeOptions = [5, 10, 25, 50, 100];
-  
+  pageSizeOptions = [ 10, 25, 50, 100];
+
   // Search debounce
   private searchSubject = new Subject<string>();
   private destroy$ = new Subject<void>();
-  
+
   // Modal states
   isProfileModalOpen = false;
   isTransferModalOpen = false;
   isConfirmModalOpen = false;
   selectedUser: UserDto | null = null;
-  
+
   // Transfer form - using LocationHelper
   transferForm: UpdateUserLocationDto = LocationHelper.createDefaultUpdateDto();
-  
+
   // Transfer location dropdown data
   transferProvinces: Province[] = [];
   transferDistricts: District[] = [];
@@ -104,7 +106,7 @@ export class UserListComponent implements OnInit, OnDestroy {
   transferProvinceName: string | null = null;
   transferDistrictName: string | null = null;
   transferTehsilName: string | null = null;
-  
+
   // Confirm modal data
   confirmModalData = {
     title: '',
@@ -113,7 +115,7 @@ export class UserListComponent implements OnInit, OnDestroy {
     isDanger: false,
     action: '' as 'toggle' | 'block' | 'delete' | null
   };
-  
+
   // Column Definitions for DataTableComponent
   columns: DataTableColumn[] = [
     { field: 'srNo', header: 'S.No', sortable: false, width: '60px', type: 'number' },
@@ -126,8 +128,8 @@ export class UserListComponent implements OnInit, OnDestroy {
     { field: 'district', header: 'District', sortable: true, width: '120px' },
     { field: 'tehsil', header: 'Tehsil', sortable: true, width: '120px' },
     { field: 'siteName', header: 'Site', sortable: true, width: '150px' },
-    { field: 'usertype', header: 'Type', sortable: true, width: '100px', type: 'badge' },
-    { field: 'isactive', header: 'Status', sortable: true, width: '100px', type: 'status' }
+    //{ field: 'usertype', header: 'Type', sortable: true, width: '100px', type: 'badge' },
+    { field: 'isactive', header: 'Status', sortable: true, width: '140px', type: 'toggle' }
   ];
 
   constructor(
@@ -171,7 +173,7 @@ export class UserListComponent implements OnInit, OnDestroy {
     this.alertTitle = title;
     this.alertMessage = message;
     this.showAlert = true;
-    
+
     setTimeout(() => {
       this.showAlert = false;
     }, 5000);
@@ -199,7 +201,7 @@ export class UserListComponent implements OnInit, OnDestroy {
 
   loadLocationData(): void {
     this.loadingLocations = true;
-    
+
     const cachedProvinces = this.locationService.getCachedProvinces();
     if (cachedProvinces && cachedProvinces.length > 0) {
       this.provinces = cachedProvinces;
@@ -257,7 +259,7 @@ export class UserListComponent implements OnInit, OnDestroy {
       this.provinceDisplay = provinceName;
       this.loadDistrictsForFilter(provinceName);
     }
-    
+
     this.pageNumber = 1;
     this.loadUsers();
   }
@@ -291,7 +293,7 @@ export class UserListComponent implements OnInit, OnDestroy {
       this.districtDisplay = districtName;
       this.loadTehsilsForFilter(districtName);
     }
-    
+
     this.pageNumber = 1;
     this.loadUsers();
   }
@@ -331,18 +333,18 @@ export class UserListComponent implements OnInit, OnDestroy {
     this.transferForm = LocationHelper.toUpdateDto(user);
     this.transferError = null;
     this.transferSuccess = null;
-    
+
     this.transferProvinceName = user.province || null;
     this.transferDistrictName = user.district || null;
     this.transferTehsilName = user.tehsil || null;
-    
+
     if (this.transferProvinceName) {
       this.loadTransferDistricts(this.transferProvinceName);
     }
     if (this.transferDistrictName) {
       this.loadTransferTehsils(this.transferDistrictName);
     }
-    
+
     this.isTransferModalOpen = true;
   }
 
@@ -391,7 +393,7 @@ export class UserListComponent implements OnInit, OnDestroy {
     this.transferDistricts = [];
     this.transferTehsils = [];
     this.transferError = null;
-    
+
     this.transferForm = {
       ...this.transferForm,
       province: provinceName || '',
@@ -409,7 +411,7 @@ export class UserListComponent implements OnInit, OnDestroy {
     this.transferTehsilName = null;
     this.transferTehsils = [];
     this.transferError = null;
-    
+
     this.transferForm = {
       ...this.transferForm,
       district: districtName || '',
@@ -444,11 +446,10 @@ export class UserListComponent implements OnInit, OnDestroy {
 
   handleTransferSubmit(): void {
     if (!this.selectedUser) return;
-    
-    // Clear previous messages
+
     this.transferError = null;
     this.transferSuccess = null;
-    
+
     const location = LocationHelper.fromUser(this.selectedUser);
     if (!location.province) {
       this.transferError = 'Please select a province';
@@ -458,16 +459,15 @@ export class UserListComponent implements OnInit, OnDestroy {
       this.transferError = 'Please select a district';
       return;
     }
-    
+
     this.loadingTransfer = true;
-    
+
     this.userService.transferUserLocation(this.selectedUser.username, this.transferForm)
       .pipe(finalize(() => this.loadingTransfer = false))
       .subscribe({
         next: (response: ApiResponse<UserDto>) => {
           if (ApiResponseHelper.isSuccess(response)) {
             this.transferSuccess = response.message || 'Location transferred successfully';
-            // Close modal after success
             setTimeout(() => {
               this.closeTransferModal();
               this.loadUsers();
@@ -539,6 +539,13 @@ export class UserListComponent implements OnInit, OnDestroy {
     return this.users.filter(user => user.usertype?.toLowerCase() === 'admin').length;
   }
 
+  private isUserBlocked(user: any): boolean {
+    const value = user?.isblocked ?? user?.isBlocked ?? user?.blocked;
+    if (value === null || value === undefined) return false;
+    const str = String(value).toLowerCase();
+    return str === '1' || str === 'true' || str === 'blocked' || str === 'yes';
+  }
+
   // ============================================
   // Event Handlers
   // ============================================
@@ -552,7 +559,16 @@ export class UserListComponent implements OnInit, OnDestroy {
   }
 
   onDelete(user: UserDto): void {
-    this.blockUser(user);
+    this.selectedUser = user;
+    this.confirmError = null;
+    this.confirmModalData = {
+      title: 'Delete User',
+      message: `Are you sure you want to delete user "${user.personName}"? This action cannot be undone.`,
+      confirmText: 'Yes, Delete',
+      isDanger: true,
+      action: 'delete'
+    };
+    this.isConfirmModalOpen = true;
   }
 
   onSearchChange(term: string): void {
@@ -588,6 +604,107 @@ export class UserListComponent implements OnInit, OnDestroy {
   }
 
   // ============================================
+  // Toggle Status (Active/Inactive) - direct
+  // ============================================
+
+  onToggleUserStatus(payload: any): void {
+    // Support two payload shapes:
+    // 1) UserDto (legacy) => payload.username, payload.isactive
+    // 2) { id, row, active } emitted by DataTable => id = username, active = desired state
+    let username: string | undefined;
+    let newStatus: boolean;
+    let targetUser: any = null;
+
+    if (payload && typeof payload === 'object' && ('id' in payload) && ('active' in payload)) {
+      username = payload.id as string;
+      newStatus = Boolean(payload.active);
+      targetUser = payload.row ?? null;
+    } else {
+      targetUser = payload;
+      username = payload?.username;
+      const isCurrentlyActive = payload?.isactive === '1' || payload?.isactive === 'true';
+      newStatus = !isCurrentlyActive;
+    }
+
+    if (!username) {
+      this.showError('Invalid user identifier for status toggle');
+      return;
+    }
+
+    // Optimistic UI update if we have the user in list
+    const userIndex = this.users.findIndex(u => u.username === username);
+    const previousValue: string | undefined = userIndex !== -1 ? this.users[userIndex].isactive : undefined;
+    if (userIndex !== -1) this.users[userIndex].isactive = newStatus ? '1' : '0';
+
+    this.loadingStatus = true;
+    this.clearAlert();
+
+    this.userService.toggleUserStatus(username, newStatus)
+      .pipe(finalize(() => (this.loadingStatus = false)))
+      .subscribe({
+        next: (response: ApiResponse<boolean>) => {
+          // clear pending flag
+          if (userIndex !== -1) delete (this.users[userIndex] as any).__togglePending;
+
+          if (ApiResponseHelper.isSuccess(response)) {
+            this.showSuccess(
+              response.message || `User ${newStatus ? 'activated' : 'deactivated'} successfully`
+            );
+            // keep optimistic change
+          } else {
+            // revert optimistic
+            if (userIndex !== -1) this.users[userIndex].isactive = previousValue ?? '0';
+            const errorMsg = response.errors?.length
+              ? response.errors.join(', ')
+              : response.message;
+            this.showError(errorMsg || 'Failed to update user status');
+          }
+        },
+        error: (error) => {
+          // clear pending flag and revert
+          if (userIndex !== -1) {
+            delete (this.users[userIndex] as any).__togglePending;
+            this.users[userIndex].isactive = previousValue ?? '0';
+          }
+          this.showError('Error updating user status: ' + (error?.message ?? String(error)));
+        }
+      });
+  }
+
+  // ============================================
+  // Block / Unblock User (from DataTable)
+  // ============================================
+
+  onBlockToggle(payload: any): void {
+    // payload can be UserDto or { id, row, blocked }
+    let target: any;
+    if (payload && typeof payload === 'object' && ('id' in payload) && ('blocked' in payload)) {
+      target = payload.row ?? null;
+    } else {
+      target = payload;
+    }
+
+    if (!target) {
+      this.showError('Invalid user for block/unblock action');
+      return;
+    }
+
+    const currentlyBlocked = this.isUserBlocked(target);
+    this.selectedUser = target;
+    this.confirmError = null;
+    this.confirmModalData = {
+      title: currentlyBlocked ? 'Unblock User' : 'Block User',
+      message: currentlyBlocked
+        ? `Are you sure you want to unblock user "${target.personName}"? They will regain access.`
+        : `Are you sure you want to block user "${target.personName}"? They will lose access.`,
+      confirmText: currentlyBlocked ? 'Yes, Unblock' : 'Yes, Block',
+      isDanger: !currentlyBlocked,
+      action: 'block'
+    };
+    this.isConfirmModalOpen = true;
+  }
+
+  // ============================================
   // Profile Modal
   // ============================================
 
@@ -610,7 +727,7 @@ export class UserListComponent implements OnInit, OnDestroy {
   toggleUserStatus(user: UserDto): void {
     const isActive = user.isactive === '1' || user.isactive === 'true';
     const action = isActive ? 'deactivate' : 'activate';
-    
+
     this.selectedUser = user;
     this.confirmError = null;
     this.confirmModalData = {
@@ -619,19 +736,6 @@ export class UserListComponent implements OnInit, OnDestroy {
       confirmText: `Yes, ${action}`,
       isDanger: false,
       action: 'toggle'
-    };
-    this.isConfirmModalOpen = true;
-  }
-
-  blockUser(user: UserDto): void {
-    this.selectedUser = user;
-    this.confirmError = null;
-    this.confirmModalData = {
-      title: 'Block User',
-      message: `Are you sure you want to block user "${user.personName}"? This action cannot be undone.`,
-      confirmText: 'Yes, Block',
-      isDanger: true,
-      action: 'block'
     };
     this.isConfirmModalOpen = true;
   }
@@ -649,7 +753,7 @@ export class UserListComponent implements OnInit, OnDestroy {
       this.loadingStatus = true;
       this.confirmError = null;
       const isActive = this.selectedUser.isactive === '1' || this.selectedUser.isactive === 'true';
-      
+
       this.userService.toggleUserStatus(this.selectedUser.username, !isActive)
         .pipe(finalize(() => this.loadingStatus = false))
         .subscribe({
@@ -667,27 +771,39 @@ export class UserListComponent implements OnInit, OnDestroy {
             this.confirmError = 'Error updating user status: ' + error.message;
           }
         });
+
     } else if (this.confirmModalData.action === 'block') {
+      const currentlyBlocked = this.isUserBlocked(this.selectedUser);
       this.loadingBlock = true;
       this.confirmError = null;
-      
-      this.userService.blockUser(this.selectedUser.username)
+
+      const request$ = currentlyBlocked
+        ? this.userService.unblockUser(this.selectedUser.username)
+        : this.userService.blockUser(this.selectedUser.username);
+
+      request$
         .pipe(finalize(() => this.loadingBlock = false))
         .subscribe({
           next: (response: ApiResponse<boolean>) => {
             if (ApiResponseHelper.isSuccess(response)) {
-              this.showSuccess(response.message || 'User blocked successfully');
+              this.showSuccess(
+                response.message || `User ${currentlyBlocked ? 'unblocked' : 'blocked'} successfully`
+              );
               this.closeConfirmModal();
               this.loadUsers();
             } else {
               const errorMsg = response.errors?.length ? response.errors.join(', ') : response.message;
-              this.confirmError = errorMsg || 'Failed to block user';
+              this.confirmError = errorMsg || `Failed to ${currentlyBlocked ? 'unblock' : 'block'} user`;
             }
           },
           error: (error) => {
-            this.confirmError = 'Error blocking user: ' + error.message;
+            this.confirmError = `Error ${currentlyBlocked ? 'unblocking' : 'blocking'} user: ` + error.message;
           }
         });
+
+    } else if (this.confirmModalData.action === 'delete') {
+      // Placeholder — implement a delete endpoint if needed
+      this.closeConfirmModal();
     }
   }
 
@@ -722,7 +838,7 @@ export class UserListComponent implements OnInit, OnDestroy {
   exportUsers(): void {
     this.loadingExport = true;
     this.clearAlert();
-    
+
     const filters = {
       searchTerm: this.searchTerm || undefined,
       province: this.provinceDisplay || undefined,

@@ -1,8 +1,9 @@
 <div class="select2-wrap">
-  <select
+  <select #selectEl
     class="select2-select h-11 w-full appearance-none rounded-xl border border-slate-300 bg-white px-4 py-2.5 pr-10 text-sm text-slate-700 shadow-sm placeholder:text-slate-400 transition focus:border-indigo-300 focus:outline-none focus:ring-4 focus:ring-indigo-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:placeholder:text-slate-400 dark:focus:border-indigo-500 dark:focus:ring-indigo-500/15
       {{ value ? 'text-slate-800 dark:text-white/90' : 'text-slate-400 dark:text-slate-400' }} {{ className }}"
     [value]="value"
+    [attr.multiple]="multiple ? true : null"
     (change)="onChange($event)"
   >
   <!-- Placeholder option -->
@@ -15,12 +16,10 @@
     {{ placeholder }}
   </option>
   <!-- Map over options -->
-  @for (option of options; track $index) {
-  <option
+  <option *ngFor="let option of options; let i = index"
     [value]="option.value"
     class="text-gray-700 dark:bg-gray-900 dark:text-gray-400"
   >
     {{ option.label }}
   </option>
-  }
 </select>

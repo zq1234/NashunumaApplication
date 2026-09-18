@@ -11,10 +11,10 @@ public partial class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     }
 
     public virtual DbSet<NthUser> NthUsers { get; set; }
-    //public virtual DbSet<NthMotherInformation> NthMotherInformations { get; set; }
-    //public virtual DbSet<NthMotherTrimister> NthMotherTrimisters { get; set; }
-    //public virtual DbSet<NthChildInformation> NthChildInformations { get; set; }
-    //public virtual DbSet<NthChildVisitDetail> NthChildVisitDetails { get; set; }
+    public virtual DbSet<NthMotherInformation> NthMotherInformations { get; set; }
+    public virtual DbSet<NthMotherTrimister> NthMotherTrimisters { get; set; }
+    public virtual DbSet<NthChildInformation> NthChildInformations { get; set; }
+    public virtual DbSet<NthChildVisitDetail> NthChildVisitDetails { get; set; }
     //public virtual DbSet<NthGeoLocation> NthGeoLocations { get; set; }
     //public virtual DbSet<NthAdolescenceChildVisitDetail> NthAdolescenceChildVisitDetails { get; set; }
     //public virtual DbSet<NthNadraChildVerification> NthNadraChildVerifications { get; set; }

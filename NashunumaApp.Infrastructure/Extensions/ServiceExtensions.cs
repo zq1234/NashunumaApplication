@@ -43,9 +43,9 @@ namespace NashunumaApp.Infrastructure.Extensions
             {
                 options.UseOracle(connectionString, oracleOptions =>
                 {
-                    oracleOptions.CommandTimeout(60);
+                    oracleOptions.CommandTimeout(360);
                 });
-
+               
                 // Add interceptors from service provider
                 var dbLoggingInterceptor = serviceProvider.GetService<DbLoggingInterceptor>();
                 var auditInterceptor = serviceProvider.GetService<AuditInterceptor>();
@@ -190,7 +190,7 @@ namespace NashunumaApp.Infrastructure.Extensions
             services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
             services.AddScoped<IFoodStockRepository, FoodStockRepository>();
             services.AddScoped<IUserManagementRepository, UserManagementRepository>();
-
+            services.AddScoped<IMotherTrimisterRepository, MotherTrimisterRepository>();
             Log.Information(" Repositories registered");
 
             // ============================================================

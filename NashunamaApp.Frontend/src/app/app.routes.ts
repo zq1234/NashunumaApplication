@@ -92,6 +92,13 @@ export const routes: Routes = [
         ]
       },
 
+      // MotherTrimister Records (lookup controller page)
+      {
+        path: 'mother-trimister',
+        loadComponent: () => import('./pages/mother-trimister/mother-trimister-list/mother-trimister-list.component').then(m => m.MotherTrimisterListComponent),
+        title: 'MotherTrimister Records'
+      },
+
       // Profile
       {
         path: 'profile',

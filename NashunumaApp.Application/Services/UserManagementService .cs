@@ -233,6 +233,40 @@ namespace NashunumaApp.Application.Services
             }
         }
 
+        public async Task<ApiResponse<bool>> UnblockUserAsync(string username, string modifiedBy)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(username))
+                {
+                    return ApiResponse<bool>.Failure("Username is required");
+                }
+
+                if (string.IsNullOrWhiteSpace(modifiedBy))
+                {
+                    return ApiResponse<bool>.Failure("Modified by user is required");
+                }
+
+                // Prevent blocking self
+                if (username == modifiedBy)
+                {
+                    return ApiResponse<bool>.Failure("You cannot block yourself");
+                }
+
+                var blocked = await _userManagementRepository.UnblockUserAsync(username, modifiedBy);
+
+                if (!blocked)
+                {
+                    return ApiResponse<bool>.Failure($"User '{username}' not found");
+                }
+
+                return ApiResponse<bool>.Success(true, "User blocked successfully");
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<bool>.Failure($"Failed to block user: {ex.Message}");
+            }
+        }
         public async Task<ApiResponse<PaginatedResponse<UserDto>>> GetUsersByLocationAsync(
             string? province = null,
             string? district = null,

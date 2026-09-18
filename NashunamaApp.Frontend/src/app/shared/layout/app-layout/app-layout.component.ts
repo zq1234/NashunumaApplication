@@ -6,6 +6,7 @@ import { AppSidebarComponent } from '../app-sidebar/app-sidebar.component';
 import { BackdropComponent } from '../backdrop/backdrop.component';
 import { NavigationEnd, Router, RouterModule } from '@angular/router';
 import { MissingStockNotificationComponent } from '@shared/components/missing-stock-notification/missing-stock-notification.component';
+import { ComponentCardComponent } from '@shared/components/common/component-card/component-card.component';
 import { AppHeaderComponent } from '../app-header/app-header.component';
 
 @Component({
@@ -16,7 +17,8 @@ import { AppHeaderComponent } from '../app-header/app-header.component';
     MissingStockNotificationComponent,
     AppHeaderComponent,
     AppSidebarComponent,
-    BackdropComponent
+    BackdropComponent,
+    ComponentCardComponent
   ],
   templateUrl: './app-layout.component.html',
 })

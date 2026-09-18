@@ -22,6 +22,7 @@ namespace NashunumaApp.Domain.Interfaces
             decimal? siteId, string siteName, string modifiedBy);
         Task<bool> ToggleUserStatusAsync(string username, bool isActive, string modifiedBy);
         Task<bool> BlockUserAsync(string username, string modifiedBy);
+        Task<bool> UnblockUserAsync(string username, string modifiedBy);
         Task<(List<UserWithLocationDto> Items, int TotalCount)> GetUsersByLocationAsync(
             string? province = null,
             string? district = null,

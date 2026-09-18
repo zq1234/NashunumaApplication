@@ -3,6 +3,7 @@ layer(base);
 
 @import "tailwindcss";
 @import "swiper/css/bundle";
+/*@import "../node_modules/select2/dist/css/select2.min.css";*/
 
 @custom-variant dark (&:is(.dark *));
 @include mat-core();
@@ -441,8 +442,8 @@ layer(base);
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 2rem;
-    height: 2rem;
+    width: 1rem;
+    height: 1rem;
     border-radius: 0.7rem;
     border: 1px solid transparent;
     font-size: 0.72rem;
@@ -969,6 +970,20 @@ layer(base);
 }
 
 /* third-party libraries CSS */
+/* Select2 tweaks to match form control heights */
+.select2-container .select2-selection--single {
+  height: 2.7rem;
+  display: flex;
+  align-items: center;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+  line-height: 2.7rem;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+  height: 2.7rem;
+}
 .apexcharts-legend-text {
   @apply !text-gray-700 dark:!text-gray-400;
 }

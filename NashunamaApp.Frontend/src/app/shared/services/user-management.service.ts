@@ -6,15 +6,15 @@ import { catchError, finalize, tap } from 'rxjs/operators';
 import { BehaviorSubject, Observable, of, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ApiResponse, PaginatedResponse, ApiResponseHelper, ApiStatusCodes } from '@core/models/api-response.model';
-import { 
-  UserDto, 
+import {
+  UserDto,
   UserFilterParams,
   UserSearchParams,
   UserHelper
 } from '@core/models/user.model';
-import { 
-  UpdateUserLocationDto, 
-  LocationStatsDto, 
+import {
+  UpdateUserLocationDto,
+  LocationStatsDto,
   UserSummaryStats,
   LocationHelper
 } from '@core/models/user-location.model';
@@ -23,7 +23,7 @@ import {
   providedIn: 'root'
 })
 export class UserManagementService {
-  
+
   private baseUrl = environment.apiUrl;
   private api = environment.api;
 
@@ -66,7 +66,7 @@ export class UserManagementService {
     let errorMessage = 'An error occurred. Please try again.';
     let errors: string[] = [errorMessage];
     let statusCode = error.status || ApiStatusCodes.INTERNAL_SERVER_ERROR;
-    
+
     if (error.error) {
       if (typeof error.error === 'string') {
         errorMessage = error.error;
@@ -75,7 +75,6 @@ export class UserManagementService {
         errorMessage = error.error.message;
         errors = [errorMessage];
       } else if (error.error.errors) {
-        // Handle validation errors from ASP.NET
         if (typeof error.error.errors === 'object') {
           const validationErrors = Object.values(error.error.errors).flat();
           errors = validationErrors as string[];
@@ -93,7 +92,6 @@ export class UserManagementService {
       errors = [errorMessage];
     }
 
-    // Create a proper ApiResponse error
     const errorResponse: ApiResponse<any> = {
       isSuccess: false,
       message: errorMessage,
@@ -102,7 +100,6 @@ export class UserManagementService {
       statusCode: statusCode
     };
 
-    // Throw the formatted error
     return throwError(() => errorResponse);
   }
 
@@ -124,7 +121,6 @@ export class UserManagementService {
    * GET /api/UserManagement/users
    */
   getPagedUsers(params: UserFilterParams): Observable<ApiResponse<PaginatedResponse<UserDto>>> {
-    // Check cache
     const cacheKey = this.getCacheKey(params);
     const cached = this.usersCache.get(cacheKey);
     if (cached && this.isCacheValid(cached)) {
@@ -147,12 +143,11 @@ export class UserManagementService {
     }
 
     this.setLoading(true);
-    
+
     let httpParams = new HttpParams()
       .set('pageNumber', params.pageNumber.toString())
       .set('pageSize', params.pageSize.toString());
 
-    // Add optional parameters if they exist
     if (params.searchTerm) {
       httpParams = httpParams.set('searchTerm', params.searchTerm);
     }
@@ -173,12 +168,11 @@ export class UserManagementService {
     }
 
     const url = this.buildUrl('user.getUsers');
-    
+
     return this.http.get<ApiResponse<PaginatedResponse<UserDto>>>(url, { params: httpParams })
       .pipe(
         tap(response => {
           if (ApiResponseHelper.isSuccess(response) && response.data) {
-            // Cache the response
             this.usersCache.set(cacheKey, {
               data: response.data.items,
               totalCount: response.data.totalCount,
@@ -198,7 +192,7 @@ export class UserManagementService {
   getUserByUsername(username: string): Observable<ApiResponse<UserDto>> {
     this.setLoading(true);
     const url = this.buildUrl('user.getByUsername', { username });
-    
+
     return this.http.get<ApiResponse<UserDto>>(url)
       .pipe(
         catchError(this.handleError),
@@ -213,11 +207,10 @@ export class UserManagementService {
   transferUserLocation(username: string, locationDto: UpdateUserLocationDto): Observable<ApiResponse<UserDto>> {
     this.setLoading(true);
     const url = this.buildUrl('user.transferLocation', { username });
-    
+
     return this.http.put<ApiResponse<UserDto>>(url, locationDto)
       .pipe(
         tap(() => {
-          // Clear cache after successful transfer
           this.usersCache.clear();
         }),
         catchError(this.handleError),
@@ -228,15 +221,15 @@ export class UserManagementService {
   /**
    * Toggle user status (Activate/Deactivate)
    * PATCH /api/UserManagement/users/{username}/status
+   * Body: raw boolean (matches [FromBody] bool isActive)
    */
   toggleUserStatus(username: string, isActive: boolean): Observable<ApiResponse<boolean>> {
     this.setLoading(true);
     const url = this.buildUrl('user.toggleStatus', { username });
-    
+
     return this.http.patch<ApiResponse<boolean>>(url, isActive)
       .pipe(
         tap(() => {
-          // Clear cache after successful status change
           this.usersCache.clear();
         }),
         catchError(this.handleError),
@@ -246,16 +239,33 @@ export class UserManagementService {
 
   /**
    * Block user
-   * POST /api/UserManagement/users/{username}/block
+   * PATCH /api/UserManagement/users/{username}/block
    */
   blockUser(username: string): Observable<ApiResponse<boolean>> {
     this.setLoading(true);
     const url = this.buildUrl('user.blockUser', { username });
-    
-    return this.http.post<ApiResponse<boolean>>(url, {})
+
+    return this.http.patch<ApiResponse<boolean>>(url, {})
       .pipe(
         tap(() => {
-          // Clear cache after successful block
+          this.usersCache.clear();
+        }),
+        catchError(this.handleError),
+        finalize(() => this.setLoading(false))
+      );
+  }
+
+  /**
+   * Unblock user
+   * PATCH /api/UserManagement/users/{username}/unblock
+   */
+  unblockUser(username: string): Observable<ApiResponse<boolean>> {
+    this.setLoading(true);
+    const url = this.buildUrl('user.unblockUser', { username });
+
+    return this.http.patch<ApiResponse<boolean>>(url, {})
+      .pipe(
+        tap(() => {
           this.usersCache.clear();
         }),
         catchError(this.handleError),
@@ -275,7 +285,7 @@ export class UserManagementService {
     pageSize: number = 10
   ): Observable<ApiResponse<PaginatedResponse<UserDto>>> {
     this.setLoading(true);
-    
+
     let params = new HttpParams()
       .set('pageNumber', pageNumber.toString())
       .set('pageSize', pageSize.toString());
@@ -285,7 +295,7 @@ export class UserManagementService {
     if (tehsil) params = params.set('tehsil', tehsil);
 
     const url = this.buildUrl('user.getByLocation');
-    
+
     return this.http.get<ApiResponse<PaginatedResponse<UserDto>>>(url, { params })
       .pipe(
         catchError(this.handleError),
@@ -300,7 +310,7 @@ export class UserManagementService {
   getLocationStatistics(): Observable<ApiResponse<LocationStatsDto>> {
     this.setLoading(true);
     const url = this.buildUrl('user.getStatistics');
-    
+
     return this.http.get<ApiResponse<LocationStatsDto>>(url)
       .pipe(
         catchError(this.handleError),
@@ -315,7 +325,7 @@ export class UserManagementService {
   getUserSummaryStats(): Observable<ApiResponse<UserSummaryStats>> {
     this.setLoading(true);
     const url = `${this.baseUrl}/api/UserManagement/statistics/summary`;
-    
+
     return this.http.get<ApiResponse<UserSummaryStats>>(url)
       .pipe(
         catchError(this.handleError),
@@ -333,13 +343,13 @@ export class UserManagementService {
     pageSize: number = 10
   ): Observable<ApiResponse<PaginatedResponse<UserDto>>> {
     this.setLoading(true);
-    
+
     let params = new HttpParams()
       .set('pageNumber', pageNumber.toString())
       .set('pageSize', pageSize.toString());
 
     const url = `${this.baseUrl}/api/UserManagement/users/by-role/${role}`;
-    
+
     return this.http.get<ApiResponse<PaginatedResponse<UserDto>>>(url, { params })
       .pipe(
         catchError(this.handleError),
@@ -357,14 +367,14 @@ export class UserManagementService {
     pageSize: number = 10
   ): Observable<ApiResponse<PaginatedResponse<UserDto>>> {
     this.setLoading(true);
-    
+
     let params = new HttpParams()
       .set('searchTerm', searchTerm)
       .set('pageNumber', pageNumber.toString())
       .set('pageSize', pageSize.toString());
 
     const url = `${this.baseUrl}/api/UserManagement/users/search`;
-    
+
     return this.http.get<ApiResponse<PaginatedResponse<UserDto>>>(url, { params })
       .pipe(
         catchError(this.handleError),
@@ -385,9 +395,9 @@ export class UserManagementService {
     isActive?: boolean;
   }): Observable<Blob> {
     this.setLoading(true);
-    
+
     let params = new HttpParams();
-    
+
     if (filters) {
       if (filters.searchTerm) params = params.set('searchTerm', filters.searchTerm);
       if (filters.province) params = params.set('province', filters.province);
@@ -398,14 +408,13 @@ export class UserManagementService {
     }
 
     const url = `${this.baseUrl}/api/UserManagement/users/export`;
-    
-    return this.http.get(url, { 
-      params, 
-      responseType: 'blob' 
+
+    return this.http.get(url, {
+      params,
+      responseType: 'blob'
     }).pipe(
       catchError((error) => {
         this.setLoading(false);
-        // For blob responses, we need to handle errors differently
         throw error;
       }),
       finalize(() => this.setLoading(false))

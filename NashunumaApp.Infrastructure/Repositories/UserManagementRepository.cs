@@ -50,7 +50,8 @@ namespace NashunumaApp.Infrastructure.Repositories
                         (x.user.Email != null && x.user.Email.ToLower().Contains(searchTerm)) ||
                         (x.user.Mobilenumber != null && x.user.Mobilenumber.ToLower().Contains(searchTerm)) ||
                         (x.user.SiteName != null && x.user.SiteName.ToLower().Contains(searchTerm)) ||
-                        (x.user.Designation != null && x.user.Designation.ToLower().Contains(searchTerm))
+                        (x.user.Designation != null && x.user.Designation.ToLower().Contains(searchTerm)) ||
+                        (x.user.Isactive != null && x.user.Isactive.Contains(searchTerm))
                     );
                 }
 
@@ -77,7 +78,7 @@ namespace NashunumaApp.Infrastructure.Repositories
 
                 if (isActive.HasValue)
                 {
-                    var activeValue = isActive.Value ? "1" : "0";
+                    string activeValue = isActive.ToString().ToLower();
                     baseQuery = baseQuery.Where(x => x.user.Isactive == activeValue);
                 }
 
@@ -294,13 +295,30 @@ namespace NashunumaApp.Infrastructure.Repositories
                 throw new Exception($"Error blocking user: {ex.Message}", ex);
             }
         }
+        public async Task<bool> UnblockUserAsync(string username, string modifiedBy)
+        {
+            try
+            {
+                var user = await _context.NthUsers.FirstOrDefaultAsync(u => u.Username == username);
+                if (user == null)
+                    return false;
+
+                user.Isactive = "1";
+                user.Isadmin = "0";
+                user.Activedby = modifiedBy;
+                user.Activedatetime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error Un blocking user: {ex.Message}", ex);
+            }
+        }
 
         public async Task<(List<UserWithLocationDto> Items, int TotalCount)> GetUsersByLocationAsync(
-            string? province = null,
-            string? district = null,
-            string? tehsil = null,
-            int pageNumber = 1,
-            int pageSize = 10)
+            string? province = null,string? district = null,string? tehsil = null,int pageNumber = 1,int pageSize = 10)
         {
             try
             {
@@ -399,9 +417,7 @@ namespace NashunumaApp.Infrastructure.Repositories
         }
 
         public async Task<(List<UserWithLocationDto> Items, int TotalCount)> SearchUsersAsync(
-            string searchTerm,
-            int pageNumber = 1,
-            int pageSize = 10)
+            string searchTerm,int pageNumber = 1,int pageSize = 10)
         {
             try
             {

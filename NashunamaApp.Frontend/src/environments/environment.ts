@@ -30,8 +30,10 @@ export const environment: Environment = {
     'user.transferLocation': '/api/UserManagement/users/{username}/location',
     'user.toggleStatus': '/api/UserManagement/users/{username}/status',
     'user.blockUser': '/api/UserManagement/users/{username}/block',
+     'user.unblockUser': '/api/UserManagement/users/{username}/unblock',
     'user.getByLocation': '/api/UserManagement/users/by-location',
     'user.getStatistics': '/api/UserManagement/statistics/location',
+    
     
     // Food Stock
     'foodStock.getList': '/api/FoodStock',

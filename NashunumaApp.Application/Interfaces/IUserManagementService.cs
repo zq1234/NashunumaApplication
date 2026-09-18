@@ -21,6 +21,7 @@ namespace NashunumaApp.Application.Interfaces
         Task<ApiResponse<UserDto>> TransferUserLocationAsync(string username, UpdateUserLocationDto locationDto, string modifiedBy);
         Task<ApiResponse<bool>> ToggleUserStatusAsync(string username, bool isActive, string modifiedBy);
         Task<ApiResponse<bool>> BlockUserAsync(string username, string modifiedBy);
+        Task<ApiResponse<bool>> UnblockUserAsync(string username, string modifiedBy);
         Task<ApiResponse<PaginatedResponse<UserDto>>> GetUsersByLocationAsync(
             string? province = null,
             string? district = null,
