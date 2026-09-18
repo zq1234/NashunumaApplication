@@ -6,12 +6,9 @@
       <!-- Page Size -->
       <div class="page-size-wrapper">
         <label for="data-table-page-size">Rows:</label>
-        <app-select
-          [(ngModel)]="pageSize"
-          [options]="pageSizeOptions.map(s => ({ value: s, label: s }))"
-          (valueChange)="pageSizeChanged($event)"
-          [className]="'page-size'"
-        ></app-select>
+        <select id="data-table-page-size" class="form-select page-size" [(ngModel)]="pageSize" (ngModelChange)="pageSizeChanged($event)">
+          <option *ngFor="let s of pageSizeOptions" [value]="s">{{ s }}</option>
+        </select>
       </div>
       <!-- <div class="header-icon-wrapper"> -->
         <!-- <i class="fas fa-table"></i> -->

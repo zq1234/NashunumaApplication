@@ -6,14 +6,14 @@ import { MotherTrimisterDto } from '@core/models/mother-trimister.model';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { DataTableComponent, DataTableColumn } from '@shared/components/data-table/data-table.component';
 import { PageBreadcrumbComponent } from '@shared/components/common/page-breadcrumb/page-breadcrumb.component';
-import { ComponentCardComponent } from '@shared/components/common/component-card/component-card.component';
+//import { ComponentCardComponent } from '@shared/components/common/component-card/component-card.component';
 import { environment } from '../../../../environments/environment';
 import { ApiResponse, PaginatedResponse } from '@core/models/api-response.model';
 
 @Component({
   selector: 'app-mother-trimister-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, DataTableComponent, PageBreadcrumbComponent, ComponentCardComponent],
+  imports: [CommonModule, FormsModule, RouterModule, DataTableComponent, PageBreadcrumbComponent],
   templateUrl: './mother-trimister-list.component.html',
   styleUrls: ['./mother-trimister-list.component.scss']
 })
@@ -26,6 +26,7 @@ export class MotherTrimisterListComponent implements OnInit {
   totalCount = 0;
 
   columns: DataTableColumn[] = [
+     { field: 'srNo', header: 'S.No', sortable: false, width: '60px', type: 'number' },
     { field: 'MotherCnic', header: 'Mother CNIC' },
     { field: 'VisitDate', header: 'Visit Date' },
     { field: 'TrimisterNo', header: 'Trimester' },
@@ -99,17 +100,17 @@ export class MotherTrimisterListComponent implements OnInit {
           }
 
           // normalize property names (API returns camelCase keys)
-          const mapped = list.map((it: any) => ({
+          const startIndex = (this.pageNumber - 1) * this.pageSize;
+          const mapped = list.map((it: any, idx: number) => ({
+            srNo: startIndex + idx + 1,
             MotherCnic: it.motherCnic ?? it.MotherCnic ?? it.mothercnic ?? '',
             VisitDate: it.visitDate ?? it.VisitDate ?? it.visitdate ?? '',
             TrimisterNo: it.trimisterNo ?? it.TrimisterNo ?? it.trimisterno ?? '',
             SiteName: it.siteName ?? it.SiteName ?? it.sitename ?? '',
             PhoneNo: it.phoneNo ?? it.PhoneNo ?? it.phoneno ?? '',
             Address: it.address ?? it.Address ?? '',
-            // keep original properties as fallback
             ...it
           }));
-
           this.items = mapped as MotherTrimisterDto[];
           this.totalCount = total || this.items.length;
           // ensure change detection so DataTable picks up new input

@@ -9,7 +9,7 @@ import {
   ChangeDetectorRef
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormsModule } from '@angular/forms'; // keep for native select binding
 import { SwitchComponent } from '../form/input/switch.component';
 import { SelectComponent } from '../form/select/select.component';
 
@@ -180,6 +180,21 @@ export class DataTableComponent implements OnChanges, OnInit {
     }
     this.updatePagination();
     this.pageChange.emit({ page: this.currentPage, pageSize: this.pageSize });
+
+    // Ensure the underlying native select (or select2) reflects the new value visually.
+    // Some select implementations return string values; set native select value and trigger change.
+    setTimeout(() => {
+      try {
+        const sel = document.querySelector('select.page-size') as HTMLSelectElement | null;
+        if (sel) {
+          const v = String(this.pageSize);
+          if (sel.value !== v) {
+            sel.value = v;
+            sel.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        }
+      } catch { /* ignore errors */ }
+    }, 0);
   }
 
   pageSizeChanged(value?: any): void {

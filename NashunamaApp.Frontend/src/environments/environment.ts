@@ -55,6 +55,10 @@ export const environment: Environment = {
     'location.getTehsilByName': '/api/Location/tehsil/{tehsilName}',
     
     // Add more as needed
+    // MotherTrimister
+    'motherTrimister.byBatch': '/api/LookUp/by-batch',
+    'motherTrimister.getById': '/api/LookUp/by-id',
+    'motherTrimister.export': '/api/LookUp/export'
   },
 
   features: {
