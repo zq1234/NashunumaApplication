@@ -57,6 +57,7 @@ export const environment: Environment = {
     // Add more as needed
     // MotherTrimister
     'motherTrimister.byBatch': '/api/LookUp/by-batch',
+    'motherTrimister.byBatchExcel': '/api/LookUp/by-batch-excel',
     'motherTrimister.getById': '/api/LookUp/by-id',
     'motherTrimister.export': '/api/LookUp/export'
   },
