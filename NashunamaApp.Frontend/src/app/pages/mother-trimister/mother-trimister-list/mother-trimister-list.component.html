@@ -4,20 +4,110 @@
   <!-- <app-component-card> -->
     <div class="flex items-center justify-between mb-4">
       <div>
-        <!-- <h1 class="text-2xl font-semibold text-gray-800 dark:text-white/90">
-          <i class="fas fa-list text-brand-500 mr-3"></i>MotherTrimister Records
-        </h1> -->
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Showing {{ items.length }} of {{ totalCount }} records</p>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Showing {{ items.length }} of {{ totalCount }} records
+          <span class="source-badge" *ngIf="resultSource === 'server'">Server results</span>
+          <span class="source-badge upload" *ngIf="resultSource === 'upload'">Upload results</span>
+          <span class="source-badge export" *ngIf="resultSource === 'export'">Downloaded export</span>
+        </p>
       </div>
 
-      <div class="flex items-center gap-2">
-        <div class="relative">
-          <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"></i>
-          <input type="text" class="h-11 w-full rounded-lg border border-gray-300 bg-transparent pl-9 pr-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800" 
-          placeholder="Search Batch Number" [(ngModel)]="batchNumber">
+      <div class="toolbar-actions">
+        <form *ngIf="!showUploadPanel" class="flex items-center gap-2" (ngSubmit)="onSubmit()">
+          <div class="relative">
+            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"></i>
+            <input type="text" class="h-11 w-full rounded-lg border border-gray-300 bg-transparent pl-9 pr-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800" 
+            placeholder="Search Batch Number" [(ngModel)]="batchNumber" name="batchNumber">
+          </div>
+          <button class="btn btn-primary" type="submit" [disabled]="!batchNumber || !batchNumber.trim()" [attr.title]="(!batchNumber || !batchNumber.trim()) ? 'Enter batch number to enable' : null">Search</button>
+        </form>
+
+        <button class="btn btn-outline refresh-button" type="button" (click)="refresh()" [disabled]="!canRefresh" title="Refresh records">
+          <i class="fa-solid fa-rotate-right" aria-hidden="true"></i>
+          <span>Refresh</span>
+        </button>
+
+        <button class="btn excel-upload-button" type="button" (click)="toggleUploadPanel()" [attr.aria-expanded]="showUploadPanel">
+          <i class="fa-solid fa-file-excel" aria-hidden="true"></i>
+          <span>Excel Upload</span>
+        </button>
+      </div>
+    </div>
+
+    <div *ngIf="showUploadPanel" class="upload-panel" [attr.aria-busy]="uploadLoading">
+      <div class="upload-card">
+        <div class="upload-card-header">
+          <div>
+            <h3>Upload batch records</h3>
+            <p>Upload a CSV or Excel file to add multiple mother trimester records in one batch.</p>
+          </div>
+          <button type="button" class="close-upload-btn" (click)="toggleUploadPanel()" aria-label="Close upload panel">
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+          </button>
         </div>
-        <button class="btn btn-primary" (click)="search()">Search</button>
-        <!-- <button class="btn btn-outline" (click)="load()">Refresh</button> -->
+
+        <div class="upload-guidance">
+          <div class="excel-sheet-preview" aria-label="Example Excel sheet layout">
+            <div class="sheet-header">
+              <span class="sheet-chip">Batch Number</span>
+            </div>
+            <div class="sheet-row">
+              <span class="cell cell-highlight">201B1B01</span>
+            </div>
+            <div class="sheet-row">
+              <span class="cell">2018E101</span>
+            </div>
+            <div class="sheet-row">
+              <span class="cell">2018A101</span>
+            </div>
+          </div>
+
+          <div class="guidance-copy">
+            <h4>Upload rules</h4>
+            <ul>
+              <li><strong>Less than 100 batches:</strong> records will appear in the table below.</li>
+              <li><strong>More than 100 batches:</strong> the system will download the result as an Excel file.</li>
+              <li><strong>One batch per row:</strong> keep each batch in a single row in the file.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="upload-dropzone" [class.has-file]="fileToUpload" (click)="!uploadLoading && fileInput.click()">
+          <input #fileInput type="file" accept=".xlsx,.xls,.csv,.txt" (change)="onFileSelected($event)" hidden [disabled]="uploadLoading">
+          <div class="dropzone-icon"><i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i></div>
+          <div class="dropzone-copy">
+            <div *ngIf="!fileToUpload"><strong>Choose a file</strong> or drag it here</div>
+            <div *ngIf="fileToUpload">Selected file: <strong>{{ fileToUpload.name }}</strong></div>
+            <small>Supported formats: CSV, XLS, XLSX, TXT</small>
+          </div>
+          <button *ngIf="!fileToUpload" type="button" class="btn btn-outline" (click)="$event.stopPropagation(); fileInput.click()" [disabled]="uploadLoading">Browse</button>
+        </div>
+
+        <div class="upload-form-row">
+          <div class="field-block field-block-wide">
+            <label class="label">Supported format</label>
+            <div class="format-note">
+              <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+              <span>CSV, XLS, XLSX, TXT</span>
+            </div>
+          </div>
+
+          <div class="file-action-block" *ngIf="fileToUpload">
+            <button type="button" class="btn btn-outline" (click)="clearSelectedFile()" [disabled]="uploadLoading">Remove file</button>
+          </div>
+        </div>
+
+        <div class="upload-footer">
+          <div class="status-block">
+            <div *ngIf="uploadError" class="error">{{ uploadError }}</div>
+            <div *ngIf="uploadMessage" class="success">{{ uploadMessage }}</div>
+            <div *ngIf="batchNumbersNotFound.length" class="warn">Not found: {{ batchNumbersNotFound.join(', ') }}</div>
+          </div>
+
+          <button class="btn btn-primary upload-action" (click)="uploadBatch()" [disabled]="!fileToUpload || uploadLoading">
+            <span *ngIf="uploadLoading" class="spinner-inline" aria-label="Loading"><i class="fa-solid fa-spinner fa-spin"></i></span>
+            <span>{{ uploadLoading ? 'Please wait...' : 'Upload Excel' }}</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -31,6 +121,7 @@
       [serverSidePaging]="true"
       [totalItems]="totalCount"
       [showActions]="false"
+      [hidePagination]="resultSource === 'upload'"
       (pageChange)="onPageChange($event)"
     ></app-data-table>
 

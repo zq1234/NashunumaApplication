@@ -11,7 +11,6 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms'; // keep for native select binding
 import { SwitchComponent } from '../form/input/switch.component';
-import { SelectComponent } from '../form/select/select.component';
 
 export interface DataTableColumn {
   field: string;
@@ -24,7 +23,7 @@ export interface DataTableColumn {
 @Component({
   selector: 'app-data-table',
   standalone: true,
-  imports: [CommonModule, FormsModule, SwitchComponent, SelectComponent],
+  imports: [CommonModule, FormsModule, SwitchComponent],
   templateUrl: './data-table.component.html'
 })
 export class DataTableComponent implements OnChanges, OnInit {
@@ -40,6 +39,7 @@ export class DataTableComponent implements OnChanges, OnInit {
   @Input() serverSidePaging = false;
   @Input() serverSideSearch = false;
   @Input() totalItems = 0;
+  @Input() hidePagination = false;
 
   // whether to render the header area (page size, title, search)
   // (kept for potential future use)

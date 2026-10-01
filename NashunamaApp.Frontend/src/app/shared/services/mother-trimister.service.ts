@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, BehaviorSubject, of, throwError } from 'rxjs';
-import { catchError, finalize, tap } from 'rxjs/operators';
+import { Observable, BehaviorSubject, of, throwError, from } from 'rxjs';
+import { catchError, finalize, tap, switchMap, map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { ApiResponse, PaginatedResponse, ApiResponseHelper, ApiStatusCodes } from '@core/models/api-response.model';
 import { MotherTrimisterDto } from '@core/models/mother-trimister.model';
@@ -28,6 +28,52 @@ export class MotherTrimisterService {
   constructor(private http: HttpClient) {}
 
   private setLoading(v: boolean) { this.loadingSubject.next(v); }
+
+  /**
+   * Upload an Excel/CSV file containing batch numbers. Backend returns JSON for small files
+   * or a streamed file for large files. This method inspects Content-Type to decide.
+   */
+  uploadBatchFile(file: File, format: 'csv' | 'xlsx') {
+    const url = this.buildUrl('motherTrimister.byBatchExcel');
+    const form = new FormData();
+    form.append('file', file, file.name);
+    const params = new HttpParams().set('format', format);
+
+    return this.http.post(url, form, { observe: 'response', responseType: 'blob', params }).pipe(
+      switchMap((response: any) => {
+        const headers = response.headers;
+        const contentType = (headers.get('content-type') || '').toLowerCase();
+        const disposition = headers.get('content-disposition');
+        const blob = response.body as Blob;
+
+        if (contentType.includes('application/json') || contentType.includes('text/json')) {
+          return from(blob.text()).pipe(
+            map(text => {
+              const parsed = JSON.parse(text) as ApiResponse<any>;
+              return { kind: 'json', payload: parsed } as const;
+            })
+          );
+        }
+
+        const filename = this.extractFilenameFromContentDisposition(disposition) || file.name;
+        return of({ kind: 'file', blob, filename, contentType } as const);
+      }),
+      catchError(err => throwError(() => new Error('Failed to upload or process the file. Please try again.')))
+    );
+  }
+
+  private extractFilenameFromContentDisposition(header: string | null): string {
+    if (!header) return '';
+    try {
+      const fnStar = header.match(/filename\*=(?:UTF-8'')?([^;\n]+)/i);
+      if (fnStar && fnStar[1]) {
+        try { return decodeURIComponent(fnStar[1].replace(/['"]/g, '').trim()); } catch { return fnStar[1].replace(/['"]/g, '').trim(); }
+      }
+      const fn = header.match(/filename=(?:\s*)"?([^";]+)"?/i);
+      if (fn && fn[1]) return fn[1].trim();
+    } catch {}
+    return '';
+  }
 
   private buildUrl(key: string, pathParams?: Record<string, string | number>) {
     let url = this.api[key] ?? '';

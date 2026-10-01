@@ -1,7 +1,7 @@
 <div class="data-table-container">
   
   <!-- Header -->
-  <div class="table-header" *ngIf="showHeader">
+  <div class="table-header" *ngIf="showHeader && !hidePagination">
     <div class="header-left">
       <!-- Page Size -->
       <div class="page-size-wrapper">
@@ -183,7 +183,7 @@
   </div>
 
   <!-- Footer -->
-  <div *ngIf="!loading" class="table-footer">
+  <div *ngIf="!loading && !hidePagination" class="table-footer">
     <div class="footer-left">
       <span class="records-info">
         Showing <strong>{{ startRecord }}</strong> - <strong>{{ endRecord }}</strong> of <strong>{{ totalItems }}</strong> records
