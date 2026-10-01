@@ -4,6 +4,7 @@ namespace NashunumaApp.Domain.Common.DTOs
 {
     public class MotherTrimisterDto
     {
+        public string BatchNumber { get; set; }
         public string MotherCnic { get; set; }
         public string VisitDate { get; set; }
         public string TrimisterNo { get; set; }
