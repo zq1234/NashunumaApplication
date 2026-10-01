@@ -55,8 +55,10 @@ export class MotherTrimisterService {
           );
         }
 
-        const filename = this.extractFilenameFromContentDisposition(disposition) || file.name;
-        return of({ kind: 'file', blob, filename, contentType } as const);
+        const responseFilename = this.extractFilenameFromContentDisposition(disposition);
+        const filename = this.ensureDownloadFilename(responseFilename, contentType, file.name);
+        const downloadBlob = new Blob([blob], { type: contentType || 'application/octet-stream' });
+        return of({ kind: 'file', blob: downloadBlob, filename, contentType } as const);
       }),
       catchError(err => throwError(() => new Error('Failed to upload or process the file. Please try again.')))
     );
@@ -73,6 +75,21 @@ export class MotherTrimisterService {
       if (fn && fn[1]) return fn[1].trim();
     } catch {}
     return '';
+  }
+
+  private ensureDownloadFilename(filename: string, contentType: string, fallbackFilename: string): string {
+    const normalizedType = contentType.toLowerCase();
+    const isExcel = normalizedType.includes('spreadsheetml') || normalizedType.includes('ms-excel');
+    const isCsv = normalizedType.includes('csv') || normalizedType.includes('text/plain');
+    const expectedExtension = isExcel ? '.xlsx' : isCsv ? '.csv' : '';
+    const candidate = filename || fallbackFilename || 'BatchExport';
+
+    if (!expectedExtension) {
+      return candidate;
+    }
+
+    const withoutKnownExtension = candidate.replace(/\.(xlsx|xls|csv|txt)$/i, '');
+    return `${withoutKnownExtension}${expectedExtension}`;
   }
 
   private buildUrl(key: string, pathParams?: Record<string, string | number>) {

@@ -49,6 +49,7 @@ export class MotherTrimisterListComponent implements OnInit {
   uploadLoading = false;
   uploadError: string | null = null;
   uploadMessage: string | null = null;
+  downloadSuccessMessage: string | null = null;
   batchNumbersNotFound: string[] = [];
   showUploadPanel = false;
 
@@ -126,6 +127,10 @@ export class MotherTrimisterListComponent implements OnInit {
   toggleUploadPanel(): void {
     this.showUploadPanel = !this.showUploadPanel;
     if (this.showUploadPanel) {
+      this.items = [];
+      this.totalCount = 0;
+      this.resultSource = null;
+      this.downloadSuccessMessage = null;
       this.uploadError = null;
       this.uploadMessage = null;
       this.batchNumbersNotFound = [];
@@ -300,7 +305,10 @@ export class MotherTrimisterListComponent implements OnInit {
           a.click();
           a.remove();
           URL.revokeObjectURL(url);
-          this.uploadMessage = `Downloaded records as ${outcome.contentType?.includes('spreadsheet') ? 'XLSX' : 'CSV'}.`;
+          const fileType = outcome.contentType?.includes('spreadsheet') ? 'Excel' : 'CSV';
+          this.clearSelectedFile();
+          this.uploadMessage = `Downloaded records as ${fileType}.`;
+          this.downloadSuccessMessage = 'Data has been downloaded in Excel successfully.';
           this.resultSource = 'export';
         }
       },

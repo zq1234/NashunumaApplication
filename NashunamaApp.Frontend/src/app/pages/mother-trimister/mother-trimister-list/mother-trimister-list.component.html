@@ -1,6 +1,11 @@
 <div class="space-y-6">
   <app-page-breadcrumb [pageTitle]="'MotherTrimister Records'"></app-page-breadcrumb>
 
+  <div *ngIf="downloadSuccessMessage" class="download-success-alert" role="alert">
+    <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+    <span>{{ downloadSuccessMessage }}</span>
+  </div>
+
   <!-- <app-component-card> -->
     <div class="flex items-center justify-between mb-4">
       <div>

@@ -185,6 +185,7 @@ namespace NashunumaApp.Infrastructure.Repositories
                     orderby mtm.Batchnumber, mtm.Mothercnic, mtm.Visitdate
                     select new MotherTrimisterDto
                     {
+                        BatchNumber=mtm.Batchnumber,
                         MotherCnic = mtm.Mothercnic,
                         VisitDate = mtm.Visitdate,
                         TrimisterNo = mtm.Trimisterno,
