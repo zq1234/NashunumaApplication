@@ -16,5 +16,6 @@ namespace NashunumaApp.Application.Interfaces
         Task<ApiResponse<ProvinceDto>> GetProvinceByName(string provinceName);
         Task<ApiResponse<DistrictDto>> GetDistrictByName(string districtName);
         Task<ApiResponse<TehsilDto>> GetTehsilByName(string tehsilName);
+        Task<ApiResponse<SitesDto>> GetSitesByName(string siteName);
     }
 }

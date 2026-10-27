@@ -199,5 +199,28 @@ namespace NashunumaApp.Application.Services
                 return ApiResponse<TehsilDto>.Failure($"Failed to retrieve tehsil: {ex.Message}");
             }
         }
+        public async Task<ApiResponse<SitesDto>> GetSitesByName(string siteName)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(siteName))
+                {
+                    return ApiResponse<SitesDto>.Failure("Site name is required");
+                }
+
+                var site = await _locationRepository.GetSitesByName(siteName);
+
+                if (site == null)
+                {
+                    return ApiResponse<SitesDto>.Failure($"Site '{siteName}' not found");
+                }
+
+                return ApiResponse<SitesDto>.Success(site, "Site retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<SitesDto>.Failure($"Failed to retrieve site: {ex.Message}");
+            }
+        }
     }
 }

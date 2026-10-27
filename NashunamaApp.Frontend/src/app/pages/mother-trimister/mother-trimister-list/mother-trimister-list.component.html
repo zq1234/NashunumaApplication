@@ -1,5 +1,5 @@
 <div class="space-y-6">
-  <app-page-breadcrumb [pageTitle]="'MotherTrimister Records'"></app-page-breadcrumb>
+  <app-page-breadcrumb [pageTitle]="displayedRecordType + ' Records'"></app-page-breadcrumb>
 
   <div *ngIf="downloadSuccessMessage" class="download-success-alert" role="alert">
     <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
@@ -17,6 +17,17 @@
       </div>
 
       <div class="toolbar-actions">
+        <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+          <span>Record type</span>
+          <select class="h-11 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                  [(ngModel)]="recordType"
+                  name="recordType"
+                  aria-label="Record type">
+            <option value="Child">Child</option>
+            <option value="Mother">Mother</option>
+          </select>
+        </label>
+
         <form *ngIf="!showUploadPanel" class="flex items-center gap-2" (ngSubmit)="onSubmit()">
           <div class="relative">
             <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"></i>

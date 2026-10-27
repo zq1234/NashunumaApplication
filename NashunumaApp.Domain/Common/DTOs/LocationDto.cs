@@ -20,6 +20,12 @@ public class TehsilDto
     public string? Tehsil { get; set; }
     public decimal? DistrictId { get; set; }
 }
+public class SitesDto
+{
+    public decimal? Id { get; set; }
+    public string? Site { get; set; }
+    public decimal? TehsilId { get; set; }
+}
 
 public class UcDto
 {

@@ -16,5 +16,7 @@ namespace NashunumaApp.Domain.Common.DTOs
         public string District { get; set; }
         public string Tehsil { get; set; }
         public string Email { get; set; }
+        public string EnteredByName { get; set; }
+        public string EnteredByCNIC { get; set; }
     }
 }

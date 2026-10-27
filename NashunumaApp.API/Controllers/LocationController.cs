@@ -211,5 +211,28 @@ namespace NashunumaApp.API.Controllers
                 return StatusCode(500, ApiResponse<TehsilDto>.Failure("An error occurred while retrieving tehsil"));
             }
         }
+
+        /// Get sites by name
+        /// </summary>
+        [HttpGet("sites/{siteName}")]
+        public async Task<IActionResult> GetSitesByTehsil(string siteName)
+        {
+            try
+            {
+                var result = await _locationService.GetSitesByName(siteName);
+
+                if (!result.IsSuccess)
+                {
+                    return BadRequest(result);
+                }
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error getting sites {siteName}");
+                return StatusCode(500, ApiResponse<SitesDto>.Failure("An error occurred while retrieving sites"));
+            }
+        }
     }
 }

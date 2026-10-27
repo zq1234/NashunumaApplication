@@ -5,7 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { Subject, debounceTime, distinctUntilChanged, takeUntil, finalize } from 'rxjs';
 import { UserManagementService } from '@shared/services/user-management.service';
-import { LocationService, Province, District, Tehsil } from '@shared/services/location.service';
+import { LocationService, Province, District, Tehsil, Sites } from '@shared/services/location.service';
 import { UserDto, UserFilterParams } from '@core/models/user.model';
 import { UpdateUserLocationDto, LocationHelper } from '@core/models/user-location.model';
 import { ApiResponse, PaginatedResponse, ApiResponseHelper } from '@core/models/api-response.model';
@@ -49,6 +49,7 @@ export class UserListComponent implements OnInit, OnDestroy {
   error: string | null = null;
   success: string | null = null;
   loadingLocations = false;
+  loadingTransferSites = false;
 
   // Alert
   alertVariant: 'success' | 'error' | 'warning' | 'info' = 'info';
@@ -103,10 +104,11 @@ export class UserListComponent implements OnInit, OnDestroy {
   transferProvinces: Province[] = [];
   transferDistricts: District[] = [];
   transferTehsils: Tehsil[] = [];
+  transferSites: Sites[] = [];
   transferProvinceName: string | null = null;
   transferDistrictName: string | null = null;
   transferTehsilName: string | null = null;
-
+  transferSiteName: string | null = null;
   // Confirm modal data
   confirmModalData = {
     title: '',
@@ -337,12 +339,16 @@ export class UserListComponent implements OnInit, OnDestroy {
     this.transferProvinceName = user.province || null;
     this.transferDistrictName = user.district || null;
     this.transferTehsilName = user.tehsil || null;
-
+    this.transferSiteName = user.siteName || null;
+   
     if (this.transferProvinceName) {
       this.loadTransferDistricts(this.transferProvinceName);
     }
     if (this.transferDistrictName) {
       this.loadTransferTehsils(this.transferDistrictName);
+    }
+    if (this.transferTehsilName) {
+      this.loadTransferSites(this.transferTehsilName);
     }
 
     this.isTransferModalOpen = true;
@@ -392,13 +398,16 @@ export class UserListComponent implements OnInit, OnDestroy {
     this.transferTehsilName = null;
     this.transferDistricts = [];
     this.transferTehsils = [];
+    this.transferSites = [];
+    this.transferSiteName = null;
     this.transferError = null;
 
     this.transferForm = {
       ...this.transferForm,
       province: provinceName || '',
       district: '',
-      tehsil: ''
+      tehsil: '',
+      siteName: ''
     };
 
     if (provinceName) {
@@ -410,12 +419,15 @@ export class UserListComponent implements OnInit, OnDestroy {
     this.transferDistrictName = districtName;
     this.transferTehsilName = null;
     this.transferTehsils = [];
+    this.transferSites = [];
+    this.transferSiteName = null;
     this.transferError = null;
 
     this.transferForm = {
       ...this.transferForm,
       district: districtName || '',
-      tehsil: ''
+      tehsil: '',
+      siteName: ''
     };
 
     if (districtName) {
@@ -425,20 +437,58 @@ export class UserListComponent implements OnInit, OnDestroy {
 
   onTransferTehsilChange(tehsilName: string | null): void {
     this.transferTehsilName = tehsilName;
+    this.transferSites = [];
+    this.transferSiteName = null;
     this.transferForm = {
       ...this.transferForm,
-      tehsil: tehsilName || ''
+      tehsil: tehsilName || '',
+      siteName: ''
     };
+
+    if (tehsilName) {
+      this.loadTransferSites(tehsilName);
+    }
   }
 
+  private loadTransferSites(tehsilName: string): void {
+    this.loadingTransferSites = true;
+    this.locationService.getSitesByTehsil(tehsilName).subscribe({
+      next: (response: ApiResponse<Sites[]>) => {
+        if (this.transferTehsilName !== tehsilName) return;
+        this.loadingTransferSites = false;
+        if (ApiResponseHelper.isSuccess(response) && response.data) {
+          this.transferSites = response.data;
+        } else {
+          this.transferSites = [];
+          this.transferError = response.message || 'Failed to load sites';
+        }
+      },
+      error: (error) => {
+        if (this.transferTehsilName !== tehsilName) return;
+        this.loadingTransferSites = false;
+        this.transferSites = [];
+        this.transferError = 'Error loading sites: ' + error.message;
+      }
+    });
+  }
+  onTransferSiteNameChange(siteName: string | null): void {
+    this.transferSiteName = siteName;
+    this.transferForm = {
+      ...this.transferForm,
+      siteName: siteName || ''
+    };
+  }
   closeTransferModal(): void {
     this.isTransferModalOpen = false;
     this.selectedUser = null;
     this.transferProvinceName = null;
     this.transferDistrictName = null;
     this.transferTehsilName = null;
+    this.transferSiteName = null;
     this.transferDistricts = [];
     this.transferTehsils = [];
+    this.transferSites = [];
+    this.loadingTransferSites = false;
     this.transferForm = LocationHelper.createDefaultUpdateDto();
     this.transferError = null;
     this.transferSuccess = null;

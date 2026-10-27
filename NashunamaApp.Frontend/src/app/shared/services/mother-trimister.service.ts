@@ -33,11 +33,13 @@ export class MotherTrimisterService {
    * Upload an Excel/CSV file containing batch numbers. Backend returns JSON for small files
    * or a streamed file for large files. This method inspects Content-Type to decide.
    */
-  uploadBatchFile(file: File, format: 'csv' | 'xlsx') {
+  uploadBatchFile(file: File, format: 'csv' | 'xlsx', type: 'Child' | 'Mother') {
     const url = this.buildUrl('motherTrimister.byBatchExcel');
     const form = new FormData();
     form.append('file', file, file.name);
-    const params = new HttpParams().set('format', format);
+    const params = new HttpParams()
+      .set('type', type)
+      .set('format', format);
 
     return this.http.post(url, form, { observe: 'response', responseType: 'blob', params }).pipe(
       switchMap((response: any) => {

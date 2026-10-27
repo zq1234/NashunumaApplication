@@ -15,6 +15,7 @@ namespace NashunumaApp.Domain.Interfaces
         Task<ProvinceDto> GetProvinceByName(string provinceName);
         Task<DistrictDto> GetDistrictByName(string districtName);
         Task<TehsilDto> GetTehsilByName(string tehsilName);
+        Task<SitesDto> GetSitesByName(string siteName);
         Task<LocationHierarchyDto> GetLocationHierarchy();
     }
 }

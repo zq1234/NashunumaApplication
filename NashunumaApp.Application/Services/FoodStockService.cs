@@ -222,14 +222,13 @@ namespace NashunumaApp.Application.Services
                 _logger.LogInformation("Saving stock information - SiteId: {SiteId}, EnteredOn: {EnteredOn}, EnteredBy: {EnteredBy}",
                     request.SiteId ?? "null", request.EnteredOn ?? "null", request.EnteredBy ?? "null");
 
-                // Validate required fields
+                // ---- Basic validation ------------------------------------------------
                 if (string.IsNullOrEmpty(request.SiteId))
                 {
                     _logger.LogWarning("SaveStockInformation failed: Site ID is required");
                     return ApiResponse<FoodStockDto>.Failure("Site ID is required");
                 }
 
-                // Check if opening stock boxes wawa is provided 
                 if (string.IsNullOrEmpty(request.OpeningStockBoxesWawa))
                 {
                     _logger.LogWarning("SaveStockInformation failed: Opening stock boxes WAWA is required for SiteId: {SiteId}",
@@ -237,7 +236,7 @@ namespace NashunumaApp.Application.Services
                     return ApiResponse<FoodStockDto>.Failure("Opening stock boxes WAWA is required");
                 }
 
-                // Get today's date in the format used by the system
+                // ---- Resolve target date (dd-MM-yyyy) --------------------------------
                 string todayDate = DateTime.Now.ToString("dd-MM-yyyy");
                 string enteredOn = !string.IsNullOrEmpty(request.EnteredOn) && request.EnteredOn != "null"
                     ? request.EnteredOn
@@ -245,27 +244,43 @@ namespace NashunumaApp.Application.Services
 
                 _logger.LogDebug("Using entered date: {EnteredOn} for SiteId: {SiteId}", enteredOn, request.SiteId);
 
-                // Parse the entered date
-                var formats = new[] { "yyyy-MM-dd", "dd-MM-yyyy" };
-
-                if (!DateTime.TryParseExact( enteredOn,formats, CultureInfo.InvariantCulture, DateTimeStyles.None, out var targetDate))
+                var acceptedFormats = new[] { "yyyy-MM-dd", "dd-MM-yyyy" };
+                if (!DateTime.TryParseExact(enteredOn, acceptedFormats, CultureInfo.InvariantCulture,
+                        DateTimeStyles.None, out var targetDate))
                 {
-                    _logger.LogWarning("Invalid date format: {EnteredOn} for SiteId: {SiteId}",enteredOn,request.SiteId);
-
+                    _logger.LogWarning("Invalid date format: {EnteredOn} for SiteId: {SiteId}", enteredOn, request.SiteId);
                     return ApiResponse<FoodStockDto>.Failure(
                         "Invalid date format. Please use yyyy-MM-dd or dd-MM-yyyy.");
                 }
 
-                // Check if stock already exists for this date
+                targetDate = targetDate.Date;
+                var today = DateTime.Now.Date;
+
+                // Normalise the string we will store to dd-MM-yyyy regardless of input format
+                enteredOn = targetDate.ToString("dd-MM-yyyy");
+
+                // ---- Reject future dates --------------------------------------------
+                if (targetDate > today)
+                {
+                    _logger.LogWarning("Cannot save stock for future date {EnteredOn} for SiteId: {SiteId}",
+                        enteredOn, request.SiteId);
+                    return ApiResponse<FoodStockDto>.Failure(
+                        $"Cannot save stock for future date {enteredOn}.",
+                        new List<string> { "FutureDate" });
+                }
+
+                // ---- Existing record for this exact date? (manual update path) ------
                 var existingStock = await _foodStockRepository.GetBySiteIdAndDateAsync(request.SiteId, enteredOn);
+
                 if (existingStock != null)
                 {
-                    // If request explicitly marks this as a manual update, update the existing record
-                    if (!string.IsNullOrEmpty(request.IsManualUpdate) && (request.IsManualUpdate == "1" || request.IsManualUpdate.Equals("true", StringComparison.OrdinalIgnoreCase)))
+                    if (!string.IsNullOrEmpty(request.IsManualUpdate) &&
+                        (request.IsManualUpdate == "1" ||
+                         request.IsManualUpdate.Equals("true", StringComparison.OrdinalIgnoreCase)))
                     {
-                        _logger.LogInformation("Manual update requested for existing stock - SiteId: {SiteId} on Date: {EnteredOn}", request.SiteId, enteredOn);
+                        _logger.LogInformation("Manual update requested for existing stock - SiteId: {SiteId} on Date: {EnteredOn}",
+                            request.SiteId, enteredOn);
 
-                        // Update fields on the existing entity
                         existingStock.OpeningStockBoxesMamta = ParseString(request.OpeningStockBoxesMamta);
                         existingStock.ReceivedStockBoxesMamta = ParseString(request.ReceivedStockBoxesMamta);
                         existingStock.DistributedBoxesMamta = ParseString(request.DistributedBoxesMamta);
@@ -307,102 +322,86 @@ namespace NashunumaApp.Application.Services
                         await _foodStockRepository.SaveChangesAsync();
 
                         var mappedUpdated = _mapper.Map<FoodStockDto>(existingStock);
-                        return ApiResponse<FoodStockDto>.Success(mappedUpdated, "Stock Information updated successfully (manual update)");
+                        return ApiResponse<FoodStockDto>.Success(
+                            mappedUpdated,
+                            "Stock Information updated successfully (manual update)");
                     }
 
                     _logger.LogWarning("Stock already exists for SiteId: {SiteId} on Date: {EnteredOn}",
                         request.SiteId, enteredOn);
                     return ApiResponse<FoodStockDto>.Failure(
                         $"Stock information already exists for {enteredOn}! You cannot add multiple entries for the same day.",
-                        new List<string> { "AlreadyExist" }
-                    );
+                        new List<string> { "AlreadyExist" });
                 }
 
-                // Get all existing stock dates for this site
-                var existingDates = await _foodStockRepository.GetExistingStockDatesAsync(request.SiteId);
-                var parsedExistingDates = new List<DateTime>();
+                // ---- Fetch all existing dates and find the PINPOINT (latest EnteredOn) ----
+                var existingDates = await _foodStockRepository.GetExistingStockDatesAsync(request.SiteId)
+                                    ?? new List<string>();
 
-                foreach (var dateStr in existingDates)
+                // Parse (dd-MM-yyyy) -> DateTime, drop invalid, distinct, sort DESC → newest first
+                var parsedExistingDates = existingDates
+                    .Select(d => DateTime.TryParseExact(d, "dd-MM-yyyy", CultureInfo.InvariantCulture,
+                                    DateTimeStyles.None, out var dt) ? dt.Date : (DateTime?)null)
+                    .Where(d => d.HasValue)
+                    .Select(d => d!.Value)
+                    .Distinct()
+                    .OrderByDescending(d => d)
+                    .ToList();
+
+                if (parsedExistingDates.Count > 0)
                 {
-                    if (!string.IsNullOrEmpty(dateStr) &&
-                        DateTime.TryParseExact(dateStr, "dd-MM-yyyy", null, DateTimeStyles.None, out var date))
+                    // PINPOINT = latest existing EnteredOn
+                    var lastExistingDate = parsedExistingDates[0];
+
+                    // 1) Must be strictly after the latest existing date
+                    if (targetDate <= lastExistingDate)
                     {
-                        parsedExistingDates.Add(date);
-                    }
-                }
+                        _logger.LogWarning(
+                            "Cannot save stock for {EnteredOn}. Latest existing record is {LastDate} for SiteId: {SiteId}",
+                            enteredOn, lastExistingDate.ToString("dd-MM-yyyy"), request.SiteId);
 
-                // Sort existing dates (oldest to newest)
-                parsedExistingDates = parsedExistingDates.OrderBy(d => d).ToList();
-
-                // Check if we have any existing records
-                var today = DateTime.Now.Date;
-
-                // Sequential date validation
-                if (parsedExistingDates.Any())
-                {
-                    var lastExistingDate = parsedExistingDates.Max();
-
-                    // Check if trying to save a date older than the last existing date
-                    if (targetDate.Date < lastExistingDate.Date)
-                    {
-                        _logger.LogWarning("Cannot save stock for {EnteredOn}. Last existing record is for {LastDate}",
-                            enteredOn, lastExistingDate.ToString("dd-MM-yyyy"));
                         return ApiResponse<FoodStockDto>.Failure(
-                            $"Cannot save stock for {enteredOn}. Please enter dates in chronological order. Last existing record is for {lastExistingDate:dd-MM-yyyy}.",
-                            new List<string> { "InvalidSequence" }
-                        );
+                            $"Cannot save stock for {enteredOn}. Please enter dates in chronological order. " +
+                            $"Latest existing record is for {lastExistingDate:dd-MM-yyyy}.",
+                            new List<string> { "InvalidSequence" });
                     }
 
-                    // Check if there's a gap between the last existing date and the target date
-                    var expectedDate = lastExistingDate.Date.AddDays(1);
+                    // 2) Every non-weekend day between lastExistingDate+1 .. targetDate-1 must exist
+                    var existingSet = parsedExistingDates.ToHashSet();
                     var missingDates = new List<DateTime>();
 
-                    // Check all dates from the day after the last existing date to the target date
-                    for (var date = expectedDate; date < targetDate.Date; date = date.AddDays(1))
+                    for (var date = lastExistingDate.AddDays(1); date < targetDate; date = date.AddDays(1))
                     {
-                        // Skip weekends (Saturday and Sunday) when considering missing previous dates
                         if (date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday)
-                        {
                             continue;
-                        }
 
-                        if (!parsedExistingDates.Any(d => d.Date == date.Date))
-                        {
+                        if (!existingSet.Contains(date.Date))
                             missingDates.Add(date);
-                        }
                     }
 
-                    if (missingDates.Any())
+                    if (missingDates.Count > 0)
                     {
+                        missingDates = missingDates.OrderBy(d => d).ToList();
                         var missingDatesList = string.Join(", ", missingDates.Select(d => d.ToString("dd-MM-yyyy")));
-                        _logger.LogWarning("Cannot save stock for {EnteredOn}. Missing previous dates for SiteId: {SiteId}. Missing dates: {MissingDates}",
+
+                        _logger.LogWarning(
+                            "Cannot save stock for {EnteredOn}. Missing previous dates for SiteId: {SiteId}. Missing: {MissingDates}",
                             enteredOn, request.SiteId, missingDatesList);
 
+                        // Tell the user the FIRST date they must enter
+                        var firstMissing = missingDates[0].ToString("dd-MM-yyyy");
+
                         return ApiResponse<FoodStockDto>.Failure(
-                            $"Cannot save stock for {enteredOn}. Please first enter stock for the following missing date(s): {missingDatesList}",
-                            new List<string> { "MissingPreviousDates" }
-                        );
-                    }
-                }
-                else
-                {
-                    // No existing records - check if this is a valid starting date
-                    // Allow saving for today or any date from the last 30 days
-                    var startDate = today.AddDays(-30);
-                    if (targetDate.Date < startDate)
-                    {
-                        _logger.LogWarning("Cannot save stock for {EnteredOn}. Date is too old.", enteredOn);
-                        return ApiResponse<FoodStockDto>.Failure(
-                            $"Cannot save stock for {enteredOn}. The date is too far in the past. Please start from {startDate:dd-MM-yyyy} or later.",
-                            new List<string> { "DateTooOld" }
-                        );
+                            $"Cannot save stock for {enteredOn}. Please first enter stock for {firstMissing}. " +
+                            $"Missing date(s) in order: {missingDatesList}",
+                            new List<string> { "MissingPreviousDates" });
                     }
                 }
 
-                // Create new stock entity
+                // ---- Create new entity ----------------------------------------------
                 var stock = new NthSnfStock
                 {
-                     // Mamta fields
+                    // Mamta
                     OpeningStockBoxesMamta = ParseString(request.OpeningStockBoxesMamta),
                     ReceivedStockBoxesMamta = ParseString(request.ReceivedStockBoxesMamta),
                     DistributedBoxesMamta = ParseString(request.DistributedBoxesMamta),
@@ -411,7 +410,7 @@ namespace NashunumaApp.Application.Services
                     ClosingStockSachetsMamta = ParseString(request.ClosingStockSachetsMamta),
                     DistributedSachetsMamta = ParseString(request.DistributedSachetsMamta),
 
-                    // Wawa fields
+                    // Wawa
                     OpeningStockBoxesWawa = ParseString(request.OpeningStockBoxesWawa),
                     ReceivedStockBoxesWawa = ParseString(request.ReceivedStockBoxesWawa),
                     DistributedBoxesWawa = ParseString(request.DistributedBoxesWawa),
@@ -420,72 +419,59 @@ namespace NashunumaApp.Application.Services
                     ClosingStockSachetsWawa = ParseString(request.ClosingStockSachetsWawa),
                     DistributedSachetsWawa = ParseString(request.DistributedSachetsWawa),
 
-                    // Unit
                     Unit = ParseString(request.Unit),
 
-                    // RUTF fields
+                    // RUTF
                     RutfReceived = ParseString(request.RutfReceived),
                     RutfOpening = ParseString(request.RutfOpening),
                     RutfDistributed = ParseString(request.RutfDistributed),
                     RutfClosing = ParseString(request.RutfClosing),
 
-                    // IFA fields
+                    // IFA
                     IfaReceived = ParseString(request.IfaReceived),
                     IfaOpening = ParseString(request.IfaOpening),
                     IfaDistributed = ParseString(request.IfaDistributed),
                     IfaClosing = ParseString(request.IfaClosing),
 
-                    // MMS fields
+                    // MMS
                     MmsReceived = ParseString(request.MmsReceived),
                     MmsOpening = ParseString(request.MmsOpening),
                     MmsDistributed = ParseString(request.MmsDistributed),
                     MmsClosing = ParseString(request.MmsClosing),
 
-                    // Common fields
+                    // Common
                     Remarks = ParseString(request.Remarks),
                     SiteId = ParseString(request.SiteId),
 
-                    // System fields 
-                    EnteredOn = enteredOn, 
+                    // System
+                    EnteredOn = enteredOn,                                   // stored as dd-MM-yyyy
                     EnteredBy = request.EnteredBy,
-                    ActivityTime = DateTime.Now.ToString("dd-MM-yyyy HH:mm:ss"), 
-                    IsManualUpdate = "1" 
-
+                    ActivityTime = DateTime.Now.ToString("dd-MM-yyyy HH:mm:ss"),
+                    IsManualUpdate = "1"
                 };
 
                 _logger.LogDebug("Created stock entity for SiteId: {SiteId} with OpeningStockBoxesWawa: {OpeningStock}",
                     request.SiteId, stock.OpeningStockBoxesWawa);
 
-                // Save to repository
                 var created = await _foodStockRepository.AddAsync(stock);
                 await _foodStockRepository.SaveChangesAsync();
 
-                // Map to DTO
                 var mappedItem = _mapper.Map<FoodStockDto>(created);
 
                 _logger.LogInformation(
                     "Stock information saved successfully for Site: {SiteId} on Date: {EnteredOn} by User: {EnteredBy}",
-                    request.SiteId,
-                    enteredOn,
-                    request.EnteredBy ?? "System"
-                );
+                    request.SiteId, enteredOn, request.EnteredBy ?? "System");
 
-                return ApiResponse<FoodStockDto>.Success(
-                    mappedItem,
-                    "Stock Information saved successfully!"
-                );
+                return ApiResponse<FoodStockDto>.Success(mappedItem, "Stock Information saved successfully!");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to save stock information for SiteId: {SiteId}, Date: {EnteredOn}",
                     request.SiteId ?? "null", request.EnteredOn ?? "null");
                 return ApiResponse<FoodStockDto>.Failure(
-                    $"Failed to save stock information: {ex.Message}"
-                );
+                    $"Failed to save stock information: {ex.Message}");
             }
         }
-
-        
         /// Gets all food stocks for a specific site
 
         public async Task<ApiResponse<List<FoodStockDto>>> GetFoodStocksBySiteIdAsync(string siteId)
@@ -520,7 +506,7 @@ namespace NashunumaApp.Application.Services
             }
         }
 
-        
+
         /// Gets missing stock dates for a specific site
 
         public async Task<ApiResponse<List<MissingStockDateDto>>> GetMissingStockDatesAsync(string siteId)
@@ -535,82 +521,85 @@ namespace NashunumaApp.Application.Services
                     return ApiResponse<List<MissingStockDateDto>>.Failure("Site ID is required");
                 }
 
-                // Get all existing stock dates for this site
+                // Repository returns distinct EnteredOn values, NEWEST first
                 var existingDates = await _foodStockRepository.GetExistingStockDatesAsync(siteId);
                 _logger.LogDebug("Found {Count} existing stock dates for SiteId: {SiteId}",
                     existingDates.Count, siteId);
 
-                var parsedDates = new List<DateTime>();
-
-                foreach (var dateStr in existingDates)
+                // No records at all -> nothing to compare
+                if (existingDates == null || existingDates.Count == 0)
                 {
-                    if (!string.IsNullOrEmpty(dateStr) &&
-                        DateTime.TryParseExact(dateStr, "dd-MM-yyyy", null, DateTimeStyles.None, out var date))
-                    {
-                        parsedDates.Add(date);
-                    }
-                    else
-                    {
-                        _logger.LogDebug("Could not parse date string: {DateStr} for SiteId: {SiteId}",
-                            dateStr ?? "null", siteId);
-                    }
+                    _logger.LogWarning("No existing stock dates found for SiteId: {SiteId}", siteId);
+                    return ApiResponse<List<MissingStockDateDto>>.Success(
+                        new List<MissingStockDateDto>(),
+                        "No orders found for this site");
                 }
 
-                // Get the last 30 days
-                var missingDates = new List<MissingStockDateDto>();
-                var startDate = DateTime.Now.AddDays(-30);
-                var endDate = DateTime.Now;
-
-                // If no existing dates, check from start date
-                if (parsedDates.Count == 0)
+                // PINPOINT = the LATEST (newest) EnteredOn date -> first element
+                if (!DateTime.TryParseExact(existingDates[0], "dd-MM-yyyy", null,
+                        DateTimeStyles.None, out var startDate))
                 {
-                    _logger.LogDebug("No existing stock dates found for SiteId: {SiteId}, checking all dates in range",
-                        siteId);
-                    for (var date = startDate; date <= endDate; date = date.AddDays(1))
-                    {
-                        // Skip weekends when reporting missing dates
-                        if (date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday)
-                        {
-                            continue;
-                        }
+                    _logger.LogWarning("Latest EnteredOn '{Raw}' is not dd-MM-yyyy for SiteId: {SiteId}",
+                        existingDates[0], siteId);
+                    return ApiResponse<List<MissingStockDateDto>>.Failure(
+                        "Invalid latest order date format");
+                }
 
+                startDate = startDate.Date;
+
+                // END DATE = today
+                var endDate = DateTime.Now.Date;
+
+                // If the latest EnteredOn is today (or future), there's nothing to check
+                if (startDate >= endDate)
+                {
+                    _logger.LogInformation(
+                        "Latest EnteredOn ({Start}) is today or later for SiteId: {SiteId} — nothing missing",
+                        startDate.ToString("dd-MM-yyyy"), siteId);
+
+                    return ApiResponse<List<MissingStockDateDto>>.Success(
+                        new List<MissingStockDateDto>(),
+                        "No missing stock dates");
+                }
+
+                _logger.LogDebug("Checking missing stock dates from {Start} (latest EnteredOn) to {End} (today) for SiteId: {SiteId}",
+                    startDate.ToString("dd-MM-yyyy"), endDate.ToString("dd-MM-yyyy"), siteId);
+
+                // HashSet of all existing dates for O(1) lookups
+                var existingDateSet = new HashSet<string>(
+                    existingDates.Where(d => !string.IsNullOrEmpty(d)),
+                    StringComparer.OrdinalIgnoreCase);
+
+                var missingDates = new List<MissingStockDateDto>();
+
+                // Walk ONLY from the latest EnteredOn -> today
+                for (var date = startDate; date <= endDate; date = date.AddDays(1))
+                {
+                    if (date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday)
+                        continue;
+
+                    var dateStr = date.ToString("dd-MM-yyyy");
+
+                    if (!existingDateSet.Contains(dateStr))
+                    {
                         missingDates.Add(new MissingStockDateDto
                         {
-                            Date = date.ToString("dd-MM-yyyy"),
+                            Date = dateStr,
                             IsMissing = true,
                             DisplayDate = date.ToString("dd-MMM-yyyy")
                         });
                     }
                 }
-                else
-                {
-                    // Check each date in the range
-                    for (var date = startDate; date <= endDate; date = date.AddDays(1))
-                    {
-                        // Skip weekends when reporting missing dates
-                        if (date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday)
-                        {
-                            continue;
-                        }
 
-                        var dateStr = date.ToString("dd-MM-yyyy");
-                        if (!parsedDates.Any(d => d.ToString("dd-MM-yyyy") == dateStr))
-                        {
-                            missingDates.Add(new MissingStockDateDto
-                            {
-                                Date = dateStr,
-                                IsMissing = true,
-                                DisplayDate = date.ToString("dd-MMM-yyyy")
-                            });
-                        }
-                    }
-                }
+                // Newest / closest first
+                missingDates = missingDates
+                    .OrderByDescending(d => DateTime.ParseExact(d.Date, "dd-MM-yyyy", null))
+                    .ToList();
 
-                // Sort missing dates (oldest first)
-                missingDates = missingDates.OrderBy(d => DateTime.ParseExact(d.Date, "dd-MM-yyyy", null)).ToList();
-
-                _logger.LogInformation("Found {MissingCount} missing stock dates for SiteId: {SiteId} out of {TotalDays} days",
-                    missingDates.Count, siteId, (endDate - startDate).Days + 1);
+                _logger.LogInformation(
+                    "Found {MissingCount} missing stock dates for SiteId: {SiteId} between {Start} and {End}",
+                    missingDates.Count, siteId,
+                    startDate.ToString("dd-MM-yyyy"), endDate.ToString("dd-MM-yyyy"));
 
                 return ApiResponse<List<MissingStockDateDto>>.Success(
                     missingDates,
@@ -625,8 +614,6 @@ namespace NashunumaApp.Application.Services
                 );
             }
         }
-
-        
         /// Validates if stock exists for a specific site and date
 
         public async Task<ApiResponse<bool>> ValidateStockExistsForDateAsync(string siteId, string date)
@@ -643,13 +630,10 @@ namespace NashunumaApp.Application.Services
                 }
 
                 var stock = await _foodStockRepository.GetBySiteIdAndDateAsync(siteId, date);
-
                 _logger.LogInformation("Stock exists for SiteId: {SiteId}, Date: {Date}: {Exists}",
                     siteId, date, stock != null);
 
-                return ApiResponse<bool>.Success(
-                    stock != null,
-                    stock != null ? "Stock exists" : "Stock does not exist"
+                return ApiResponse<bool>.Success(stock != null,stock != null ? "Stock exists" : "Stock does not exist"
                 );
             }
             catch (Exception ex)
@@ -662,7 +646,6 @@ namespace NashunumaApp.Application.Services
             }
         }
 
-        
         /// Gets the next date that needs to be entered for a site
 
         public async Task<ApiResponse<NextRequiredDateDto>> GetNextRequiredDateAsync(string siteId)
@@ -678,52 +661,49 @@ namespace NashunumaApp.Application.Services
                 }
 
                 var today = DateTime.Now.Date;
-                var existingDates = await _foodStockRepository.GetExistingStockDatesAsync(siteId);
-                var parsedExistingDates = new List<DateTime>();
 
+                // Get all existing stock dates for this site
+                var existingDates = await _foodStockRepository.GetExistingStockDatesAsync(siteId);
+
+                var parsedExistingDates = new List<DateTime>();
                 foreach (var dateStr in existingDates)
                 {
                     if (!string.IsNullOrEmpty(dateStr) &&
                         DateTime.TryParseExact(dateStr, "dd-MM-yyyy", null, DateTimeStyles.None, out var date))
                     {
-                        parsedExistingDates.Add(date);
+                        parsedExistingDates.Add(date.Date);
                     }
                 }
 
-                var missingDates = new List<DateTime>();
+                // Dedupe then order DESCENDING — latest first
+                parsedExistingDates = parsedExistingDates
+                    .Distinct()
+                    .OrderByDescending(d => d)
+                    .ToList();
 
-                if (!parsedExistingDates.Any())
+                // Starting point: day after the last existing record (or today if none)
+                DateTime startDate;
+                if (parsedExistingDates.Any())
                 {
-                    // If no records exist, start from 30 days ago
-                    var startDate = today.AddDays(-30);
-                    for (var date = startDate; date < today; date = date.AddDays(1))
-                    {
-                        missingDates.Add(date);
-                    }
-
-                    // Add today if today is not yet saved
-                    if (!parsedExistingDates.Any(d => d.Date == today))
-                    {
-                        missingDates.Add(today);
-                    }
+                    startDate = parsedExistingDates.First().AddDays(1);
                 }
                 else
                 {
-                    var lastExistingDate = parsedExistingDates.Max();
-
-                    // Check from the day after the last existing date to today
-                    var nextDate = lastExistingDate.Date.AddDays(1);
-                    for (var date = nextDate; date <= today; date = date.AddDays(1))
-                    {
-                        if (!parsedExistingDates.Any(d => d.Date == date.Date))
-                        {
-                            missingDates.Add(date);
-                        }
-                    }
+                    startDate = today;
                 }
 
-                // Sort missing dates (oldest first)
-                missingDates = missingDates.OrderBy(d => d).ToList();
+                // Walk day-by-day to today, collect missing weekdays
+                var missingDates = new List<DateTime>();
+                for (var date = startDate; date <= today; date = date.AddDays(1))
+                {
+                    if (date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday)
+                        continue;
+
+                    if (parsedExistingDates.Any(d => d.Date == date.Date))
+                        continue;
+
+                    missingDates.Add(date);
+                }
 
                 var response = new NextRequiredDateDto
                 {
@@ -741,7 +721,8 @@ namespace NashunumaApp.Application.Services
                     TotalMissingCount = missingDates.Count
                 };
 
-                _logger.LogInformation("Found {MissingCount} missing dates for SiteId: {SiteId}. Next required date: {NextDate}",
+                _logger.LogInformation(
+                    "Found {MissingCount} missing dates for SiteId: {SiteId}. Next required date: {NextDate}",
                     missingDates.Count, siteId, response.NextRequiredDate ?? "None");
 
                 return ApiResponse<NextRequiredDateDto>.Success(
@@ -759,12 +740,11 @@ namespace NashunumaApp.Application.Services
                 );
             }
         }
-
         #endregion
 
         #region Private Helper Methods
 
-        
+
         /// Helper method to parse and clean string values
 
         private string? ParseString(string? value)

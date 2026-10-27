@@ -21,6 +21,8 @@ import { ApiResponse, PaginatedResponse } from '@core/models/api-response.model'
 })
 export class MotherTrimisterListComponent implements OnInit {
   batchNumber = '';
+  recordType: 'Child' | 'Mother' = 'Mother';
+  displayedRecordType: 'Child' | 'Mother' = 'Mother';
   lastSearchBatchNumber = '';
   items: MotherTrimisterDto[] = [];
   loading = false;
@@ -30,15 +32,23 @@ export class MotherTrimisterListComponent implements OnInit {
   // indicates where the current items came from: 'server' | 'upload' | 'export' | null
   resultSource: 'server' | 'upload' | 'export' | null = null;
 
-  columns: DataTableColumn[] = [
-     { field: 'srNo', header: 'S.No', sortable: false, width: '60px', type: 'number' },
+  get columns(): DataTableColumn[] {
+    return [
+    { field: 'srNo', header: 'S.No', sortable: false, width: '60px', type: 'number' },
+    { field: 'BatchNumber', header: 'Batch Number' },
     { field: 'MotherCnic', header: 'Mother CNIC' },
-    { field: 'VisitDate', header: 'Visit Date' },
-    { field: 'TrimisterNo', header: 'Trimester' },
+    { field: 'VisitDate', header: 'Visit Date', width: '160px' },
+    { field: 'TrimisterNo', header: this.displayedRecordType === 'Child' ? 'Quarter No' : 'Trimester' },
     { field: 'SiteName', header: 'Site' },
     { field: 'PhoneNo', header: 'Phone' },
-    { field: 'Address', header: 'Address' }
-  ];
+    { field: 'Address', header: 'Address' },
+    { field: 'Province', header: 'Province' },
+    { field: 'District', header: 'District' },
+    { field: 'Tehsil', header: 'Tehsil' },
+    { field: 'EnteredByCNIC', header: 'Entered By CNIC' },
+    { field: 'EnteredByName', header: 'Entered By Name' },
+    ];
+  }
 
   private apiUrl = `${environment.apiUrl}/api/LookUp`;
 
@@ -163,16 +173,21 @@ export class MotherTrimisterListComponent implements OnInit {
 
     this.batchNumber = currentBatch;
     this.lastSearchBatchNumber = currentBatch;
+    const requestedType = this.recordType;
 
     this.loading = true;
     const params = new HttpParams()
       .set('batchNumber', currentBatch)
+      .set('type', requestedType)
       .set('pageNumber', this.pageNumber.toString())
       .set('pageSize', this.pageSize.toString());
 
     this.http.get<ApiResponse<any>>(`${this.apiUrl}/by-batch`, { params }).subscribe({
       next: (resp) => {
         this.loading = false;
+        if (resp?.isSuccess) {
+          this.displayedRecordType = requestedType;
+        }
         if (resp?.isSuccess && resp.data) {
           // normalize common API shapes: array, { items, totalCount }, { Items, TotalCount }, { data: { items } }
           const raw = resp.data as any;
@@ -209,14 +224,20 @@ export class MotherTrimisterListComponent implements OnInit {
           // normalize property names (API returns camelCase keys)
           const startIndex = (this.pageNumber - 1) * this.pageSize;
           const mapped = list.map((it: any, idx: number) => ({
+            ...it,
             srNo: startIndex + idx + 1,
+            BatchNumber: it.batchNumber ?? it.BatchNumber ?? it.batchnumber ?? '',
             MotherCnic: it.motherCnic ?? it.MotherCnic ?? it.mothercnic ?? '',
             VisitDate: it.visitDate ?? it.VisitDate ?? it.visitdate ?? '',
             TrimisterNo: it.trimisterNo ?? it.TrimisterNo ?? it.trimisterno ?? '',
             SiteName: it.siteName ?? it.SiteName ?? it.sitename ?? '',
             PhoneNo: it.phoneNo ?? it.PhoneNo ?? it.phoneno ?? '',
             Address: it.address ?? it.Address ?? '',
-            ...it
+            Province: it.province ?? it.Province ?? '',
+            District: it.district ?? it.District ?? '',
+            Tehsil: it.tehsil ?? it.Tehsil ?? '',
+            EnteredByCNIC: it.enteredByCNIC ?? it.EnteredByCNIC ?? it.enteredByCnic ?? it.enteredbycnic ?? '',
+            EnteredByName: it.enteredByName ?? it.EnteredByName ?? it.enteredbyname ?? ''
           }));
           this.items = mapped as MotherTrimisterDto[];
           this.totalCount = total || this.items.length;
@@ -259,6 +280,7 @@ export class MotherTrimisterListComponent implements OnInit {
     this.pageSize = evt.pageSize;
     this.load();
   }
+
   uploadBatch(): void {
     if (!this.fileToUpload) {
       this.uploadError = 'Please select a file to upload.';
@@ -268,27 +290,37 @@ export class MotherTrimisterListComponent implements OnInit {
     this.uploadError = null;
     this.uploadMessage = null;
     this.batchNumbersNotFound = [];
+    const requestedType = this.recordType;
 
-    this.mts.uploadBatchFile(this.fileToUpload, this.uploadFormat).pipe(
+    this.mts.uploadBatchFile(this.fileToUpload, this.uploadFormat, requestedType).pipe(
       finalize(() => (this.uploadLoading = false))
     ).subscribe({
       next: (outcome: any) => {
         if (outcome && outcome.kind === 'json') {
           const payload = outcome.payload as any;
+          if (payload?.isSuccess !== false) {
+            this.displayedRecordType = requestedType;
+          }
           this.uploadMessage = payload?.message ?? null;
           const dto = payload?.data ?? payload;
           const inner = dto?.data ?? dto;
           const items = Array.isArray(inner?.items) ? inner.items : (Array.isArray(inner) ? inner : []);
 
           const mapped = (items as any[]).map((it: any, idx: number) => ({
+            ...it,
             srNo: idx + 1,
+            BatchNumber: it.batchNumber ?? it.BatchNumber ?? it.batchnumber ?? '',
             MotherCnic: it.motherCnic ?? it.MotherCnic ?? it.mothercnic ?? '',
             VisitDate: it.visitDate ?? it.VisitDate ?? it.visitdate ?? '',
             TrimisterNo: it.trimisterNo ?? it.TrimisterNo ?? it.trimisterno ?? '',
             SiteName: it.siteName ?? it.SiteName ?? it.sitename ?? '',
             PhoneNo: it.phoneNo ?? it.PhoneNo ?? it.phoneno ?? '',
             Address: it.address ?? it.Address ?? '',
-            ...it
+            Province: it.province ?? it.Province ?? '',
+            District: it.district ?? it.District ?? '',
+            Tehsil: it.tehsil ?? it.Tehsil ?? '',
+            EnteredByCNIC: it.enteredByCNIC ?? it.EnteredByCNIC ?? it.enteredByCnic ?? it.enteredbycnic ?? '',
+            EnteredByName: it.enteredByName ?? it.EnteredByName ?? it.enteredbyname ?? ''
           }));
 
           this.items = mapped as MotherTrimisterDto[];
@@ -297,6 +329,7 @@ export class MotherTrimisterListComponent implements OnInit {
           this.resultSource = 'upload';
           this.cdr.detectChanges();
         } else if (outcome && outcome.kind === 'file') {
+          this.displayedRecordType = requestedType;
           const url = URL.createObjectURL(outcome.blob);
           const a = document.createElement('a');
           a.href = url;

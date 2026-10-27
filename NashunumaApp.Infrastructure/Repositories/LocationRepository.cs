@@ -181,6 +181,28 @@ namespace NashunumaApp.Infrastructure.Repositories
                 throw new Exception($"Error retrieving tehsil {tehsilName}: {ex.Message}", ex);
             }
         }
+        public async Task<SitesDto> GetSitesByName(string siteName)
+        {
+            try
+            {
+                var site = await _context.NthSiteLocations
+                    .Where(s => s.IsActive == 1 && s.Tehsil == siteName && s.SiteName != null)
+                    .GroupBy(s => new {s.Id, s.SiteName, s.TehsilId })
+                    .Select(g => new SitesDto
+                    {
+                        Id = g.Key.Id ,
+                        Site = g.Key.SiteName,
+                        TehsilId = g.Key.TehsilId
+                    })
+                    .FirstOrDefaultAsync();
+
+                return site;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error retrieving site {siteName}: {ex.Message}", ex);
+            }
+        }
 
         
         /// Get complete location hierarchy: Provinces -> Districts -> Tehsils

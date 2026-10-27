@@ -53,7 +53,7 @@ export const environment: Environment = {
     'location.getProvinceByName': '/api/Location/province/{provinceName}',
     'location.getDistrictByName': '/api/Location/district/{districtName}',
     'location.getTehsilByName': '/api/Location/tehsil/{tehsilName}',
-    
+    'location.getSitesByTehsil': '/api/Location/sites/{tehsilName}',
     // Add more as needed
     // MotherTrimister
     'motherTrimister.byBatch': '/api/LookUp/by-batch',

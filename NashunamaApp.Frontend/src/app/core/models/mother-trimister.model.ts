@@ -9,5 +9,7 @@ export interface MotherTrimisterDto {
   Province?: string;
   District?: string;
   Tehsil?: string;
-  Email?: string;
+   EnteredByCNIC: string;
+   EnteredByName: string;
+   BatchNumber?: string;
 }

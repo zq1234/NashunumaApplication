@@ -23,8 +23,7 @@ namespace NashunumaApp.Application.Services
             _repository = repository;
             _mapper = mapper;
         }
-
-        public async Task<ApiResponse<PaginatedResponse<MotherTrimisterResponseDto>>> GetByBatchNumberAsync(string batchNumber, int pageNumber = 1,int pageSize = 10)
+        public async Task<ApiResponse<PaginatedResponse<MotherTrimisterResponseDto>>> GetByBatchNumberAsync(string batchNumber, string type, int pageNumber = 1,int pageSize = 10)
         {
             try
             {
@@ -37,7 +36,7 @@ namespace NashunumaApp.Application.Services
                 pageNumber = Math.Max(1, pageNumber);
                 pageSize = Math.Max(1, Math.Min(100, pageSize));
 
-                var result = await _repository.GetByBatchNumberAsync(batchNumber.Trim(), pageNumber, pageSize);
+                var result = await _repository.GetByBatchNumberAsync(batchNumber.Trim(), type, pageNumber, pageSize);
 
                 var mappedItems = _mapper.Map<List<MotherTrimisterResponseDto>>(result.Items);
                 var paginatedResponse = new PaginatedResponse<MotherTrimisterResponseDto>
@@ -57,7 +56,7 @@ namespace NashunumaApp.Application.Services
                     .Failure($"Failed to retrieve mother trimister records: {ex.Message}");
             }
         }
-        public async Task<ApiResponse<BatchExcelResultDto>> GetExcelBatchNumbersAsync( IFormFile file, int pageNumber = 1, int pageSize = 10)
+        public async Task<ApiResponse<BatchExcelResultDto>> GetExcelBatchNumbersAsync( IFormFile file, string type, int pageNumber = 1, int pageSize = 10)
         {
             try
             {
@@ -85,7 +84,7 @@ namespace NashunumaApp.Application.Services
                 pageSize = Math.Max(1, Math.Min(100, pageSize));
 
                 var (items, totalCount, notFound) =
-                    await _repository.GetExcelBatchNumbersAsync(batchNumbers, pageNumber, pageSize);
+                    await _repository.GetExcelBatchNumbersAsync(batchNumbers, type,pageNumber, pageSize);
 
                 var mappedItems = _mapper.Map<List<MotherTrimisterResponseDto>>(items);
 
@@ -123,7 +122,7 @@ namespace NashunumaApp.Application.Services
         // ------------------------------------------------------------
         // — INLINE JSON (no pagination)
         // ------------------------------------------------------------
-        public async Task<ApiResponse<BatchExcelResultDto>> GetExcelBatchNumbersInlineAsync( IFormFile file, CancellationToken cancellationToken = default)
+        public async Task<ApiResponse<BatchExcelResultDto>> GetExcelBatchNumbersInlineAsync( IFormFile file, string type, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -151,10 +150,10 @@ namespace NashunumaApp.Application.Services
 
                 // --- do not use StreamExcelBatchNumbersAsync paging; just take all rows ---
                 var allRows = new List<MotherTrimisterDto>();
-                await foreach (var r in _repository.StreamExcelBatchNumbersAsync(batchNumbers, cancellationToken))
+                await foreach (var r in _repository.StreamExcelBatchNumbersAsync(batchNumbers,type, cancellationToken))
                     allRows.Add(r);
 
-                var existing = await _repository.GetExistingBatchNumbersAsync(batchNumbers, cancellationToken);
+                var existing = await _repository.GetExistingBatchNumbersAsync(batchNumbers,type, cancellationToken);
                 var existingSet = new HashSet<string>(existing, StringComparer.OrdinalIgnoreCase);
                 var notFound = batchNumbers
                     .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -197,7 +196,7 @@ namespace NashunumaApp.Application.Services
         // — EXPORT (streams csv/xlsx)
         // ------------------------------------------------------------
         public async Task<(Stream FileStream, string ContentType, string FileName)> GetExcelBatchNumbersExportAsync(
-            IFormFile file, string format, CancellationToken cancellationToken = default)
+            IFormFile file, string type, string format, CancellationToken cancellationToken = default)
         {
             if (file == null || file.Length == 0)
                 throw new InvalidOperationException("Please upload a valid file.");
@@ -228,7 +227,7 @@ namespace NashunumaApp.Application.Services
             // For truly huge exports, write to a temp file instead.
             var ms = new MemoryStream();
 
-            var rowStream = _repository.StreamExcelBatchNumbersAsync(batchNumbers, cancellationToken);
+            var rowStream = _repository.StreamExcelBatchNumbersAsync(batchNumbers,type, cancellationToken);
 
             if (normalizedFormat == "csv")
                 await BatchExportWriter.WriteCsvAsync(ms, rowStream, cancellationToken);

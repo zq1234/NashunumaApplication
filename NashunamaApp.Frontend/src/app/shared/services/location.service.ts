@@ -25,7 +25,14 @@ export interface Tehsil {
   tehsilcode: number;
   tehsil: string;
 }
-
+export interface Sites {
+  id: number;
+  site?: string;
+  tehsilId?: number;
+  sitecode?: number;
+  tehsilcode?: number;
+  sitename?: string;
+}
 export interface Uc {
   id: number;
   tehsilcode: number;
@@ -73,12 +80,14 @@ export class LocationService {
   private provincesCache = new BehaviorSubject<Province[]>([]);
   private districtsCache = new Map<string, District[]>(); // Key: province name
   private tehsilsCache = new Map<string, Tehsil[]>(); // Key: district name
+  private sitesCache = new Map<string, Sites[]>(); // Key: tehsil name
   private ucsCache = new Map<string, Uc[]>(); // Key: tehsil name
   
   // Loading states
   private loadingProvinces = false;
   private loadingDistricts = new Map<string, boolean>();
   private loadingTehsils = new Map<string, boolean>();
+  private loadingSites = new Map<string, boolean>();
   private loadingUcs = new Map<string, boolean>();
 
   constructor(private http: HttpClient) {}
@@ -340,6 +349,72 @@ export class LocationService {
   }
 
   /**
+   * Get sites by tehsil name
+   * GET /api/Location/sites/{tehsilName}
+   */
+  getSitesByTehsil(tehsilName: string): Observable<ApiResponse<Sites[]>> {
+    if (!tehsilName) {
+      return of({
+        isSuccess: false,
+        message: 'Tehsil name is required',
+        data: [],
+        errors: ['Tehsil name is required'],
+        statusCode: ApiStatusCodes.BAD_REQUEST
+      });
+    }
+
+    if (this.loadingSites.get(tehsilName)) {
+      return of({
+        isSuccess: true,
+        message: 'Sites loading...',
+        data: this.sitesCache.get(tehsilName) || [],
+        errors: null,
+        statusCode: ApiStatusCodes.OK
+      });
+    }
+
+    if (this.sitesCache.has(tehsilName)) {
+      return of({
+        isSuccess: true,
+        message: 'Sites retrieved from cache',
+        data: this.sitesCache.get(tehsilName)!,
+        errors: null,
+        statusCode: ApiStatusCodes.OK
+      });
+    }
+
+    this.loadingSites.set(tehsilName, true);
+    const url = this.buildUrl('location.getSitesByTehsil', { tehsilName });
+
+    return this.http.get<ApiResponse<Sites[] | Sites>>(url).pipe(
+      map(response => ({
+        ...response,
+        data: Array.isArray(response.data)
+          ? response.data
+          : response.data
+            ? [response.data]
+            : []
+      }) as ApiResponse<Sites[]>),
+      tap(response => {
+        this.loadingSites.set(tehsilName, false);
+        if (ApiResponseHelper.isSuccess(response) && response.data) {
+          this.sitesCache.set(tehsilName, response.data);
+        }
+      }),
+      catchError(error => {
+        this.loadingSites.set(tehsilName, false);
+        return of({
+          isSuccess: false,
+          message: error.message || 'Failed to load sites',
+          data: [],
+          errors: [error.message || 'An error occurred'],
+          statusCode: error.status || ApiStatusCodes.INTERNAL_SERVER_ERROR
+        });
+      })
+    );
+  }
+
+  /**
    * Get full location hierarchy
    * GET /api/Location/hierarchy
    */
@@ -511,9 +586,11 @@ export class LocationService {
     this.provincesCache.next([]);
     this.districtsCache.clear();
     this.tehsilsCache.clear();
+    this.sitesCache.clear();
     this.ucsCache.clear();
     this.loadingDistricts.clear();
     this.loadingTehsils.clear();
+    this.loadingSites.clear();
     this.loadingUcs.clear();
     this.loadingProvinces = false;
   }
@@ -537,6 +614,11 @@ export class LocationService {
    */
   getCachedTehsils(districtName: string): Tehsil[] | null {
     return this.tehsilsCache.get(districtName) || null;
+  }
+
+  /** Get cached sites for a tehsil by name */
+  getCachedSites(tehsilName: string): Sites[] | null {
+    return this.sitesCache.get(tehsilName) || null;
   }
 
   /**

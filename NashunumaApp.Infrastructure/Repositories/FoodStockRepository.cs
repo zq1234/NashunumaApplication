@@ -4,6 +4,7 @@ using NashunumaApp.Domain.Common.DTOs;
 using NashunumaApp.Domain.Entities;
 using NashunumaApp.Domain.Interfaces;
 using NashunumaApp.Infrastructure.Data;
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 
@@ -162,64 +163,79 @@ namespace NashunumaApp.Infrastructure.Repositories
                     .Where(s => s.IsActive == 1)
                     .CountAsync();
 
-                // Get all sites
-                var allSites = await _context.NthSiteLocations
+                // Get all active site IDs (as strings for consistent comparison with stock.SiteId)
+                var allSiteIds = await _context.NthSiteLocations
                     .Where(s => s.IsActive == 1)
                     .Select(s => s.Id)
                     .ToListAsync();
 
-                // Get all food stocks (with date parsing in memory)
+                var allSiteIdStrings = allSiteIds
+                    .Select(id => id.ToString())
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+                // Get all food stocks (EnteredOn is a dd-MM-yyyy STRING)
                 var stocks = await _context.Foodstock
                     .Where(f => f.EnteredOn != null)
                     .Select(f => new { f.SiteId, f.EnteredOn, f.ClosingStockBoxesMamta })
                     .ToListAsync();
 
-                // Process in memory using LINQ
-                var sevenDaysAgo = DateTime.Now.AddDays(-7);
-
-                // Get site IDs that were updated in last 7 days
-                var updatedSiteIds = stocks
-                    .Where(s => DateTime.TryParse(s.EnteredOn, out var date) && date >= sevenDaysAgo)
-                    .Select(s => s.SiteId)
-                    .Distinct()
+                // Parse EnteredOn (dd-MM-yyyy string) once into DateTime?
+                var parsedStocks = stocks
+                    .Select(s => new
+                    {
+                        s.SiteId,
+                        s.ClosingStockBoxesMamta,
+                        EnteredOnDate = DateTime.TryParseExact(
+                                            s.EnteredOn, "dd-MM-yyyy", null,
+                                            DateTimeStyles.None, out var dt)
+                                        ? dt
+                                        : (DateTime?)null
+                    })
+                    .Where(s => s.EnteredOnDate.HasValue)   // ignore unparseable
                     .ToList();
 
-                // Sites not updated
-                var notUpdated = allSites.Count(s => !updatedSiteIds.Contains(s.ToString()));
+                // 1) Sites not updated in last 7 days
+                var sevenDaysAgo = DateTime.Now.Date.AddDays(-7);
 
-                // Low stock sites
-                var lowStockSites = stocks
-                    .Where(s => s.ClosingStockBoxesMamta != null &&
-                               int.TryParse(s.ClosingStockBoxesMamta, out var closing) && closing < 10)
+                var updatedSiteIds = parsedStocks
+                    .Where(s => s.EnteredOnDate.Value >= sevenDaysAgo)
                     .Select(s => s.SiteId)
-                    .Distinct()
+                    .Where(id => !string.IsNullOrEmpty(id))
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+                var notUpdated = allSiteIdStrings.Count(id => !updatedSiteIds.Contains(id));
+
+                // 2) Low stock sites (closing < 10)
+                var lowStockSites = parsedStocks
+                    .Where(s => s.ClosingStockBoxesMamta != null &&
+                                int.TryParse(s.ClosingStockBoxesMamta, out var closing) &&
+                                closing < 10)
+                    .Select(s => s.SiteId)
+                    .Where(id => !string.IsNullOrEmpty(id))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
                     .Count();
 
-                // Get stock by province (join with sites)
+                // 3) Stock by province (join sites with stocks)
                 var sitesWithProvince = await _context.NthSiteLocations
                     .Where(s => s.IsActive == 1)
                     .Select(s => new { s.Id, s.Province })
                     .ToListAsync();
 
                 var stockByProvince = sitesWithProvince
-                    .Join(stocks,
+                    .Join(parsedStocks,
                         site => site.Id.ToString(),
                         stock => stock.SiteId,
-                        (site, stock) => site.Province ?? "Unknown")
+                        (site, stock) => site.Province ?? "Unknown",
+                        StringComparer.OrdinalIgnoreCase)
                     .GroupBy(p => p)
                     .ToDictionary(g => g.Key, g => g.Count());
 
-                // Get last updated time
-                var lastUpdatedString = stocks
-                    .OrderByDescending(s => s.EnteredOn)
-                    .Select(s => s.EnteredOn)
+                // 4) Last updated = latest EnteredOn (parsed chronologically, since dd-MM-yyyy
+                //    strings sort wrong lexicographically)
+                var lastUpdated = parsedStocks
+                    .OrderByDescending(s => s.EnteredOnDate.Value)
+                    .Select(s => (DateTime?)s.EnteredOnDate.Value)
                     .FirstOrDefault();
-
-                DateTime? lastUpdated = null;
-                if (lastUpdatedString != null && DateTime.TryParse(lastUpdatedString, out var parsed))
-                {
-                    lastUpdated = parsed;
-                }
 
                 return new FoodStockSummaryDto
                 {
@@ -462,11 +478,25 @@ namespace NashunumaApp.Infrastructure.Repositories
         {
             try
             {
-                return await _context.Foodstock
+                var dates = await _context.Foodstock
                     .Where(f => f.SiteId == siteId && f.EnteredOn != null)
                     .Select(f => f.EnteredOn)
                     .Distinct()
                     .ToListAsync();
+
+                // dd-MM-yyyy strings do NOT sort chronologically in SQL,
+                // so parse + sort in memory (oldest first).
+                return dates
+                    .Select(d => new
+                    {
+                        Raw = d,
+                        Parsed = DateTime.TryParseExact(d, "dd-MM-yyyy", null,
+                                    DateTimeStyles.None, out var dt) ? dt : (DateTime?)null
+                    })
+                    .Where(x => x.Parsed.HasValue)
+                    .OrderByDescending(x => x.Parsed.Value)   // oldest → newest
+                    .Select(x => x.Raw)
+                    .ToList();
             }
             catch (Exception ex)
             {

@@ -385,15 +385,26 @@
             <option *ngFor="let t of transferTehsils" [ngValue]="t.tehsil">{{ t.tehsil }}</option>
           </select>
         </div>
-
+<!-- SiteName Dropdown -->
         <div>
+          <label class="form-label">Site Name</label>
+          <select class="form-select"
+                  title="Site Name"
+                  [(ngModel)]="transferSiteName"
+                  (change)="onTransferSiteNameChange(transferSiteName)"
+                  [disabled]="!transferTehsilName || loadingTransfer || loadingTransferSites">
+            <option [ngValue]="null">Select Site Name</option>
+            <option *ngFor="let t of transferSites" [ngValue]="t.site || t.sitename">{{ t.site || t.sitename }}</option>
+          </select>
+        </div>
+        <!-- <div>
           <label class="form-label">Site Name</label>
           <input type="text"
                  class="form-control"
                  [(ngModel)]="transferForm.siteName"
                  placeholder="Enter site name"
                  [disabled]="loadingTransfer">
-        </div>
+        </div> -->
       </div>
     </div>
 
