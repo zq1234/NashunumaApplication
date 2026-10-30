@@ -1,4 +1,6 @@
-﻿using AutoMapper;
+﻿// Application/Services/FoodStockService.cs
+
+using AutoMapper;
 using Microsoft.Extensions.Logging;
 using NashunumaApp.Application.DTOs.Common;
 using NashunumaApp.Application.DTOs.FoodStock;
@@ -10,6 +12,12 @@ using System.Globalization;
 
 namespace NashunumaApp.Application.Services
 {
+    /// <summary>
+    /// Application service for food stock.
+    /// Role-scoped methods accept a username (resolved by the controller from
+    /// authenticated claims) and forward it to the repository, which applies
+    /// admin vs. non-admin site scoping.
+    /// </summary>
     public class FoodStockService : IFoodStockService
     {
         private readonly IFoodStockRepository _foodStockRepository;
@@ -26,7 +34,12 @@ namespace NashunumaApp.Application.Services
             _logger = logger;
         }
 
+        // =====================================================================
+        // Role-scoped read methods
+        // =====================================================================
+
         public async Task<ApiResponse<PaginatedResponse<FoodStockDto>>> GetPagedFoodStocksAsync(
+            string username,
             int pageNumber,
             int pageSize,
             string? searchTerm = null,
@@ -34,29 +47,28 @@ namespace NashunumaApp.Application.Services
         {
             try
             {
-                _logger.LogInformation("Getting paged food stocks - PageNumber: {PageNumber}, PageSize: {PageSize}, SearchTerm: {SearchTerm}",
-                    pageNumber, pageSize, searchTerm ?? "null");
+                _logger.LogInformation("Getting paged food stocks - User: {User}, PageNumber: {PageNumber}, PageSize: {PageSize}, SearchTerm: {SearchTerm}",
+                    username, pageNumber, pageSize, searchTerm ?? "null");
 
-                // Validate pagination parameters
+                // Validate pagination parameters.
                 pageNumber = Math.Max(1, pageNumber);
                 pageSize = Math.Max(1, Math.Min(100, pageSize));
 
-                // Get paged data with site information
+                // Delegate scoping + filtering to the repository.
                 var result = await _foodStockRepository.GetPagedFoodStocksWithSiteAsync(
+                    username,
                     pageNumber,
                     pageSize,
                     searchTerm,
                     siteId
                 );
 
-                // Extract items and total count
                 var items = result.Items;
                 var totalCount = result.TotalCount;
 
-                // Map Domain DTO to Application DTO using AutoMapper
+                // Domain DTO -> Application DTO.
                 var mappedItems = _mapper.Map<List<FoodStockDto>>(items);
 
-                // Create paginated response
                 var paginatedResponse = new PaginatedResponse<FoodStockDto>
                 {
                     Items = mappedItems,
@@ -75,13 +87,77 @@ namespace NashunumaApp.Application.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to retrieve paged food stocks - PageNumber: {PageNumber}, PageSize: {PageSize}",
-                    pageNumber, pageSize);
+                _logger.LogError(ex, "Failed to retrieve paged food stocks - User: {User}, PageNumber: {PageNumber}, PageSize: {PageSize}",
+                    username, pageNumber, pageSize);
                 return ApiResponse<PaginatedResponse<FoodStockDto>>.Failure(
                     $"Failed to retrieve food stocks: {ex.Message}"
                 );
             }
         }
+
+        public async Task<ApiResponse<Domain.Common.DTOs.FoodStockSummaryDto>> GetSummaryStatsAsync(string username)
+        {
+            try
+            {
+                _logger.LogInformation("Getting summary statistics for user {Username}", username);
+
+                var summary = await _foodStockRepository.GetSummaryStatsAsync(username);
+
+                _logger.LogInformation("Successfully retrieved summary statistics - TotalSites: {TotalSites}, NotUpdated: {NotUpdated}, LowStockSites: {LowStockSites}",
+                    summary.TotalSites, summary.NotUpdated, summary.LowStockSites);
+
+                return ApiResponse<Domain.Common.DTOs.FoodStockSummaryDto>.Success(
+                    summary,
+                    "Summary retrieved successfully"
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to retrieve summary statistics");
+                return ApiResponse<Domain.Common.DTOs.FoodStockSummaryDto>.Failure(
+                    $"Failed to retrieve summary: {ex.Message}"
+                );
+            }
+        }
+
+        public async Task<ApiResponse<byte[]>> ExportFoodStocksAsync(
+            string username,
+            string? searchTerm,
+            string? province,
+            string? district,
+            string? tehsil,
+            string format)
+        {
+            try
+            {
+                _logger.LogInformation("Exporting food stocks - User: {User}, SearchTerm: {SearchTerm}, Province: {Province}, District: {District}, Tehsil: {Tehsil}, Format: {Format}",
+                    username, searchTerm ?? "null", province ?? "null", district ?? "null", tehsil ?? "null", format);
+
+                // Role-scoped fetch, then serialize to bytes.
+                var data = await _foodStockRepository.GetExportDataAsync(
+                    username, searchTerm, province, district, tehsil);
+                var bytes = await _foodStockRepository.GenerateExportFileAsync(data, format);
+
+                _logger.LogInformation("Successfully exported {Count} food stocks in {Format} format",
+                    data.Count, format);
+
+                return ApiResponse<byte[]>.Success(
+                    bytes,
+                    "Export generated successfully"
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to export food stocks - Format: {Format}", format);
+                return ApiResponse<byte[]>.Failure(
+                    $"Failed to export: {ex.Message}"
+                );
+            }
+        }
+
+        // =====================================================================
+        // Simple single-row operations
+        // =====================================================================
 
         public async Task<ApiResponse<FoodStockDto>> GetFoodStockByIdAsync(decimal id)
         {
@@ -89,24 +165,20 @@ namespace NashunumaApp.Application.Services
             {
                 _logger.LogInformation("Getting food stock by ID: {Id}", id);
 
-                // Validate ID
                 if (id <= 0)
                 {
                     _logger.LogWarning("Invalid ID provided: {Id}", id);
                     return ApiResponse<FoodStockDto>.Failure("Invalid ID provided");
                 }
 
-                // Get the food stock by ID
                 var foodStock = await _foodStockRepository.GetByIdAsync(id);
 
-                // Check if record exists
                 if (foodStock == null)
                 {
                     _logger.LogWarning("Food stock with ID {Id} not found", id);
                     return ApiResponse<FoodStockDto>.Failure($"Food stock with ID {id} not found");
                 }
 
-                // Map to DTO
                 var mappedItem = _mapper.Map<FoodStockDto>(foodStock);
 
                 _logger.LogInformation("Successfully retrieved food stock with ID: {Id}", id);
@@ -160,61 +232,14 @@ namespace NashunumaApp.Application.Services
             }
         }
 
-        public async Task<ApiResponse<Domain.Common.DTOs.FoodStockSummaryDto>> GetSummaryStatsAsync()
-        {
-            try
-            {
-                _logger.LogInformation("Getting summary statistics");
+        // =====================================================================
+        // Save / update
+        // =====================================================================
 
-                var summary = await _foodStockRepository.GetSummaryStatsAsync();
-
-                _logger.LogInformation("Successfully retrieved summary statistics - TotalSites: {TotalSites}, NotUpdated: {NotUpdated}, LowStockSites: {LowStockSites}",
-                    summary.TotalSites, summary.NotUpdated, summary.LowStockSites);
-
-                return ApiResponse<Domain.Common.DTOs.FoodStockSummaryDto>.Success(
-                    summary,
-                    "Summary retrieved successfully"
-                );
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to retrieve summary statistics");
-                return ApiResponse<Domain.Common.DTOs.FoodStockSummaryDto>.Failure(
-                    $"Failed to retrieve summary: {ex.Message}"
-                );
-            }
-        }
-
-        public async Task<ApiResponse<byte[]>> ExportFoodStocksAsync(string? searchTerm, string format)
-        {
-            try
-            {
-                _logger.LogInformation("Exporting food stocks - SearchTerm: {SearchTerm}, Format: {Format}",
-                    searchTerm ?? "null", format);
-
-                var data = await _foodStockRepository.GetExportDataAsync(searchTerm);
-                var bytes = await _foodStockRepository.GenerateExportFileAsync(data, format);
-
-                _logger.LogInformation("Successfully exported {Count} food stocks in {Format} format",
-                    data.Count, format);
-
-                return ApiResponse<byte[]>.Success(
-                    bytes,
-                    "Export generated successfully"
-                );
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to export food stocks - Format: {Format}", format);
-                return ApiResponse<byte[]>.Failure(
-                    $"Failed to export: {ex.Message}"
-                );
-            }
-        }
-
-        #region Stock Information Management
-
-        /// Saves or updates stock information for a specific site with sequential date validation
+        /// <summary>
+        /// Saves or updates stock information for a specific site with sequential
+        /// date validation (no future dates, no gaps in weekday dates, no dupes).
+        /// </summary>
         public async Task<ApiResponse<FoodStockDto>> SaveStockInformationAsync(SaveStockInformationRequest request)
         {
             try
@@ -222,7 +247,7 @@ namespace NashunumaApp.Application.Services
                 _logger.LogInformation("Saving stock information - SiteId: {SiteId}, EnteredOn: {EnteredOn}, EnteredBy: {EnteredBy}",
                     request.SiteId ?? "null", request.EnteredOn ?? "null", request.EnteredBy ?? "null");
 
-                // ---- Basic validation ------------------------------------------------
+                // ---- Basic validation ------------------------------------------
                 if (string.IsNullOrEmpty(request.SiteId))
                 {
                     _logger.LogWarning("SaveStockInformation failed: Site ID is required");
@@ -236,7 +261,7 @@ namespace NashunumaApp.Application.Services
                     return ApiResponse<FoodStockDto>.Failure("Opening stock boxes WAWA is required");
                 }
 
-                // ---- Resolve target date (dd-MM-yyyy) --------------------------------
+                // ---- Resolve target date ---------------------------------------
                 string todayDate = DateTime.Now.ToString("dd-MM-yyyy");
                 string enteredOn = !string.IsNullOrEmpty(request.EnteredOn) && request.EnteredOn != "null"
                     ? request.EnteredOn
@@ -256,10 +281,10 @@ namespace NashunumaApp.Application.Services
                 targetDate = targetDate.Date;
                 var today = DateTime.Now.Date;
 
-                // Normalise the string we will store to dd-MM-yyyy regardless of input format
+                // Store as dd-MM-yyyy regardless of input format.
                 enteredOn = targetDate.ToString("dd-MM-yyyy");
 
-                // ---- Reject future dates --------------------------------------------
+                // ---- Reject future dates ---------------------------------------
                 if (targetDate > today)
                 {
                     _logger.LogWarning("Cannot save stock for future date {EnteredOn} for SiteId: {SiteId}",
@@ -269,11 +294,12 @@ namespace NashunumaApp.Application.Services
                         new List<string> { "FutureDate" });
                 }
 
-                // ---- Existing record for this exact date? (manual update path) ------
+                // ---- Existing record for this date? ----------------------------
                 var existingStock = await _foodStockRepository.GetBySiteIdAndDateAsync(request.SiteId, enteredOn);
 
                 if (existingStock != null)
                 {
+                    // Manual-update path: overwrite the existing row.
                     if (!string.IsNullOrEmpty(request.IsManualUpdate) &&
                         (request.IsManualUpdate == "1" ||
                          request.IsManualUpdate.Equals("true", StringComparison.OrdinalIgnoreCase)))
@@ -327,6 +353,7 @@ namespace NashunumaApp.Application.Services
                             "Stock Information updated successfully (manual update)");
                     }
 
+                    // Otherwise reject duplicate entries for the same day.
                     _logger.LogWarning("Stock already exists for SiteId: {SiteId} on Date: {EnteredOn}",
                         request.SiteId, enteredOn);
                     return ApiResponse<FoodStockDto>.Failure(
@@ -334,11 +361,10 @@ namespace NashunumaApp.Application.Services
                         new List<string> { "AlreadyExist" });
                 }
 
-                // ---- Fetch all existing dates and find the PINPOINT (latest EnteredOn) ----
+                // ---- Enforce chronological entry with no weekday gaps ----------
                 var existingDates = await _foodStockRepository.GetExistingStockDatesAsync(request.SiteId)
                                     ?? new List<string>();
 
-                // Parse (dd-MM-yyyy) -> DateTime, drop invalid, distinct, sort DESC → newest first
                 var parsedExistingDates = existingDates
                     .Select(d => DateTime.TryParseExact(d, "dd-MM-yyyy", CultureInfo.InvariantCulture,
                                     DateTimeStyles.None, out var dt) ? dt.Date : (DateTime?)null)
@@ -350,10 +376,10 @@ namespace NashunumaApp.Application.Services
 
                 if (parsedExistingDates.Count > 0)
                 {
-                    // PINPOINT = latest existing EnteredOn
+                    // The most recent existing entry.
                     var lastExistingDate = parsedExistingDates[0];
 
-                    // 1) Must be strictly after the latest existing date
+                    // Must be strictly after the latest existing date.
                     if (targetDate <= lastExistingDate)
                     {
                         _logger.LogWarning(
@@ -366,7 +392,7 @@ namespace NashunumaApp.Application.Services
                             new List<string> { "InvalidSequence" });
                     }
 
-                    // 2) Every non-weekend day between lastExistingDate+1 .. targetDate-1 must exist
+                    // No non-weekend day may be skipped between lastExistingDate+1 and targetDate-1.
                     var existingSet = parsedExistingDates.ToHashSet();
                     var missingDates = new List<DateTime>();
 
@@ -388,7 +414,6 @@ namespace NashunumaApp.Application.Services
                             "Cannot save stock for {EnteredOn}. Missing previous dates for SiteId: {SiteId}. Missing: {MissingDates}",
                             enteredOn, request.SiteId, missingDatesList);
 
-                        // Tell the user the FIRST date they must enter
                         var firstMissing = missingDates[0].ToString("dd-MM-yyyy");
 
                         return ApiResponse<FoodStockDto>.Failure(
@@ -398,10 +423,9 @@ namespace NashunumaApp.Application.Services
                     }
                 }
 
-                // ---- Create new entity ----------------------------------------------
+                // ---- Create new row -------------------------------------------
                 var stock = new NthSnfStock
                 {
-                    // Mamta
                     OpeningStockBoxesMamta = ParseString(request.OpeningStockBoxesMamta),
                     ReceivedStockBoxesMamta = ParseString(request.ReceivedStockBoxesMamta),
                     DistributedBoxesMamta = ParseString(request.DistributedBoxesMamta),
@@ -410,7 +434,6 @@ namespace NashunumaApp.Application.Services
                     ClosingStockSachetsMamta = ParseString(request.ClosingStockSachetsMamta),
                     DistributedSachetsMamta = ParseString(request.DistributedSachetsMamta),
 
-                    // Wawa
                     OpeningStockBoxesWawa = ParseString(request.OpeningStockBoxesWawa),
                     ReceivedStockBoxesWawa = ParseString(request.ReceivedStockBoxesWawa),
                     DistributedBoxesWawa = ParseString(request.DistributedBoxesWawa),
@@ -421,30 +444,25 @@ namespace NashunumaApp.Application.Services
 
                     Unit = ParseString(request.Unit),
 
-                    // RUTF
                     RutfReceived = ParseString(request.RutfReceived),
                     RutfOpening = ParseString(request.RutfOpening),
                     RutfDistributed = ParseString(request.RutfDistributed),
                     RutfClosing = ParseString(request.RutfClosing),
 
-                    // IFA
                     IfaReceived = ParseString(request.IfaReceived),
                     IfaOpening = ParseString(request.IfaOpening),
                     IfaDistributed = ParseString(request.IfaDistributed),
                     IfaClosing = ParseString(request.IfaClosing),
 
-                    // MMS
                     MmsReceived = ParseString(request.MmsReceived),
                     MmsOpening = ParseString(request.MmsOpening),
                     MmsDistributed = ParseString(request.MmsDistributed),
                     MmsClosing = ParseString(request.MmsClosing),
 
-                    // Common
                     Remarks = ParseString(request.Remarks),
                     SiteId = ParseString(request.SiteId),
 
-                    // System
-                    EnteredOn = enteredOn,                                   // stored as dd-MM-yyyy
+                    EnteredOn = enteredOn,
                     EnteredBy = request.EnteredBy,
                     ActivityTime = DateTime.Now.ToString("dd-MM-yyyy HH:mm:ss"),
                     IsManualUpdate = "1"
@@ -472,8 +490,14 @@ namespace NashunumaApp.Application.Services
                     $"Failed to save stock information: {ex.Message}");
             }
         }
-        /// Gets all food stocks for a specific site
 
+        // =====================================================================
+        // Site-scoped read methods
+        // =====================================================================
+
+        /// <summary>
+        /// Returns all stock rows for a site, newest first.
+        /// </summary>
         public async Task<ApiResponse<List<FoodStockDto>>> GetFoodStocksBySiteIdAsync(string siteId)
         {
             try
@@ -506,9 +530,9 @@ namespace NashunumaApp.Application.Services
             }
         }
 
-
-        /// Gets missing stock dates for a specific site
-
+        /// <summary>
+        /// Returns missing (weekday) dates between the latest existing entry and today.
+        /// </summary>
         public async Task<ApiResponse<List<MissingStockDateDto>>> GetMissingStockDatesAsync(string siteId)
         {
             try
@@ -521,12 +545,12 @@ namespace NashunumaApp.Application.Services
                     return ApiResponse<List<MissingStockDateDto>>.Failure("Site ID is required");
                 }
 
-                // Repository returns distinct EnteredOn values, NEWEST first
+                // Repository returns distinct EnteredOn values, newest first.
                 var existingDates = await _foodStockRepository.GetExistingStockDatesAsync(siteId);
                 _logger.LogDebug("Found {Count} existing stock dates for SiteId: {SiteId}",
                     existingDates.Count, siteId);
 
-                // No records at all -> nothing to compare
+                // No records at all -> nothing to compare.
                 if (existingDates == null || existingDates.Count == 0)
                 {
                     _logger.LogWarning("No existing stock dates found for SiteId: {SiteId}", siteId);
@@ -535,7 +559,7 @@ namespace NashunumaApp.Application.Services
                         "No orders found for this site");
                 }
 
-                // PINPOINT = the LATEST (newest) EnteredOn date -> first element
+                // PINPOINT = the LATEST (newest) EnteredOn date -> first element.
                 if (!DateTime.TryParseExact(existingDates[0], "dd-MM-yyyy", null,
                         DateTimeStyles.None, out var startDate))
                 {
@@ -546,11 +570,9 @@ namespace NashunumaApp.Application.Services
                 }
 
                 startDate = startDate.Date;
-
-                // END DATE = today
                 var endDate = DateTime.Now.Date;
 
-                // If the latest EnteredOn is today (or future), there's nothing to check
+                // If the latest EnteredOn is today (or future), there's nothing to check.
                 if (startDate >= endDate)
                 {
                     _logger.LogInformation(
@@ -565,14 +587,14 @@ namespace NashunumaApp.Application.Services
                 _logger.LogDebug("Checking missing stock dates from {Start} (latest EnteredOn) to {End} (today) for SiteId: {SiteId}",
                     startDate.ToString("dd-MM-yyyy"), endDate.ToString("dd-MM-yyyy"), siteId);
 
-                // HashSet of all existing dates for O(1) lookups
+                // HashSet for O(1) lookups of existing dates.
                 var existingDateSet = new HashSet<string>(
                     existingDates.Where(d => !string.IsNullOrEmpty(d)),
                     StringComparer.OrdinalIgnoreCase);
 
                 var missingDates = new List<MissingStockDateDto>();
 
-                // Walk ONLY from the latest EnteredOn -> today
+                // Walk only from the latest EnteredOn -> today.
                 for (var date = startDate; date <= endDate; date = date.AddDays(1))
                 {
                     if (date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday)
@@ -591,7 +613,7 @@ namespace NashunumaApp.Application.Services
                     }
                 }
 
-                // Newest / closest first
+                // Newest / closest first.
                 missingDates = missingDates
                     .OrderByDescending(d => DateTime.ParseExact(d.Date, "dd-MM-yyyy", null))
                     .ToList();
@@ -614,8 +636,10 @@ namespace NashunumaApp.Application.Services
                 );
             }
         }
-        /// Validates if stock exists for a specific site and date
 
+        /// <summary>
+        /// Indicates whether a stock row exists for the given site + date.
+        /// </summary>
         public async Task<ApiResponse<bool>> ValidateStockExistsForDateAsync(string siteId, string date)
         {
             try
@@ -633,8 +657,7 @@ namespace NashunumaApp.Application.Services
                 _logger.LogInformation("Stock exists for SiteId: {SiteId}, Date: {Date}: {Exists}",
                     siteId, date, stock != null);
 
-                return ApiResponse<bool>.Success(stock != null,stock != null ? "Stock exists" : "Stock does not exist"
-                );
+                return ApiResponse<bool>.Success(stock != null, stock != null ? "Stock exists" : "Stock does not exist");
             }
             catch (Exception ex)
             {
@@ -646,8 +669,10 @@ namespace NashunumaApp.Application.Services
             }
         }
 
-        /// Gets the next date that needs to be entered for a site
-
+        /// <summary>
+        /// Returns the next date the user should enter stock for, plus any missing
+        /// dates between the latest existing entry and today.
+        /// </summary>
         public async Task<ApiResponse<NextRequiredDateDto>> GetNextRequiredDateAsync(string siteId)
         {
             try
@@ -662,7 +687,6 @@ namespace NashunumaApp.Application.Services
 
                 var today = DateTime.Now.Date;
 
-                // Get all existing stock dates for this site
                 var existingDates = await _foodStockRepository.GetExistingStockDatesAsync(siteId);
 
                 var parsedExistingDates = new List<DateTime>();
@@ -675,24 +699,21 @@ namespace NashunumaApp.Application.Services
                     }
                 }
 
-                // Dedupe then order DESCENDING — latest first
+                // Dedupe + sort DESCENDING (latest first).
                 parsedExistingDates = parsedExistingDates
                     .Distinct()
                     .OrderByDescending(d => d)
                     .ToList();
 
-                // Starting point: day after the last existing record (or today if none)
+                // Start the walk from the day after the latest existing record,
+                // or from today if there are none.
                 DateTime startDate;
                 if (parsedExistingDates.Any())
-                {
                     startDate = parsedExistingDates.First().AddDays(1);
-                }
                 else
-                {
                     startDate = today;
-                }
 
-                // Walk day-by-day to today, collect missing weekdays
+                // Collect missing weekdays between startDate and today.
                 var missingDates = new List<DateTime>();
                 for (var date = startDate; date <= today; date = date.AddDays(1))
                 {
@@ -740,13 +761,14 @@ namespace NashunumaApp.Application.Services
                 );
             }
         }
-        #endregion
+
+
 
         #region Private Helper Methods
 
-
-        /// Helper method to parse and clean string values
-
+        /// <summary>
+        /// Trims the value and normalises null/empty/"null" to null.
+        /// </summary>
         private string? ParseString(string? value)
         {
             if (string.IsNullOrEmpty(value) || value == "null")
@@ -755,9 +777,9 @@ namespace NashunumaApp.Application.Services
             return value.Trim();
         }
 
-        
-        /// Helper method to parse string to decimal, returns null if empty
-
+        /// <summary>
+        /// Parses a string to decimal; returns null on empty/"null"/unparseable.
+        /// </summary>
         private decimal? ParseDecimal(string? value)
         {
             if (string.IsNullOrEmpty(value) || value == "null")

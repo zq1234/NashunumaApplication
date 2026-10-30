@@ -32,10 +32,23 @@ import { ButtonComponent } from '@shared/components/ui/button/button.component';
 export class FoodStockFormComponent implements OnInit {
   stock: Partial<CreateFoodStockDto & UpdateFoodStockDto> = {};
   loading = false;
+  previousStockLoading = false;
   error: string | null = null;
   success: string | null = null;
+  previousStockMessage: string | null = null;
   isEdit = false;
   id: number | null = null;
+  private previousStockRequest = 0;
+
+  private readonly stockBalances = [
+    { label: 'Mamta boxes', opening: 'openingStockBoxesMamta', received: 'receivedStockBoxesMamta', distributed: 'distributedBoxesMamta', closing: 'closingStockBoxesMamta' },
+    { label: 'Mamta sachets', opening: 'openingStockSachetsMamta', received: 'receivedStockSachetsMamta', distributed: 'distributedSachetsMamta', closing: 'closingStockSachetsMamta' },
+    { label: 'Wawa boxes', opening: 'openingStockBoxesWawa', received: 'receivedStockBoxesWawa', distributed: 'distributedBoxesWawa', closing: 'closingStockBoxesWawa' },
+    { label: 'Wawa sachets', opening: 'openingStockSachetsWawa', received: 'receivedStockSachetsWawa', distributed: 'distributedSachetsWawa', closing: 'closingStockSachetsWawa' },
+    { label: 'RUTF', opening: 'rutfOpening', received: 'rutfReceived', distributed: 'rutfDistributed', closing: 'rutfClosing' },
+    { label: 'IFA', opening: 'ifaOpening', received: 'ifaReceived', distributed: 'ifaDistributed', closing: 'ifaClosing' },
+    { label: 'MMS', opening: 'mmsOpening', received: 'mmsReceived', distributed: 'mmsDistributed', closing: 'mmsClosing' }
+  ];
 
   constructor(
     private route: ActivatedRoute,
@@ -73,6 +86,10 @@ export class FoodStockFormComponent implements OnInit {
           this.stock.siteId = user.siteId?.toString();
         }
       }
+
+      if (!this.isEdit && this.stock.siteId && this.stock.enteredOn) {
+        this.loadPreviousDayStock(this.stock.siteId, this.stock.enteredOn);
+      }
     });
   }
 
@@ -97,7 +114,12 @@ export class FoodStockFormComponent implements OnInit {
 
   save(): void {
     this.error = null;
+    if (this.previousStockLoading) {
+      this.error = 'Please wait while previous day stock is checked.';
+      return;
+    }
     this.loading = true;
+    this.recalculateClosingStocks();
     // client-side validation
     const validation = this.validateFields();
     if (!validation.isValid) {
@@ -150,10 +172,149 @@ export class FoodStockFormComponent implements OnInit {
       }
     }
 
+    for (const balance of this.stockBalances) {
+      const opening = this.getNumericValue(balance.opening);
+      const received = balance.received ? this.getNumericValue(balance.received) : 0;
+      const distributed = this.getNumericValue(balance.distributed);
+      const available = opening + received;
+
+      const quantityFields = [balance.opening, balance.received, balance.distributed].filter(Boolean) as string[];
+      for (const field of quantityFields) {
+        const rawValue = (this.stock as Record<string, any>)[field];
+        if (rawValue !== null && rawValue !== undefined && rawValue !== '') {
+          const quantity = Number(rawValue);
+          if (!Number.isFinite(quantity) || quantity < 0 || !Number.isInteger(quantity)) {
+            messages.push(`${balance.label} quantities must be non-negative whole numbers.`);
+            break;
+          }
+        }
+      }
+
+      if (distributed > available) {
+        messages.push(`${balance.label} distributed quantity cannot exceed opening plus received stock (${available}).`);
+      }
+    }
+
     if (messages.length) {
       return { isValid: false, message: messages.join('; ') };
     }
     return { isValid: true, message: null };
+  }
+
+  onStockValueChange(field: string, value: string | number): void {
+    (this.stock as Record<string, any>)[field] = value.toString();
+    this.recalculateClosingStocks();
+  }
+
+  getDistributionError(distributedField: string): string | null {
+    const balance = this.stockBalances.find(item => item.distributed === distributedField);
+    if (!balance) return null;
+
+    const opening = this.getNumericValue(balance.opening);
+    const received = balance.received ? this.getNumericValue(balance.received) : 0;
+    const distributed = this.getNumericValue(balance.distributed);
+    const available = opening + received;
+
+    return distributed > available
+      ? `${balance.label} distribution cannot exceed available stock (${available}).`
+      : null;
+  }
+
+  private recalculateClosingStocks(): void {
+    for (const balance of this.stockBalances) {
+      const fields = [balance.opening, balance.distributed, balance.received].filter(Boolean) as string[];
+      const hasValues = fields.some(field => this.stock[field as keyof typeof this.stock] !== null && this.stock[field as keyof typeof this.stock] !== undefined && this.stock[field as keyof typeof this.stock] !== '');
+      if (!hasValues) {
+        (this.stock as Record<string, any>)[balance.closing] = '';
+        continue;
+      }
+
+      const opening = this.getNumericValue(balance.opening);
+      const received = balance.received ? this.getNumericValue(balance.received) : 0;
+      const distributed = this.getNumericValue(balance.distributed);
+      (this.stock as Record<string, any>)[balance.closing] = String(opening + received - distributed);
+    }
+  }
+
+  private getNumericValue(field: string): number {
+    const value = Number((this.stock as Record<string, any>)[field] ?? 0);
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  private loadPreviousDayStock(siteId: string, enteredOn: string): void {
+    const requestId = ++this.previousStockRequest;
+    const targetDate = this.toDateKey(enteredOn);
+    if (!targetDate) return;
+
+    this.previousStockLoading = true;
+    this.previousStockMessage = null;
+    this.foodStockService.getFoodStocks(1, 100, {
+      siteId,
+      pageNumber: 1,
+      pageSize: 100,
+      sortBy: 'enteredOn',
+      sortDescending: true
+    }).subscribe({
+      next: response => {
+        if (requestId !== this.previousStockRequest) return;
+        this.previousStockLoading = false;
+
+        if (!response.isSuccess || !response.data) {
+          this.previousStockMessage = response.message || 'Could not load previous day stock.';
+          return;
+        }
+
+        const previousDate = this.getPreviousDateKey(targetDate);
+  const previous = response.data.items.find(record => {
+          const recordSiteId = String((record as any).siteId ?? (record as any).SiteId ?? '');
+          const recordDate = this.toDateKey((record as any).enteredOn ?? (record as any).EnteredOn ?? '');
+          return recordSiteId === siteId && recordDate === previousDate;
+        });
+
+        if (!previous) {
+          this.setOpeningStocksToZero();
+          this.previousStockMessage = 'No previous-day stock record was found. Opening stocks were set to zero.';
+          return;
+        }
+
+        for (const balance of this.stockBalances) {
+          const closingField = balance.closing;
+          const pascalClosingField = closingField.charAt(0).toUpperCase() + closingField.slice(1);
+          const closingValue = (previous as any)[closingField] ?? (previous as any)[pascalClosingField] ?? '0';
+          (this.stock as Record<string, any>)[balance.opening] = String(closingValue ?? '0');
+        }
+        this.recalculateClosingStocks();
+        this.previousStockMessage = `Previous day's closing stock (${previousDate}) was used as today's opening stock.`;
+      },
+      error: () => {
+        if (requestId !== this.previousStockRequest) return;
+        this.previousStockLoading = false;
+        this.previousStockMessage = 'Could not load previous day stock.';
+      }
+    });
+  }
+
+  private setOpeningStocksToZero(): void {
+    for (const balance of this.stockBalances) {
+      (this.stock as Record<string, any>)[balance.opening] = '0';
+    }
+    this.recalculateClosingStocks();
+  }
+
+  private toDateKey(value: string): string | null {
+    const trimmed = value.trim();
+    const isoDate = trimmed.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (isoDate) return isoDate[1];
+
+    const dayFirst = trimmed.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+    if (!dayFirst) return null;
+    return `${dayFirst[3]}-${dayFirst[2].padStart(2, '0')}-${dayFirst[1].padStart(2, '0')}`;
+  }
+
+  private getPreviousDateKey(dateKey: string): string {
+    const [year, month, day] = dateKey.split('-').map(Number);
+    const previousDate = new Date(Date.UTC(year, month - 1, day - 1));
+    return `${previousDate.getUTCFullYear()}-${String(previousDate.getUTCMonth() + 1).padStart(2, '0')}-${String(previousDate.getUTCDate()).padStart(2, '0')}`;
   }
 
   private handleSaveResponse(resp: ApiResponse<any>): void {
@@ -179,6 +340,9 @@ export class FoodStockFormComponent implements OnInit {
 
   onEnteredOnChange(event: { dateStr?: string } | any): void {
     this.stock.enteredOn = event?.dateStr || '';
+    if (!this.isEdit && this.stock.siteId && this.stock.enteredOn) {
+      this.loadPreviousDayStock(this.stock.siteId, this.stock.enteredOn);
+    }
   }
 
   cancel(): void {

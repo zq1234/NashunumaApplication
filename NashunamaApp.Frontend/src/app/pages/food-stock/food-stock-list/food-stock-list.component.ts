@@ -44,9 +44,7 @@ export class FoodStockListComponent implements OnInit, OnDestroy {
   
   // Filters
   searchTerm = '';
-  showAll = false;
-  hideMobile = false;
-  onlyMobile = false;
+  mobileFilter: 'all' | 'hide' | 'only' = 'all';
   
   // Pagination
   pageNumber = 1;
@@ -67,16 +65,15 @@ export class FoodStockListComponent implements OnInit, OnDestroy {
   // Column Definitions for DataTableComponent
   columns: DataTableColumn[] = [
     { field: 'srNo', header: 'S.No', sortable: false, width: '60px', type: 'number' },
-    { field: 'siteName', header: 'Site Name', sortable: true, width: '200px' },
     { field: 'province', header: 'Province', sortable: true, width: '120px' },
     { field: 'district', header: 'District', sortable: true, width: '120px' },
     { field: 'tehsil', header: 'Tehsil', sortable: true, width: '120px' },
+    { field: 'siteName', header: 'Site Name', sortable: true, width: '200px' },
+    { field: 'dated', header: 'Dated', sortable: true, width: '130px', type: 'date' },
     { field: 'wawa', header: 'Wawa', sortable: true, width: '80px', type: 'number' },
     { field: 'mamta', header: 'Mamta', sortable: true, width: '80px', type: 'number' },
     { field: 'rutf', header: 'RUTF', sortable: true, width: '80px', type: 'number' },
-    { field: 'dated', header: 'Dated', sortable: true, width: '130px', type: 'date' },
-    { field: 'enteredBy', header: 'Entered By', sortable: true, width: '120px' },
-    { field: 'activityTime', header: 'Activity Time', sortable: true, width: '130px' }
+    { field: 'ifa', header: 'IFA', sortable: true, width: '80px' }
   ];
 
   constructor(
@@ -125,10 +122,9 @@ export class FoodStockListComponent implements OnInit, OnDestroy {
       pageSize: this.pageSize
     };
 
-    // Apply checkbox filters
-    if (this.onlyMobile) {
+    if (this.mobileFilter === 'only') {
       filter.isMobileSite = '1';
-    } else if (this.hideMobile) {
+    } else if (this.mobileFilter === 'hide') {
       filter.isMobileSite = '0';
     }
 
@@ -145,6 +141,7 @@ export class FoodStockListComponent implements OnInit, OnDestroy {
             wawa: this.calculateWawa(item),
             mamta: this.calculateMamta(item),
             rutf: this.calculateRutf(item),
+            ifa: item.ifaClosing || 'N/A',
             dated: this.formatDate(item.enteredOn),
             activityTime: this.formatTime(item.enteredOn)
           }));
@@ -247,7 +244,13 @@ export class FoodStockListComponent implements OnInit, OnDestroy {
 
   // Handle view from datatable
   onView(item: FoodStock): void {
-    this.openDetailModal(item);
+    this.openDetails(item);
+  }
+
+  openDetails(item: FoodStock): void {
+    if (item.id !== null && item.id !== undefined) {
+      this.router.navigate(['/foodstock', item.id]);
+    }
   }
 
   openDetailModal(item: FoodStock): void {
@@ -285,41 +288,15 @@ export class FoodStockListComponent implements OnInit, OnDestroy {
     // We already handle search via onSearchChange
   }
 
-  toggleShowAll(): void {
-    this.showAll = !this.showAll;
-    if (this.showAll) {
-      this.hideMobile = false;
-      this.onlyMobile = false;
-    }
-    this.pageNumber = 1;
-    this.loadFoodStocks();
-  }
-
-  toggleHideMobile(): void {
-    this.hideMobile = !this.hideMobile;
-    if (this.hideMobile) {
-      this.onlyMobile = false;
-      this.showAll = false;
-    }
-    this.pageNumber = 1;
-    this.loadFoodStocks();
-  }
-
-  toggleOnlyMobile(): void {
-    this.onlyMobile = !this.onlyMobile;
-    if (this.onlyMobile) {
-      this.hideMobile = false;
-      this.showAll = false;
-    }
+  setMobileFilter(filter: 'all' | 'hide' | 'only'): void {
+    this.mobileFilter = filter;
     this.pageNumber = 1;
     this.loadFoodStocks();
   }
 
   resetFilters(): void {
     this.searchTerm = '';
-    this.showAll = false;
-    this.hideMobile = false;
-    this.onlyMobile = false;
+    this.mobileFilter = 'all';
     this.pageNumber = 1;
     this.searchSubject.next('');
     this.loadFoodStocks();

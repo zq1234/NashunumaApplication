@@ -89,17 +89,17 @@
       </div>
 
       <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-        <input type="checkbox" class="form-checkbox" [(ngModel)]="showAll" (change)="toggleShowAll()">
+        <input type="radio" name="mobileSiteFilter" class="form-radio" [checked]="mobileFilter === 'all'" (change)="setMobileFilter('all')">
         <span>Show All</span>
       </label>
 
       <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-        <input type="checkbox" class="form-checkbox" [(ngModel)]="hideMobile" (change)="toggleHideMobile()">
+        <input type="radio" name="mobileSiteFilter" class="form-radio" [checked]="mobileFilter === 'hide'" (change)="setMobileFilter('hide')">
         <span>Hide Mobile</span>
       </label>
 
       <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-        <input type="checkbox" class="form-checkbox" [(ngModel)]="onlyMobile" (change)="toggleOnlyMobile()">
+        <input type="radio" name="mobileSiteFilter" class="form-radio" [checked]="mobileFilter === 'only'" (change)="setMobileFilter('only')">
         <span>Only Mobile</span>
       </label>
     </div>
@@ -121,12 +121,14 @@
       [title]="'Food Stock Records'"
       [loading]="loading"
       [showSearch]="false"
-      [showActions]="true"
+      [showActions]="false"
       [pageSizeOptions]="pageSizeOptions"
       [defaultPageSize]="pageSize"
       [serverSidePaging]="true"
       [serverSideSearch]="true"
+      [rowClickable]="true"
       [totalItems]="totalItems"
+      (rowClick)="openDetails($event)"
       (view)="onView($event)"
       (edit)="onEdit($event)"
       (delete)="onDelete($event)"

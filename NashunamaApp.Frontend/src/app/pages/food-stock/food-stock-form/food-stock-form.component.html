@@ -9,170 +9,207 @@
   <div *ngIf="success" class="mb-6 rounded-xl border border-success-200 bg-success-50 px-4 py-3 text-sm text-success-700 dark:border-success-500/40 dark:bg-success-500/10 dark:text-success-300">
     {{ success }}
   </div>
+  <div *ngIf="previousStockLoading" class="mb-6 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700 dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-300" role="status">
+    Checking previous day's stock...
+  </div>
+  <div *ngIf="previousStockMessage && !previousStockLoading" class="mb-6 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700 dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-300" role="status">
+    {{ previousStockMessage }}
+  </div>
 
   <app-component-card title="Food stock details" desc="Capture the basic stock information using the standard project form layout.">
-    <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
-      <div>
-        <app-label for="siteId">Site ID</app-label>
-        <!-- show but disable editing -->
-        <app-input-field id="siteId" type="text" [value]="stock.siteId || ''" [disabled]="true" (valueChange)="stock.siteId = $event.toString()"></app-input-field>
-      </div>
+    <div class="stock-form-sections">
+      <section class="stock-section">
+        <header class="stock-section-heading">
+          <h2>Record Details</h2>
+          <p>Site and date for this stock entry</p>
+        </header>
+        <div class="stock-fields-grid">
+          <div>
+            <app-label for="siteId">Site ID</app-label>
+            <app-input-field id="siteId" type="text" [value]="stock.siteId || ''" [disabled]="true" (valueChange)="stock.siteId = $event.toString()"></app-input-field>
+          </div>
+          <div>
+            <app-date-picker id="enteredOn" label="Entered On" placeholder="Select a date" [value]="stock.enteredOn || ''" (dateChange)="onEnteredOnChange($event)"></app-date-picker>
+          </div>
+          <div>
+            <app-label for="remarks">Remarks</app-label>
+            <app-input-field id="remarks" type="text" [value]="stock.remarks || ''" (valueChange)="stock.remarks = $event.toString()"></app-input-field>
+          </div>
+        </div>
+      </section>
 
-      <div>
-        <app-date-picker
-          id="enteredOn"
-          label="Entered On"
-          placeholder="Select a date"
-          [value]="stock.enteredOn || ''"
-          (dateChange)="onEnteredOnChange($event)"
-        ></app-date-picker>
-      </div>
+      <section class="stock-section">
+        <header class="stock-section-heading">
+          <h2>Mamta</h2>
+          <p>Boxes and sachets</p>
+        </header>
+        <div class="stock-fields-grid">
+          <div>
+            <app-label for="openingMamta">Opening Boxes</app-label>
+            <app-input-field id="openingMamta" type="number" min="0" [step]="1" [value]="stock.openingStockBoxesMamta || ''" [disabled]="!isEdit || previousStockLoading" (valueChange)="onStockValueChange('openingStockBoxesMamta', $event)"></app-input-field>
+          </div>
+          <div>
+            <app-label for="receivedMamta">Received Boxes</app-label>
+            <app-input-field id="receivedMamta" type="number" min="0" [step]="1" [value]="stock.receivedStockBoxesMamta || ''" (valueChange)="onStockValueChange('receivedStockBoxesMamta', $event)"></app-input-field>
+          </div>
+          <div>
+            <app-label for="distributedMamta">Distributed Boxes</app-label>
+            <app-input-field id="distributedMamta" type="number" min="0" [step]="1" [value]="stock.distributedBoxesMamta || ''" [error]="!!getDistributionError('distributedBoxesMamta')" [hint]="getDistributionError('distributedBoxesMamta') || undefined" (valueChange)="onStockValueChange('distributedBoxesMamta', $event)"></app-input-field>
+          </div>
+          <div>
+            <app-label for="closingMamta">Closing Boxes</app-label>
+            <app-input-field id="closingMamta" type="number" [value]="stock.closingStockBoxesMamta || ''" [disabled]="true"></app-input-field>
+          </div>
+          <div>
+            <app-label for="openingSachetsMamta">Opening Sachets</app-label>
+            <app-input-field id="openingSachetsMamta" type="number" min="0" [step]="1" [value]="stock.openingStockSachetsMamta || ''" [disabled]="!isEdit || previousStockLoading" (valueChange)="onStockValueChange('openingStockSachetsMamta', $event)"></app-input-field>
+          </div>
+          <div>
+            <app-label for="receivedSachetsMamta">Received Sachets</app-label>
+            <app-input-field id="receivedSachetsMamta" type="number" min="0" [step]="1" [value]="stock.receivedStockSachetsMamta || ''" (valueChange)="onStockValueChange('receivedStockSachetsMamta', $event)"></app-input-field>
+          </div>
+          <div>
+            <app-label for="distributedSachetsMamta">Distributed Sachets</app-label>
+            <app-input-field id="distributedSachetsMamta" type="number" min="0" [step]="1" [value]="stock.distributedSachetsMamta || ''" [error]="!!getDistributionError('distributedSachetsMamta')" [hint]="getDistributionError('distributedSachetsMamta') || undefined" (valueChange)="onStockValueChange('distributedSachetsMamta', $event)"></app-input-field>
+          </div>
+          <div>
+            <app-label for="closingSachetsMamta">Closing Sachets</app-label>
+            <app-input-field id="closingSachetsMamta" type="number" [value]="stock.closingStockSachetsMamta || ''" [disabled]="true"></app-input-field>
+          </div>
+        </div>
+      </section>
 
-      <!-- <div>
-        <app-label for="enteredBy">Entered By</app-label>
-        <app-input-field id="enteredBy" type="text" [value]="stock.enteredBy || ''" (valueChange)="stock.enteredBy = $event.toString()"></app-input-field>
-      </div> -->
+      <section class="stock-section">
+        <header class="stock-section-heading">
+          <h2>Wawa</h2>
+          <p>Boxes and sachets</p>
+        </header>
+        <div class="stock-fields-grid">
+          <div>
+            <app-label for="openingWawa">Opening Boxes <span class="text-danger">*</span></app-label>
+            <app-input-field id="openingWawa" type="number" min="0" [step]="1" [value]="stock.openingStockBoxesWawa || ''" [disabled]="!isEdit || previousStockLoading" (valueChange)="onStockValueChange('openingStockBoxesWawa', $event)"></app-input-field>
+          </div>
+          <div>
+            <app-label for="receivedWawa">Received Boxes</app-label>
+            <app-input-field id="receivedWawa" type="number" min="0" [step]="1" [value]="stock.receivedStockBoxesWawa || ''" (valueChange)="onStockValueChange('receivedStockBoxesWawa', $event)"></app-input-field>
+          </div>
+          <div>
+            <app-label for="distributedWawa">Distributed Boxes</app-label>
+            <app-input-field id="distributedWawa" type="number" min="0" [step]="1" [value]="stock.distributedBoxesWawa || ''" [error]="!!getDistributionError('distributedBoxesWawa')" [hint]="getDistributionError('distributedBoxesWawa') || undefined" (valueChange)="onStockValueChange('distributedBoxesWawa', $event)"></app-input-field>
+          </div>
+          <div>
+            <app-label for="closingWawa">Closing Boxes</app-label>
+            <app-input-field id="closingWawa" type="number" [value]="stock.closingStockBoxesWawa || ''" [disabled]="true"></app-input-field>
+          </div>
+          <div>
+            <app-label for="openingSachetsWawa">Opening Sachets</app-label>
+            <app-input-field id="openingSachetsWawa" type="number" min="0" [step]="1" [value]="stock.openingStockSachetsWawa || ''" [disabled]="!isEdit || previousStockLoading" (valueChange)="onStockValueChange('openingStockSachetsWawa', $event)"></app-input-field>
+          </div>
+          <div>
+            <app-label for="receivedSachetsWawa">Received Sachets</app-label>
+            <app-input-field id="receivedSachetsWawa" type="number" min="0" [step]="1" [value]="stock.receivedStockSachetsWawa || ''" (valueChange)="onStockValueChange('receivedStockSachetsWawa', $event)"></app-input-field>
+          </div>
+          <div>
+            <app-label for="distributedSachetsWawa">Distributed Sachets</app-label>
+            <app-input-field id="distributedSachetsWawa" type="number" min="0" [step]="1" [value]="stock.distributedSachetsWawa || ''" [error]="!!getDistributionError('distributedSachetsWawa')" [hint]="getDistributionError('distributedSachetsWawa') || undefined" (valueChange)="onStockValueChange('distributedSachetsWawa', $event)"></app-input-field>
+          </div>
+          <div>
+            <app-label for="closingSachetsWawa">Closing Sachets</app-label>
+            <app-input-field id="closingSachetsWawa" type="number" [value]="stock.closingStockSachetsWawa || ''" [disabled]="true"></app-input-field>
+          </div>
+        </div>
+      </section>
 
-      <div>
-        <app-label for="remarks">Remarks</app-label>
-        <app-input-field id="remarks" type="text" [value]="stock.remarks || ''" (valueChange)="stock.remarks = $event.toString()"></app-input-field>
-      </div>
+      <section class="stock-section">
+        <header class="stock-section-heading">
+          <h2>RUTF</h2>
+          <p>Ready-to-use therapeutic food</p>
+        </header>
+        <div class="stock-fields-grid">
+          <div>
+            <app-label for="rutfOpening">Opening</app-label>
+            <app-input-field id="rutfOpening" type="number" min="0" [step]="1" [value]="stock.rutfOpening || ''" [disabled]="!isEdit || previousStockLoading" (valueChange)="onStockValueChange('rutfOpening', $event)"></app-input-field>
+          </div>
+          <div>
+            <app-label for="rutfReceived">Received</app-label>
+            <app-input-field id="rutfReceived" type="number" min="0" [step]="1" [value]="stock.rutfReceived || ''" (valueChange)="onStockValueChange('rutfReceived', $event)"></app-input-field>
+          </div>
+          <div>
+            <app-label for="rutfDistributed">Distributed</app-label>
+            <app-input-field id="rutfDistributed" type="number" min="0" [step]="1" [value]="stock.rutfDistributed || ''" [error]="!!getDistributionError('rutfDistributed')" [hint]="getDistributionError('rutfDistributed') || undefined" (valueChange)="onStockValueChange('rutfDistributed', $event)"></app-input-field>
+          </div>
+          <div>
+            <app-label for="rutfClosing">Closing</app-label>
+            <app-input-field id="rutfClosing" type="number" [value]="stock.rutfClosing || ''" [disabled]="true"></app-input-field>
+          </div>
+        </div>
+      </section>
 
-      <!-- MAMTA -->
-      <div>
-        <app-label for="openingMamta">Opening Boxes (Mamta)</app-label>
-        <app-input-field id="openingMamta" type="text" [value]="stock.openingStockBoxesMamta || ''" (valueChange)="stock.openingStockBoxesMamta = $event.toString()"></app-input-field>
-      </div>
+      <section class="stock-section">
+        <header class="stock-section-heading">
+          <h2>IFA</h2>
+          <p>Iron and folic acid</p>
+        </header>
+        <div class="stock-fields-grid">
+          <div>
+            <app-label for="ifaOpening">Opening</app-label>
+            <app-input-field id="ifaOpening" type="number" min="0" [step]="1" [value]="stock.ifaOpening || ''" [disabled]="!isEdit || previousStockLoading" (valueChange)="onStockValueChange('ifaOpening', $event)"></app-input-field>
+          </div>
+          <div>
+            <app-label for="ifaReceived">Received</app-label>
+            <app-input-field id="ifaReceived" type="number" min="0" [step]="1" [value]="stock.ifaReceived || ''" (valueChange)="onStockValueChange('ifaReceived', $event)"></app-input-field>
+          </div>
+          <div>
+            <app-label for="ifaDistributed">Distributed</app-label>
+            <app-input-field id="ifaDistributed" type="number" min="0" [step]="1" [value]="stock.ifaDistributed || ''" [error]="!!getDistributionError('ifaDistributed')" [hint]="getDistributionError('ifaDistributed') || undefined" (valueChange)="onStockValueChange('ifaDistributed', $event)"></app-input-field>
+          </div>
+          <div>
+            <app-label for="ifaClosing">Closing</app-label>
+            <app-input-field id="ifaClosing" type="number" [value]="stock.ifaClosing || ''" [disabled]="true"></app-input-field>
+          </div>
+        </div>
+      </section>
 
-      <div>
-        <app-label for="receivedMamta">Received Boxes (Mamta)</app-label>
-        <app-input-field id="receivedMamta" type="text" [value]="stock.receivedStockBoxesMamta || ''" (valueChange)="stock.receivedStockBoxesMamta = $event.toString()"></app-input-field>
-      </div>
+      <section class="stock-section">
+        <header class="stock-section-heading">
+          <h2>MMS</h2>
+          <p>Multiple micronutrient supplements</p>
+        </header>
+        <div class="stock-fields-grid">
+          <div>
+            <app-label for="mmsOpening">Opening</app-label>
+            <app-input-field id="mmsOpening" type="number" min="0" [step]="1" [value]="stock.mmsOpening || ''" [disabled]="!isEdit || previousStockLoading" (valueChange)="onStockValueChange('mmsOpening', $event)"></app-input-field>
+          </div>
+          <div>
+            <app-label for="mmsReceived">Received</app-label>
+            <app-input-field id="mmsReceived" type="number" min="0" [step]="1" [value]="stock.mmsReceived || ''" (valueChange)="onStockValueChange('mmsReceived', $event)"></app-input-field>
+          </div>
+          <div>
+            <app-label for="mmsDistributed">Distributed</app-label>
+            <app-input-field id="mmsDistributed" type="number" min="0" [step]="1" [value]="stock.mmsDistributed || ''" [error]="!!getDistributionError('mmsDistributed')" [hint]="getDistributionError('mmsDistributed') || undefined" (valueChange)="onStockValueChange('mmsDistributed', $event)"></app-input-field>
+          </div>
+          <div>
+            <app-label for="mmsClosing">Closing</app-label>
+            <app-input-field id="mmsClosing" type="number" [value]="stock.mmsClosing || ''" [disabled]="true"></app-input-field>
+          </div>
+        </div>
+      </section>
 
-      <div>
-        <app-label for="distributedMamta">Distributed Boxes (Mamta)</app-label>
-        <app-input-field id="distributedMamta" type="text" [value]="stock.distributedBoxesMamta || ''" (valueChange)="stock.distributedBoxesMamta = $event.toString()"></app-input-field>
-      </div>
-
-      <div>
-        <app-label for="closingMamta">Closing Boxes (Mamta)</app-label>
-        <app-input-field id="closingMamta" type="text" [value]="stock.closingStockBoxesMamta || ''" (valueChange)="stock.closingStockBoxesMamta = $event.toString()"></app-input-field>
-      </div>
-
-      <div>
-        <app-label for="openingSachetsMamta">Opening Sachets (Mamta)</app-label>
-        <app-input-field id="openingSachetsMamta" type="text" [value]="stock.openingStockSachetsMamta || ''" (valueChange)="stock.openingStockSachetsMamta = $event.toString()"></app-input-field>
-      </div>
-
-      <div>
-        <app-label for="distributedSachetsMamta">Distributed Sachets (Mamta)</app-label>
-        <app-input-field id="distributedSachetsMamta" type="text" [value]="stock.distributedSachetsMamta || ''" (valueChange)="stock.distributedSachetsMamta = $event.toString()"></app-input-field>
-      </div>
-
-      <div>
-        <app-label for="closingSachetsMamta">Closing Sachets (Mamta)</app-label>
-        <app-input-field id="closingSachetsMamta" type="text" [value]="stock.closingStockSachetsMamta || ''" (valueChange)="stock.closingStockSachetsMamta = $event.toString()"></app-input-field>
-      </div>
-
-      <!-- WAWA -->
-      <div>
-        <app-label for="openingWawa">Opening Boxes (Wawa) <span class="text-danger">*</span></app-label>
-        <app-input-field id="openingWawa" type="text" [value]="stock.openingStockBoxesWawa || ''" (valueChange)="stock.openingStockBoxesWawa = $event.toString()"></app-input-field>
-      </div>
-
-      <div>
-        <app-label for="receivedWawa">Received Boxes (Wawa)</app-label>
-        <app-input-field id="receivedWawa" type="text" [value]="stock.receivedStockBoxesWawa || ''" (valueChange)="stock.receivedStockBoxesWawa = $event.toString()"></app-input-field>
-      </div>
-
-      <div>
-        <app-label for="distributedWawa">Distributed Boxes (Wawa)</app-label>
-        <app-input-field id="distributedWawa" type="text" [value]="stock.distributedBoxesWawa || ''" (valueChange)="stock.distributedBoxesWawa = $event.toString()"></app-input-field>
-      </div>
-
-      <div>
-        <app-label for="closingWawa">Closing Boxes (Wawa)</app-label>
-        <app-input-field id="closingWawa" type="text" [value]="stock.closingStockBoxesWawa || ''" (valueChange)="stock.closingStockBoxesWawa = $event.toString()"></app-input-field>
-      </div>
-
-      <div>
-        <app-label for="openingSachetsWawa">Opening Sachets (Wawa)</app-label>
-        <app-input-field id="openingSachetsWawa" type="text" [value]="stock.openingStockSachetsWawa || ''" (valueChange)="stock.openingStockSachetsWawa = $event.toString()"></app-input-field>
-      </div>
-
-      <div>
-        <app-label for="distributedSachetsWawa">Distributed Sachets (Wawa)</app-label>
-        <app-input-field id="distributedSachetsWawa" type="text" [value]="stock.distributedSachetsWawa || ''" (valueChange)="stock.distributedSachetsWawa = $event.toString()"></app-input-field>
-      </div>
-
-      <div>
-        <app-label for="closingSachetsWawa">Closing Sachets (Wawa)</app-label>
-        <app-input-field id="closingSachetsWawa" type="text" [value]="stock.closingStockSachetsWawa || ''" (valueChange)="stock.closingStockSachetsWawa = $event.toString()"></app-input-field>
-      </div>
-
-      <!-- Unit -->
-      <div>
-        <app-label for="unit">Unit</app-label>
-        <app-input-field id="unit" type="text" [value]="stock.unit || ''" (valueChange)="stock.unit = $event.toString()"></app-input-field>
-      </div>
-
-      <!-- RUTF -->
-      <div>
-        <app-label for="rutfOpening">RUTF Opening</app-label>
-        <app-input-field id="rutfOpening" type="text" [value]="stock.rutfOpening || ''" (valueChange)="stock.rutfOpening = $event.toString()"></app-input-field>
-      </div>
-      <div>
-        <app-label for="rutfReceived">RUTF Received</app-label>
-        <app-input-field id="rutfReceived" type="text" [value]="stock.rutfReceived || ''" (valueChange)="stock.rutfReceived = $event.toString()"></app-input-field>
-      </div>
-      <div>
-        <app-label for="rutfDistributed">RUTF Distributed</app-label>
-        <app-input-field id="rutfDistributed" type="text" [value]="stock.rutfDistributed || ''" (valueChange)="stock.rutfDistributed = $event.toString()"></app-input-field>
-      </div>
-      <div>
-        <app-label for="rutfClosing">RUTF Closing</app-label>
-        <app-input-field id="rutfClosing" type="text" [value]="stock.rutfClosing || ''" (valueChange)="stock.rutfClosing = $event.toString()"></app-input-field>
-      </div>
-
-      <!-- IFA -->
-      <div>
-        <app-label for="ifaOpening">IFA Opening</app-label>
-        <app-input-field id="ifaOpening" type="text" [value]="stock.ifaOpening || ''" (valueChange)="stock.ifaOpening = $event.toString()"></app-input-field>
-      </div>
-      <div>
-        <app-label for="ifaReceived">IFA Received</app-label>
-        <app-input-field id="ifaReceived" type="text" [value]="stock.ifaReceived || ''" (valueChange)="stock.ifaReceived = $event.toString()"></app-input-field>
-      </div>
-      <div>
-        <app-label for="ifaDistributed">IFA Distributed</app-label>
-        <app-input-field id="ifaDistributed" type="text" [value]="stock.ifaDistributed || ''" (valueChange)="stock.ifaDistributed = $event.toString()"></app-input-field>
-      </div>
-      <div>
-        <app-label for="ifaClosing">IFA Closing</app-label>
-        <app-input-field id="ifaClosing" type="text" [value]="stock.ifaClosing || ''" (valueChange)="stock.ifaClosing = $event.toString()"></app-input-field>
-      </div>
-
-      <!-- MMS -->
-      <div>
-        <app-label for="mmsOpening">MMS Opening</app-label>
-        <app-input-field id="mmsOpening" type="text" [value]="stock.mmsOpening || ''" (valueChange)="stock.mmsOpening = $event.toString()"></app-input-field>
-      </div>
-      <div>
-        <app-label for="mmsReceived">MMS Received</app-label>
-        <app-input-field id="mmsReceived" type="text" [value]="stock.mmsReceived || ''" (valueChange)="stock.mmsReceived = $event.toString()"></app-input-field>
-      </div>
-      <div>
-        <app-label for="mmsDistributed">MMS Distributed</app-label>
-        <app-input-field id="mmsDistributed" type="text" [value]="stock.mmsDistributed || ''" (valueChange)="stock.mmsDistributed = $event.toString()"></app-input-field>
-      </div>
-      <div>
-        <app-label for="mmsClosing">MMS Closing</app-label>
-        <app-input-field id="mmsClosing" type="text" [value]="stock.mmsClosing || ''" (valueChange)="stock.mmsClosing = $event.toString()"></app-input-field>
-      </div>
+      <section class="stock-section stock-section-compact">
+        <header class="stock-section-heading">
+          <h2>Other Details</h2>
+        </header>
+        <div class="stock-fields-grid">
+          <div>
+            <app-label for="unit">Unit</app-label>
+            <app-input-field id="unit" type="text" [value]="stock.unit || ''" (valueChange)="stock.unit = $event.toString()"></app-input-field>
+          </div>
+        </div>
+      </section>
     </div>
     <div class="mb-6 flex flex-wrap items-center justify-end gap-3">
     <app-button size="sm" variant="outline" (btnClick)="cancel()">Cancel</app-button>
-    <app-button size="sm" (btnClick)="save()" [disabled]="loading">
+    <app-button size="sm" (btnClick)="save()" [disabled]="loading || previousStockLoading">
       <span class="flex items-center gap-2">
         <i class="fas fa-save"></i>
         <span>{{ loading ? 'Saving...' : 'Save' }}</span>

@@ -1,3 +1,5 @@
+// API/Controllers/FoodStockController.cs
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NashunumaApp.Application.DTOs.Common;
@@ -8,6 +10,12 @@ using System.Security.Claims;
 
 namespace NashunumaApp.API.Controllers
 {
+    /// <summary>
+    /// HTTP API for food stock.
+    /// The controller resolves the username from claims and hands it to the
+    /// service, so role-scoped reads (list, summary, export) are filtered by
+    /// the caller's role: admin sees every active site, non-admin only their own.
+    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
@@ -24,18 +32,27 @@ namespace NashunumaApp.API.Controllers
             _logger = logger;
         }
 
+        /// <summary>
+        /// GET api/foodstock
+        /// Returns the latest stock row per scoped active site, paginated.
+        /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetFoodStocks([FromQuery] int pageNumber = 1,[FromQuery] int pageSize = 10,[FromQuery] string? searchTerm = null)
+        public async Task<IActionResult> GetFoodStocks(
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string? searchTerm = null)
         {
             try
             {
-                _logger.LogInformation("Getting paged food stocks - Page: {PageNumber}, PageSize: {PageSize}, SearchTerm: {SearchTerm}",
-                    pageNumber, pageSize, searchTerm ?? "null");
-
+                var username = GetUserUsername();
                 var siteId = GetUserSiteId();
-                _logger.LogDebug("Using SiteId from claims: {SiteId}", siteId ?? "null");
 
-                var result = await _foodStockService.GetPagedFoodStocksAsync(pageNumber, pageSize, searchTerm, siteId);
+                _logger.LogInformation("Getting paged food stocks - User: {Username}, Page: {PageNumber}, PageSize: {PageSize}, SearchTerm: {SearchTerm}, SiteId: {SiteId}",
+                    username ?? "null", pageNumber, pageSize, searchTerm ?? "null", siteId ?? "null");
+
+                // username drives role scoping; siteId further restricts for non-admins.
+                var result = await _foodStockService.GetPagedFoodStocksAsync(
+                    username!, pageNumber, pageSize, searchTerm, siteId);
 
                 if (result.IsSuccess)
                 {
@@ -55,6 +72,10 @@ namespace NashunumaApp.API.Controllers
             }
         }
 
+        /// <summary>
+        /// GET api/foodstock/{id}
+        /// Returns a single stock row by primary key.
+        /// </summary>
         [HttpGet("{id}")]
         public async Task<IActionResult> GetFoodStockById(decimal id)
         {
@@ -92,14 +113,20 @@ namespace NashunumaApp.API.Controllers
             }
         }
 
+        /// <summary>
+        /// GET api/foodstock/summary
+        /// Returns summary counters (TotalSites, NotUpdated, LowStockSites, ...)
+        /// scoped to the caller's role.
+        /// </summary>
         [HttpGet("summary")]
         public async Task<IActionResult> GetSummaryStats()
         {
             try
             {
-                _logger.LogInformation("Getting summary statistics");
+                var username = GetUserUsername();
+                _logger.LogInformation("Getting summary statistics for user: {Username}", username ?? "null");
 
-                var result = await _foodStockService.GetSummaryStatsAsync();
+                var result = await _foodStockService.GetSummaryStatsAsync(username!);
 
                 if (result.IsSuccess)
                 {
@@ -119,24 +146,35 @@ namespace NashunumaApp.API.Controllers
             }
         }
 
+        /// <summary>
+        /// GET api/foodstock/export
+        /// Returns the latest row per scoped active site as a file.
+        /// </summary>
         [HttpGet("export")]
         public async Task<IActionResult> ExportFoodStocks(
             [FromQuery] string? searchTerm = null,
+            [FromQuery] string? province = null,
+            [FromQuery] string? district = null,
+            [FromQuery] string? tehsil = null,
             [FromQuery] string format = "excel")
         {
             try
             {
-                _logger.LogInformation("Exporting food stocks - SearchTerm: {SearchTerm}, Format: {Format}",
-                    searchTerm ?? "null", format);
+                var username = GetUserUsername();
 
-                var result = await _foodStockService.ExportFoodStocksAsync(searchTerm, format);
+                _logger.LogInformation("Exporting food stocks - User: {Username}, SearchTerm: {SearchTerm}, Format: {Format}",
+                    username ?? "null", searchTerm ?? "null", format);
+
+                var result = await _foodStockService.ExportFoodStocksAsync(
+                    username!, searchTerm, province, district, tehsil, format);
 
                 if (result.IsSuccess)
                 {
                     _logger.LogInformation("Successfully exported food stocks with {DataLength} bytes",
                         result.Data?.Length ?? 0);
 
-                    return File(result.Data, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    return File(result.Data,
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                         $"FoodStock_{DateTime.Now:yyyy-MM-dd}.xlsx");
                 }
                 else
@@ -152,6 +190,10 @@ namespace NashunumaApp.API.Controllers
             }
         }
 
+        /// <summary>
+        /// DELETE api/foodstock/{id}
+        /// Deletes a stock row by primary key.
+        /// </summary>
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteFoodStock(int id)
         {
@@ -182,7 +224,11 @@ namespace NashunumaApp.API.Controllers
             }
         }
 
-        
+        /// <summary>
+        /// GET api/foodstock/missing-dates
+        /// Returns the missing stock dates for the current user's site as a
+        /// notification DTO.
+        /// </summary>
         [HttpGet("missing-dates")]
         public async Task<IActionResult> GetMissingStockDates()
         {
@@ -209,7 +255,7 @@ namespace NashunumaApp.API.Controllers
                     return BadRequest(result);
                 }
 
-                // Create notification
+                // Wrap the result in a notification DTO for the client.
                 var notification = new MissingStockNotificationDto
                 {
                     SiteId = siteId,
@@ -233,27 +279,30 @@ namespace NashunumaApp.API.Controllers
             }
         }
 
-        
+        /// <summary>
+        /// POST api/foodstock/save
+        /// Creates or updates a stock row. Non-admins can only write to their
+        /// own site; the claim is enforced here.
+        /// </summary>
         [HttpPost("save")]
         public async Task<IActionResult> SaveStockInformation([FromBody] SaveStockInformationRequest request)
         {
             try
             {
-                // Get current user's site ID
                 var userSiteId = GetUserSiteId();
                 var username = GetUserUsername();
 
                 _logger.LogInformation("Saving stock information - User: {Username}, SiteId: {SiteId}, Date: {Date}",
                     username ?? "null", request.SiteId ?? "null", request.EnteredOn ?? "null");
 
-                // Set site ID from authenticated user if not provided in request
+                // Default SiteId to the current user's site.
                 if (string.IsNullOrEmpty(request.SiteId))
                 {
                     request.SiteId = userSiteId;
                     _logger.LogDebug("Set SiteId from authenticated user: {SiteId}", request.SiteId);
                 }
 
-                // Verify user has permission for this site
+                // Write authorization: user must target their own site.
                 if (request.SiteId != userSiteId)
                 {
                     _logger.LogWarning("User {Username} attempted to save stock for unauthorized site {SiteId}",
@@ -261,7 +310,7 @@ namespace NashunumaApp.API.Controllers
                     return Forbid("You don't have permission to save stock for this site");
                 }
 
-                // Set entered by to current user
+                // Default EnteredBy to the current user and verify it.
                 if (string.IsNullOrEmpty(request.EnteredBy))
                 {
                     request.EnteredBy = username;
@@ -269,10 +318,11 @@ namespace NashunumaApp.API.Controllers
                 }
                 if (request.EnteredBy != username)
                 {
-                    _logger.LogWarning("User {Username} attempted to save stock for unauthorized user: {Username}",
-                        username ?? "unknown", request.SiteId);
+                    _logger.LogWarning("User {Username} attempted to save stock with unauthorized EnteredBy",
+                        username ?? "unknown");
                     return Forbid("You don't have permission to save stock for this user");
                 }
+
                 var result = await _foodStockService.SaveStockInformationAsync(request);
 
                 if (!result.IsSuccess)
@@ -294,7 +344,10 @@ namespace NashunumaApp.API.Controllers
             }
         }
 
-        
+        /// <summary>
+        /// GET api/foodstock/history
+        /// Returns all stock rows for the current user's site.
+        /// </summary>
         [HttpGet("history")]
         public async Task<IActionResult> GetSiteStockHistory()
         {
@@ -333,7 +386,10 @@ namespace NashunumaApp.API.Controllers
             }
         }
 
-        
+        /// <summary>
+        /// GET api/foodstock/exists?date=dd-MM-yyyy
+        /// Indicates whether the current user's site has a stock row for the date.
+        /// </summary>
         [HttpGet("exists")]
         public async Task<IActionResult> CheckStockExists([FromQuery] string date)
         {
@@ -379,6 +435,9 @@ namespace NashunumaApp.API.Controllers
 
         #region Helper Methods
 
+        /// <summary>
+        /// Reads the "siteid" claim from the authenticated principal.
+        /// </summary>
         private string GetUserSiteId()
         {
             var siteId = User.FindFirst("siteid")?.Value;
@@ -386,6 +445,10 @@ namespace NashunumaApp.API.Controllers
             return siteId;
         }
 
+        /// <summary>
+        /// Reads the username from the standard Name claim (or the custom
+        /// "username" claim).
+        /// </summary>
         private string GetUserUsername()
         {
             var username = User.FindFirst(ClaimTypes.Name)?.Value ?? User.FindFirst("username")?.Value;

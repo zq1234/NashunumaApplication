@@ -60,6 +60,9 @@ export class FoodStockService {
       if (filter.siteName) {
         params = params.set('siteName', filter.siteName);
       }
+      if (filter.siteId) {
+        params = params.set('siteId', filter.siteId);
+      }
       if (filter.province) {
         params = params.set('province', filter.province);
       }
@@ -156,9 +159,11 @@ export class FoodStockService {
       EnteredBy: foodStock.enteredBy ?? '',
       SiteId: foodStock.siteId ?? '',
       OpeningStockSachetsMamta: foodStock.openingStockSachetsMamta ?? '',
+      ReceivedStockSachetsMamta: foodStock.receivedStockSachetsMamta ?? '',
       ClosingStockSachetsMamta: foodStock.closingStockSachetsMamta ?? '',
       DistributedSachetsMamta: foodStock.distributedSachetsMamta ?? '',
       OpeningStockSachetsWawa: foodStock.openingStockSachetsWawa ?? '',
+      ReceivedStockSachetsWawa: foodStock.receivedStockSachetsWawa ?? '',
       ClosingStockSachetsWawa: foodStock.closingStockSachetsWawa ?? '',
       DistributedSachetsWawa: foodStock.distributedSachetsWawa ?? '',
       OpeningStockBoxesWawa: foodStock.openingStockBoxesWawa ?? '',
@@ -192,6 +197,8 @@ export class FoodStockService {
    */
   getAllFoodStocks(filter?: Partial<FoodStockFilter>): Observable<ApiResponse<FoodStock[]>> {
     let params = new HttpParams();
+    const auth = localStorage.getItem(`${environment.storage.prefix}${environment.auth.tokenKey}`) ?? '';
+    params = params.set('Auth', auth);
 
     if (filter) {
       if (filter.searchTerm) {
@@ -199,6 +206,9 @@ export class FoodStockService {
       }
       if (filter.siteName) {
         params = params.set('siteName', filter.siteName);
+      }
+      if (filter.siteId) {
+        params = params.set('siteId', filter.siteId);
       }
       if (filter.province) {
         params = params.set('province', filter.province);

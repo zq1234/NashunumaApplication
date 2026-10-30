@@ -14,3 +14,54 @@
 }
 .card-body { padding: 1rem; }
 */
+.stock-form-sections {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.stock-section {
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.stock-section:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.stock-section-heading {
+  margin-bottom: 1rem;
+  padding-left: 0.75rem;
+  border-left: 3px solid #0f766e;
+}
+
+.stock-section-heading h2 {
+  margin: 0;
+  color: #111827;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.stock-section-heading p {
+  margin: 0.2rem 0 0;
+  color: #6b7280;
+  font-size: 0.8rem;
+}
+
+.stock-fields-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .stock-fields-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .stock-fields-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

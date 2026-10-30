@@ -33,6 +33,13 @@ namespace NashunumaApp.Shared.Logging
         public const string ErrorLogLevel = "Error";
         public const string WarningLogLevel = "Warning";
 
+        // Logging Categories (used for Serilog MinimumLevel.Override keys)
+        public const string LoggingCategoryHostingLifetime = "Microsoft.Hosting.Lifetime";
+        public const string LoggingCategoryAspNetCore = "Microsoft.AspNetCore";
+        public const string LoggingCategoryEfCore = "Microsoft.EntityFrameworkCore";
+        public const string LoggingCategorySystem = "System";
+        public const string LoggingCategoryMicrosoft = "Microsoft";
+
         // Property Names
         public const string PropertyApplication = "Application";
         public const string PropertyEnvironment = "Environment";
@@ -44,6 +51,10 @@ namespace NashunumaApp.Shared.Logging
         public const string PropertyRequestMethod = "RequestMethod";
         public const string PropertyRequestHost = "RequestHost";
         public const string PropertyIsAuthenticated = "IsAuthenticated";
+
+        // Kestrel / listening address property names
+        public const string PropertyAddress = "Address";
+        public const string PropertySwaggerUrl = "SwaggerUrl";
 
         // Source Filters
         public static readonly List<string> FilteredSources = new List<string>
@@ -76,6 +87,10 @@ namespace NashunumaApp.Shared.Logging
         public const string SwaggerDocumentTitle = "Nashunuma App API Documentation";
         public const string SwaggerApiVersion = "v1";
 
+        // Swagger configuration keys
+        public const string SwaggerConfigSectionName = "Swagger";
+        public const string SwaggerEnableInProductionKey = "Swagger:EnableInProduction";
+
         // Authentication
         public const string AuthScheme = "Bearer";
         public const string AuthSecurityId = "Bearer";
@@ -83,7 +98,23 @@ namespace NashunumaApp.Shared.Logging
         // CORS
         public const string CorsPolicyAllowAngular = "AllowAngular";
         public const string CorsPolicyAllowAll = "AllowAll";
-        public static readonly string[] DefaultAllowedOrigins = new[] { "http://localhost:4200", "https://localhost:4200" };
+        public const string CorsConfigSectionName = "Cors";
+        public const string CorsAllowedOriginsKey = "Cors:AllowedOrigins";
+
+        // Default allowed origins (used when Cors:AllowedOrigins is not configured)
+        public static readonly string[] DefaultAllowedOrigins = new[]
+        {
+            "http://localhost:4200",
+            "https://localhost:4200",
+            "http://localhost:4300",
+            "https://localhost:4300",
+            "http://localhost:333",
+            "https://localhost:333",
+            "http://192.168.18.49:4300",
+            "https://192.168.18.49:4300",
+             "http://192.168.18.49:333",
+            "https://192.168.18.49:333",
+        };
 
         // Message Templates
         public const string MessageApplicationStartup = "Starting NashunumaApp API...";
@@ -92,11 +123,20 @@ namespace NashunumaApp.Shared.Logging
         public const string MessageApplicationShutdown = "Application shutting down...";
         public const string MessageApplicationTerminated = "Application terminated unexpectedly";
         public const string MessageEnvironment = "Environment: {Environment}";
-        public const string MessageSwaggerUI = "Swagger UI available at: https://localhost:7058/swagger";
+        public const string MessageSwaggerUI = "Swagger UI enabled";
         public const string MessageJwtEnabled = "JWT Authentication: Enabled";
         public const string MessageStartedAt = "Started at: {Timestamp}";
         public const string MessageCorsAllowAll = "Development Mode: CORS AllowAll enabled";
         public const string MessageCorsRestricted = "Production Mode: CORS restricted to allowed origins";
+
+        // Startup / bound-address messages
+        public const string MessageListeningOn = "Nashunuma App API listening on: {Address}";
+        public const string MessageNoBoundAddresses = "No bound addresses reported by Kestrel. Check Kestrel/Urls configuration.";
+        public const string MessageSwaggerUiUrl = "Swagger UI: {SwaggerUrl}/{RoutePrefix}";
+        public const string MessageSwaggerDisabled = "Swagger UI is disabled in this environment";
+        public const string MessageJwtStatus = "JWT Auth: {Status}";
+        public const string MessageEnvironmentLabel = "Environment: {Environment}";
+        public const string MessageCorsOrigins = "CORS allowed origins: {Origins}";
 
         // Error Messages
         public const string ErrorDetails = "Error Details: {ErrorType} - {ErrorMessage}";

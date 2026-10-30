@@ -1,5 +1,84 @@
 // src/environments/environment.prod.ts
-export const environment = {
+
+import { Environment } from './environment.interface';
+
+export const environment: Environment = {
   production: true,
-  apiUrl: 'https://your-api-domain.com'
+  apiUrl: 'http://192.168.18.49:333',
+  apiVersion: 'v1',
+  appName: 'Nashunuma App',
+  appVersion: '1.0.0',
+
+  auth: {
+    tokenKey: 'auth_token',
+    userKey: 'user_info',
+    refreshTokenKey: 'refresh_token',
+    tokenExpiryKey: 'token_expiry',
+    loginUrl: '/api/Auth/login',
+    logoutUrl: '/api/Auth/logout',
+    registerUrl: '/api/Auth/register',
+    changePasswordUrl: '/api/Auth/change-password',
+    resetPasswordUrl: '/api/Auth/reset-password',
+    validateTokenUrl: '/api/Auth/validate-token',
+    refreshTokenUrl: '/api/Auth/refresh-token'
+  },
+
+  api: {
+    // User Management
+    'user.getUsers': '/api/UserManagement/users',
+    'user.getByUsername': '/api/UserManagement/users/{username}',
+    'user.transferLocation': '/api/UserManagement/users/{username}/location',
+    'user.toggleStatus': '/api/UserManagement/users/{username}/status',
+    'user.blockUser': '/api/UserManagement/users/{username}/block',
+    'user.unblockUser': '/api/UserManagement/users/{username}/unblock',
+    'user.getByLocation': '/api/UserManagement/users/by-location',
+    'user.getStatistics': '/api/UserManagement/statistics/location',
+
+    // Food Stock
+    'foodStock.getList': '/api/FoodStock',
+    'foodStock.getById': '/api/FoodStock/{id}',
+    'foodStock.create': '/api/FoodStock',
+    'foodStock.update': '/api/FoodStock/{id}',
+    'foodStock.delete': '/api/FoodStock/{id}',
+    'foodStock.export': '/api/FoodStock/export',
+    'foodStock.getSummary': '/api/FoodStock/summary',
+
+    // Location Management
+    'location.getProvinces': '/api/Location/provinces',
+    'location.getDistrictsByProvince': '/api/Location/districts/{provinceName}',
+    'location.getTehsilsByDistrict': '/api/Location/tehsils/{districtName}',
+    'location.getUcsByTehsil': '/api/Location/ucs/{tehsilName}',
+    'location.getHierarchy': '/api/Location/hierarchy',
+    'location.getProvinceByName': '/api/Location/province/{provinceName}',
+    'location.getDistrictByName': '/api/Location/district/{districtName}',
+    'location.getTehsilByName': '/api/Location/tehsil/{tehsilName}',
+    'location.getSitesByTehsil': '/api/Location/sites/{tehsilName}',
+
+    // Mother Trimester / Lookup
+    'motherTrimister.byBatch': '/api/LookUp/by-batch',
+    'motherTrimister.byBatchExcel': '/api/LookUp/by-batch-excel',
+    'motherTrimister.getById': '/api/LookUp/by-id',
+    'motherTrimister.export': '/api/LookUp/export'
+  },
+
+  features: {
+    enableSwagger: false,
+    enableDebug: false,
+    enableLogging: true,
+    enableAnalytics: false
+  },
+
+  pagination: {
+    defaultPageSize: 10,
+    pageSizeOptions: [5, 10, 25, 50, 100]
+  },
+
+  timeout: {
+    apiTimeout: 30000,
+    retryAttempts: 3
+  },
+
+  storage: {
+    prefix: 'nashunuma_'
+  }
 };

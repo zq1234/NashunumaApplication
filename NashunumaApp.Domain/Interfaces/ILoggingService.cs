@@ -4,8 +4,6 @@ using System.Text;
 
 namespace NashunumaApp.Domain.Interfaces
 {
- 
-
     public interface ILoggingService
     {
         void LogInformation(string message, params object[] args);

@@ -270,6 +270,10 @@
   .data-row {
     transition: background 0.15s ease;
 
+    &.row-clickable {
+      cursor: pointer;
+    }
+
     &:hover {
       background: #f8fafc;
 

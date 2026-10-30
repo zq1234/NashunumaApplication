@@ -10,9 +10,11 @@ export interface FoodStock {
   enteredOn: string | null;
   siteId: string | null;
   openingStockSachetsMamta: string | null;
+  receivedStockSachetsMamta?: string | null;
   closingStockSachetsMamta: string | null;
   distributedSachetsMamta: string | null;
   openingStockSachetsWawa: string | null;
+  receivedStockSachetsWawa?: string | null;
   closingStockSachetsWawa: string | null;
   distributedSachetsWawa: string | null;
   openingStockBoxesWawa: string | null;
@@ -71,9 +73,11 @@ export interface CreateFoodStockDto {
   enteredOn?: string | null;
   siteId?: string | null;
   openingStockSachetsMamta?: string | null;
+  receivedStockSachetsMamta?: string | null;
   closingStockSachetsMamta?: string | null;
   distributedSachetsMamta?: string | null;
   openingStockSachetsWawa?: string | null;
+  receivedStockSachetsWawa?: string | null;
   closingStockSachetsWawa?: string | null;
   distributedSachetsWawa?: string | null;
   openingStockBoxesWawa?: string | null;

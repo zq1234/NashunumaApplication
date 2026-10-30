@@ -82,7 +82,11 @@ export class FoodStockDetailComponent implements OnInit {
       this.stock.openingStockBoxesMamta,
       this.stock.openingStockBoxesWawa,
       this.stock.openingStockSachetsMamta,
-      this.stock.openingStockSachetsWawa
+      this.stock.openingStockSachetsWawa,
+      this.stock.receivedStockBoxesMamta,
+      this.stock.receivedStockBoxesWawa,
+      this.stock.receivedStockSachetsMamta,
+      this.stock.receivedStockSachetsWawa
     ];
     return stocks.reduce((sum, val) => sum + (parseInt(val || '0') || 0), 0);
   }
@@ -92,6 +96,8 @@ export class FoodStockDetailComponent implements OnInit {
     const stocks = [
       this.stock.receivedStockBoxesMamta,
       this.stock.receivedStockBoxesWawa,
+      this.stock.receivedStockSachetsMamta,
+      this.stock.receivedStockSachetsWawa,
       this.stock.rutfReceived,
       this.stock.ifaReceived,
       this.stock.mmsReceived

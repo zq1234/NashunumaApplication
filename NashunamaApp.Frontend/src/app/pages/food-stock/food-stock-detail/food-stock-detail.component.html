@@ -149,27 +149,35 @@
       </div>
 
       <div class="lg:col-span-2 space-y-6">
-        <app-component-card title="Mamta Stock" desc="Inventory details for Mamta products.">
-          <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
-            <div><label class="mb-1 block text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Opening Boxes</label><p class="text-sm font-medium text-gray-800 dark:text-white/90">{{ stock.openingStockBoxesMamta || '0' }}</p></div>
-            <div><label class="mb-1 block text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Received Boxes</label><p class="text-sm font-medium text-success-600 dark:text-success-300">{{ stock.receivedStockBoxesMamta || '0' }}</p></div>
-            <div><label class="mb-1 block text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Distributed Boxes</label><p class="text-sm font-medium text-warning-600 dark:text-warning-300">{{ stock.distributedBoxesMamta || '0' }}</p></div>
-            <div><label class="mb-1 block text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Closing Boxes</label><p class="text-sm font-medium text-brand-600 dark:text-brand-300">{{ stock.closingStockBoxesMamta || '0' }}</p></div>
-            <div><label class="mb-1 block text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Opening Sachets</label><p class="text-sm font-medium text-gray-800 dark:text-white/90">{{ stock.openingStockSachetsMamta || '0' }}</p></div>
-            <div><label class="mb-1 block text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Distributed Sachets</label><p class="text-sm font-medium text-warning-600 dark:text-warning-300">{{ stock.distributedSachetsMamta || '0' }}</p></div>
-            <div><label class="mb-1 block text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Closing Sachets</label><p class="text-sm font-medium text-brand-600 dark:text-brand-300">{{ stock.closingStockSachetsMamta || '0' }}</p></div>
+        <app-component-card title="Wawa Stock" desc="Inventory details for Wawa products.">
+          <div class="overflow-x-auto">
+            <div class="min-w-[640px]">
+              <div class="grid grid-cols-5 border-b border-gray-200 pb-2 text-xs font-semibold uppercase text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                <span>Product</span><span class="text-center">Opening</span><span class="text-center">Received</span><span class="text-center">Distributed</span><span class="text-center">Closing</span>
+              </div>
+              <div class="grid grid-cols-5 items-center border-b border-gray-100 py-3 text-sm dark:border-gray-800">
+                <span class="font-semibold text-gray-800 dark:text-white/90">Boxes</span><span class="text-center">{{ stock.openingStockBoxesWawa || '0' }}</span><span class="text-center text-success-600 dark:text-success-300">{{ stock.receivedStockBoxesWawa || '0' }}</span><span class="text-center text-warning-600 dark:text-warning-300">{{ stock.distributedBoxesWawa || '0' }}</span><span class="text-center font-semibold text-brand-600 dark:text-brand-300">{{ stock.closingStockBoxesWawa || '0' }}</span>
+              </div>
+              <div class="grid grid-cols-5 items-center py-3 text-sm">
+                <span class="font-semibold text-gray-800 dark:text-white/90">Sachets</span><span class="text-center">{{ stock.openingStockSachetsWawa || '0' }}</span><span class="text-center text-success-600 dark:text-success-300">{{ stock.receivedStockSachetsWawa || '0' }}</span><span class="text-center text-warning-600 dark:text-warning-300">{{ stock.distributedSachetsWawa || '0' }}</span><span class="text-center font-semibold text-brand-600 dark:text-brand-300">{{ stock.closingStockSachetsWawa || '0' }}</span>
+              </div>
+            </div>
           </div>
         </app-component-card>
 
-        <app-component-card title="Wawa Stock" desc="Inventory details for Wawa products.">
-          <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
-            <div><label class="mb-1 block text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Opening Boxes</label><p class="text-sm font-medium text-gray-800 dark:text-white/90">{{ stock.openingStockBoxesWawa || '0' }}</p></div>
-            <div><label class="mb-1 block text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Received Boxes</label><p class="text-sm font-medium text-success-600 dark:text-success-300">{{ stock.receivedStockBoxesWawa || '0' }}</p></div>
-            <div><label class="mb-1 block text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Distributed Boxes</label><p class="text-sm font-medium text-warning-600 dark:text-warning-300">{{ stock.distributedBoxesWawa || '0' }}</p></div>
-            <div><label class="mb-1 block text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Closing Boxes</label><p class="text-sm font-medium text-brand-600 dark:text-brand-300">{{ stock.closingStockBoxesWawa || '0' }}</p></div>
-            <div><label class="mb-1 block text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Opening Sachets</label><p class="text-sm font-medium text-gray-800 dark:text-white/90">{{ stock.openingStockSachetsWawa || '0' }}</p></div>
-            <div><label class="mb-1 block text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Distributed Sachets</label><p class="text-sm font-medium text-warning-600 dark:text-warning-300">{{ stock.distributedSachetsWawa || '0' }}</p></div>
-            <div><label class="mb-1 block text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Closing Sachets</label><p class="text-sm font-medium text-brand-600 dark:text-brand-300">{{ stock.closingStockSachetsWawa || '0' }}</p></div>
+        <app-component-card title="Mamta Stock" desc="Inventory details for Mamta products.">
+          <div class="overflow-x-auto">
+            <div class="min-w-[640px]">
+              <div class="grid grid-cols-5 border-b border-gray-200 pb-2 text-xs font-semibold uppercase text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                <span>Product</span><span class="text-center">Opening</span><span class="text-center">Received</span><span class="text-center">Distributed</span><span class="text-center">Closing</span>
+              </div>
+              <div class="grid grid-cols-5 items-center border-b border-gray-100 py-3 text-sm dark:border-gray-800">
+                <span class="font-semibold text-gray-800 dark:text-white/90">Boxes</span><span class="text-center">{{ stock.openingStockBoxesMamta || '0' }}</span><span class="text-center text-success-600 dark:text-success-300">{{ stock.receivedStockBoxesMamta || '0' }}</span><span class="text-center text-warning-600 dark:text-warning-300">{{ stock.distributedBoxesMamta || '0' }}</span><span class="text-center font-semibold text-brand-600 dark:text-brand-300">{{ stock.closingStockBoxesMamta || '0' }}</span>
+              </div>
+              <div class="grid grid-cols-5 items-center py-3 text-sm">
+                <span class="font-semibold text-gray-800 dark:text-white/90">Sachets</span><span class="text-center">{{ stock.openingStockSachetsMamta || '0' }}</span><span class="text-center text-success-600 dark:text-success-300">{{ stock.receivedStockSachetsMamta || '0' }}</span><span class="text-center text-warning-600 dark:text-warning-300">{{ stock.distributedSachetsMamta || '0' }}</span><span class="text-center font-semibold text-brand-600 dark:text-brand-300">{{ stock.closingStockSachetsMamta || '0' }}</span>
+              </div>
+            </div>
           </div>
         </app-component-card>
 

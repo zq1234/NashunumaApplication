@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.OpenApi.Models;
 using NashunumaApp.API.Extensions;
 using NashunumaApp.API.Middleware;
@@ -19,7 +21,7 @@ using System.Text.Json.Serialization;
 var builder = WebApplication.CreateBuilder(args);
 
 // ============================================================
-// 1. CONFIGURE SERILOG 
+// 1. CONFIGURE SERILOG
 // ============================================================
 builder.AddSerilog();
 
@@ -45,7 +47,7 @@ try
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen(c =>
     {
-        var swaggerConfig = builder.Configuration.GetSection("Swagger");
+        var swaggerConfig = builder.Configuration.GetSection(LoggingConstants.SwaggerConfigSectionName);
         c.SwaggerDoc("v1", new OpenApiInfo
         {
             Title = swaggerConfig.GetValue<string>("Title") ?? "Nashunuma App API",
@@ -90,7 +92,7 @@ try
             }
         });
 
-        // XML Documentation
+        // XML Documentation (API layer)
         var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
         var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
         if (File.Exists(xmlPath))
@@ -98,7 +100,7 @@ try
             c.IncludeXmlComments(xmlPath);
         }
 
-        // Include XML from Application layer
+        // XML Documentation (Application layer)
         var appXmlFile = "NashunumaApp.Application.xml";
         var appXmlPath = Path.Combine(AppContext.BaseDirectory, appXmlFile);
         if (File.Exists(appXmlPath))
@@ -131,7 +133,9 @@ try
     // ============================================================
     // 5. CONFIGURE CORS
     // ============================================================
-    var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+    var allowedOrigins = builder.Configuration
+        .GetSection(LoggingConstants.CorsAllowedOriginsKey)
+        .Get<string[]>()
         ?? LoggingConstants.DefaultAllowedOrigins;
 
     builder.Services.AddCors(options =>
@@ -162,11 +166,39 @@ try
     // 7. CONFIGURE PIPELINE
     // ============================================================
 
-    // Use Serilog Request Logging
+    // Request logging
     app.UseSerilogRequestLogging();
 
-    // Swagger Pipeline
+    // 7.1 CORS must run before redirect / exception / auth middleware,
+    //     otherwise preflight OPTIONS requests fail with
+    //     "No 'Access-Control-Allow-Origin' header is present".
     if (app.Environment.IsDevelopment())
+    {
+        app.UseCors(LoggingConstants.CorsPolicyAllowAll);
+        Log.Information(LoggingConstants.MessageCorsAllowAll);
+    }
+    else
+    {
+        app.UseCors(LoggingConstants.CorsPolicyAllowAngular);
+        Log.Information(LoggingConstants.MessageCorsRestricted);
+        Log.Information(LoggingConstants.MessageCorsOrigins, string.Join(", ", allowedOrigins));
+    }
+
+    // Exception handling middleware
+    app.UseMiddleware<GlobalExceptionMiddleware>();
+
+    app.UseHttpsRedirection();
+
+    // Static files (for Swagger customizations)
+    app.UseStaticFiles();
+
+    // 7.2 Swagger (enabled in Development or when explicitly configured)
+    var swaggerConfigSection = builder.Configuration.GetSection(LoggingConstants.SwaggerConfigSectionName);
+    var swaggerEnabled =
+        app.Environment.IsDevelopment() ||
+        swaggerConfigSection.GetValue<bool>("EnableInProduction");
+
+    if (swaggerEnabled)
     {
         app.UseSwagger();
         app.UseSwaggerUI(c =>
@@ -183,32 +215,12 @@ try
         });
     }
 
-    app.UseHttpsRedirection();
-
-    // Static Files (for Swagger customizations)
-    app.UseStaticFiles();
-
-    // Use CORS based on environment
-    if (app.Environment.IsDevelopment())
-    {
-        app.UseCors(LoggingConstants.CorsPolicyAllowAll);
-        Log.Information(LoggingConstants.MessageCorsAllowAll);
-    }
-    else
-    {
-        app.UseCors(LoggingConstants.CorsPolicyAllowAngular);
-        Log.Information(LoggingConstants.MessageCorsRestricted);
-    }
-
-    // Exception Handling Middleware (with logging)
-    app.UseMiddleware<GlobalExceptionMiddleware>();
-
     app.UseAuthentication();
     app.UseAuthorization();
 
     app.MapControllers();
 
-    // Health Check Endpoint
+    // Health check endpoint
     app.MapGet(LoggingConstants.HealthCheckEndpoint, () => Results.Ok(new
     {
         Status = LoggingConstants.HealthCheckStatus,
@@ -218,18 +230,54 @@ try
     }));
 
     // ============================================================
-    // 8. DATABASE INITIALIZATION AND SEEDING
+    // 8. LOG BOUND ADDRESSES ONCE KESTREL STARTS
+    //    (Kestrel only knows the actual ports after it binds,
+    //     which happens inside app.Run().)
     // ============================================================
-    Log.Information(LoggingConstants.MessageEnvironment, app.Environment.EnvironmentName);
-    Log.Information(LoggingConstants.MessageJwtEnabled);
+    var lifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
 
-    if (app.Environment.IsDevelopment())
+    lifetime.ApplicationStarted.Register(() =>
     {
-        Log.Information(LoggingConstants.MessageSwaggerUI);
-    }
+        var server = app.Services.GetRequiredService<IServer>();
+        var addresses = server.Features.Get<IServerAddressesFeature>()?.Addresses
+                        ?? new List<string>();
 
-    Log.Information(LoggingConstants.MessageApplicationStarted);
-    Log.Information(LoggingConstants.MessageStartedAt, DateTime.Now.ToString(LoggingConstants.DefaultDateTime));
+        if (addresses.Count == 0)
+        {
+            Log.Warning(LoggingConstants.MessageNoBoundAddresses);
+        }
+        else
+        {
+            foreach (var address in addresses)
+            {
+                Log.Information(LoggingConstants.MessageListeningOn, address);
+            }
+        }
+
+        Log.Information(LoggingConstants.MessageEnvironmentLabel, app.Environment.EnvironmentName);
+        Log.Information(LoggingConstants.MessageJwtStatus, "Enabled");
+
+        if (swaggerEnabled)
+        {
+            var swaggerBase = addresses.FirstOrDefault(a => a.StartsWith("http://"))
+                              ?? addresses.FirstOrDefault();
+
+            if (swaggerBase != null)
+            {
+                Log.Information(LoggingConstants.MessageSwaggerUiUrl,
+                    swaggerBase.TrimEnd('/'),
+                    LoggingConstants.SwaggerRoutePrefix);
+            }
+        }
+        else
+        {
+            Log.Information(LoggingConstants.MessageSwaggerDisabled);
+        }
+
+        Log.Information(LoggingConstants.MessageApplicationStarted);
+        Log.Information(LoggingConstants.MessageStartedAt,
+            DateTime.Now.ToString(LoggingConstants.DefaultDateTime));
+    });
 
     // ============================================================
     // 9. RUN APPLICATION

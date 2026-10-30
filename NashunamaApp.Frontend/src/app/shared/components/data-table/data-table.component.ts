@@ -40,6 +40,7 @@ export class DataTableComponent implements OnChanges, OnInit {
   @Input() serverSideSearch = false;
   @Input() totalItems = 0;
   @Input() hidePagination = false;
+  @Input() rowClickable = false;
 
   // whether to render the header area (page size, title, search)
   // (kept for potential future use)
@@ -57,6 +58,7 @@ export class DataTableComponent implements OnChanges, OnInit {
   @Output() edit = new EventEmitter<any>();
   @Output() delete = new EventEmitter<any>();
   @Output() view = new EventEmitter<any>();
+  @Output() rowClick = new EventEmitter<any>();
   @Output() toggle = new EventEmitter<any>();
   @Output() block = new EventEmitter<any>();
   @Output() pageChange = new EventEmitter<{ page: number; pageSize: number }>();
@@ -257,6 +259,12 @@ export class DataTableComponent implements OnChanges, OnInit {
     }
 
     this.toggle.emit({ id, row, active: newState });
+  }
+
+  onRowClick(row: any): void {
+    if (this.rowClickable) {
+      this.rowClick.emit(row);
+    }
   }
 
   // ============================================
