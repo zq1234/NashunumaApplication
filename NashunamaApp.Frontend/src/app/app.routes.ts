@@ -73,6 +73,14 @@ export const routes: Routes = [
             title: 'Create Food Stock'
           },
           {
+            path: 'site/:siteId',
+            loadComponent: () =>
+              import('./pages/food-stock/food-stock-site-history/food-stock-site-history.component').then(
+                m => m.FoodStockSiteHistoryComponent
+              ),
+            title: 'Site Food Stock History'
+          },
+          {
             path: ':id',
             loadComponent: () =>
               import(

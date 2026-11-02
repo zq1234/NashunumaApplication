@@ -1,0 +1,122 @@
+<div class="space-y-6">
+  <app-page-breadcrumb pageTitle="Food Stock History" />
+
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <app-button size="sm" variant="outline" (btnClick)="goBack()">Back to sites</app-button>
+      <div>
+        <h1 class="text-xl font-semibold text-gray-900 dark:text-white">{{ siteName || 'Site Stock History' }}</h1>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          Site ID: {{ siteId }}
+          <span *ngIf="province || district || tehsil" class="ml-2">{{ province }} / {{ district }} / {{ tehsil }}</span>
+        </p>
+      </div>
+    </div>
+    <span class="rounded-full border border-gray-200 px-3 py-1 text-sm text-gray-600 dark:border-gray-700 dark:text-gray-300">
+      {{ records.length }} records
+    </span>
+  </div>
+
+  <div *ngIf="error" class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300" role="alert">
+    {{ error }}
+  </div>
+
+  <div *ngIf="loading" class="rounded-xl border border-gray-200 bg-white p-8 text-center text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400" role="status">
+    Loading site stock records...
+  </div>
+
+  <div *ngIf="!loading && !error && records.length === 0" class="rounded-xl border border-gray-200 bg-white p-8 text-center text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400">
+    No stock records were found for this site.
+  </div>
+
+  <section *ngIf="!loading && records.length > 0" class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-900">
+    <div class="overflow-x-auto">
+      <table class="min-w-[1550px] w-full border-collapse text-center text-sm">
+        <thead>
+          <tr class="bg-amber-700 text-sm font-bold text-white">
+            <th colspan="2" class="border border-amber-600 px-3 py-3"></th>
+            <th colspan="4" class="border border-amber-600 px-3 py-3">Received</th>
+            <th colspan="4" class="border border-amber-600 px-3 py-3">Opening</th>
+            <th colspan="4" class="border border-amber-600 px-3 py-3">Distributed</th>
+            <th colspan="4" class="border border-amber-600 px-3 py-3">Closing</th>
+            <th class="border border-amber-600 px-3 py-3"></th>
+          </tr>
+          <tr class="bg-gray-100 text-xs font-bold uppercase text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+            <th class="border border-gray-200 px-3 py-3 dark:border-gray-700">Activity Time</th>
+            <th class="border border-gray-200 px-3 py-3 dark:border-gray-700">Dated</th>
+            <th *ngFor="let group of [1, 2, 3, 4]" class="border border-gray-200 px-3 py-3 dark:border-gray-700">{{ group === 1 ? 'Mamta' : group === 2 ? 'Wawa' : group === 3 ? 'RUTF' : 'IFA' }}</th>
+            <th *ngFor="let group of [1, 2, 3, 4]" class="border border-gray-200 px-3 py-3 dark:border-gray-700">{{ group === 1 ? 'Mamta' : group === 2 ? 'Wawa' : group === 3 ? 'RUTF' : 'IFA' }}</th>
+            <th *ngFor="let group of [1, 2, 3, 4]" class="border border-gray-200 px-3 py-3 dark:border-gray-700">{{ group === 1 ? 'Mamta' : group === 2 ? 'Wawa' : group === 3 ? 'RUTF' : 'IFA' }}</th>
+            <th *ngFor="let group of [1, 2, 3, 4]" class="border border-gray-200 px-3 py-3 dark:border-gray-700">{{ group === 1 ? 'Mamta' : group === 2 ? 'Wawa' : group === 3 ? 'RUTF' : 'IFA' }}</th>
+            <th class="border border-gray-200 px-3 py-3 dark:border-gray-700">Staff Remarks</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let record of records"
+              class="cursor-pointer text-gray-800 transition-colors hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500 dark:text-gray-100 dark:hover:bg-gray-800"
+              tabindex="0"
+              role="button"
+              (click)="showRecord(record)"
+              (keydown.enter)="showRecord(record)"
+              (keydown.space)="$event.preventDefault(); showRecord(record)">
+            <td class="whitespace-nowrap border border-gray-200 px-3 py-3 font-semibold text-red-600 dark:border-gray-700">{{ formatTime(record.activityTime || record.enteredOn) }}</td>
+            <td class="whitespace-nowrap border border-gray-200 px-3 py-3 font-semibold text-green-700 dark:border-gray-700">{{ formatDate(record.enteredOn) }}</td>
+            <td class="border border-gray-200 bg-[#9D2D52] px-3 py-3 font-semibold text-white dark:border-gray-700">{{ value(record.receivedStockBoxesMamta) }}</td>
+            <td class="border border-gray-200 bg-[#CBC02C] px-3 py-3 font-semibold text-gray-900 dark:border-gray-700">{{ value(record.receivedStockBoxesWawa) }}</td>
+            <td class="border border-gray-200 bg-[#4D589C] px-3 py-3 font-semibold text-white dark:border-gray-700">{{ value(record.rutfReceived) }}</td>
+            <td class="border border-gray-200 px-3 py-3 dark:border-gray-700">{{ value(record.ifaReceived) }}</td>
+            <td class="border border-gray-200 bg-[#9D2D52] px-3 py-3 font-semibold text-white dark:border-gray-700">{{ value(record.openingStockBoxesMamta) }}</td>
+            <td class="border border-gray-200 bg-[#CBC02C] px-3 py-3 font-semibold text-gray-900 dark:border-gray-700">{{ value(record.openingStockBoxesWawa) }}</td>
+            <td class="border border-gray-200 bg-[#4D589C] px-3 py-3 font-semibold text-white dark:border-gray-700">{{ value(record.rutfOpening) }}</td>
+            <td class="border border-gray-200 px-3 py-3 dark:border-gray-700">{{ value(record.ifaOpening) }}</td>
+            <td class="border border-gray-200 bg-[#9D2D52] px-3 py-3 font-semibold text-white dark:border-gray-700">{{ value(record.distributedBoxesMamta) }}</td>
+            <td class="border border-gray-200 bg-[#CBC02C] px-3 py-3 font-semibold text-gray-900 dark:border-gray-700">{{ value(record.distributedBoxesWawa) }}</td>
+            <td class="border border-gray-200 bg-[#4D589C] px-3 py-3 font-semibold text-white dark:border-gray-700">{{ value(record.rutfDistributed) }}</td>
+            <td class="border border-gray-200 px-3 py-3 dark:border-gray-700">{{ value(record.ifaDistributed) }}</td>
+            <td class="border border-gray-200 bg-[#9D2D52] px-3 py-3 font-semibold text-white dark:border-gray-700">{{ value(record.closingStockBoxesMamta) }}</td>
+            <td class="border border-gray-200 bg-[#CBC02C] px-3 py-3 font-semibold text-gray-900 dark:border-gray-700">{{ value(record.closingStockBoxesWawa) }}</td>
+            <td class="border border-gray-200 bg-[#4D589C] px-3 py-3 font-semibold text-white dark:border-gray-700">{{ value(record.rutfClosing) }}</td>
+            <td class="border border-gray-200 px-3 py-3 dark:border-gray-700">{{ value(record.ifaClosing) }}</td>
+            <td class="max-w-[220px] truncate border border-gray-200 px-3 py-3 text-left dark:border-gray-700" [title]="record.remarks || ''">{{ record.remarks || '-' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="border-t border-gray-200 px-4 py-2 text-xs text-gray-500 dark:border-gray-700 dark:text-gray-400">Select a record to view its complete stock details.</p>
+  </section>
+
+  <app-modal [isOpen]="!!selectedRecord" (close)="closeRecord()" className="max-w-5xl p-4 md:p-6">
+    <ng-container *ngIf="selectedRecord as record">
+      <header class="mb-5 flex items-start justify-between gap-3 border-b border-gray-200 pb-4 dark:border-gray-700">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-300">Stock record details</p>
+          <h2 class="mt-1 text-xl font-semibold text-gray-900 dark:text-white">{{ siteName || 'Site' }} · {{ formatDate(record.enteredOn) }}</h2>
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Entered by {{ record.enteredBy || '-' }} · Activity {{ formatTime(record.activityTime || record.enteredOn) }}</p>
+        </div>
+        <button type="button" class="rounded-md p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800" aria-label="Close details" (click)="closeRecord()"><i class="fas fa-times"></i></button>
+      </header>
+
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <section *ngFor="let group of ['Received', 'Opening', 'Distributed', 'Closing']" class="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+          <h3 class="bg-amber-700 px-3 py-2 text-sm font-semibold text-white">{{ group }} Stock</h3>
+          <div class="divide-y divide-gray-100 dark:divide-gray-800">
+            <div *ngFor="let product of ['Mamta Boxes', 'Wawa Boxes', 'Mamta Sachets', 'Wawa Sachets', 'RUTF', 'IFA']" class="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+              <span class="text-gray-600 dark:text-gray-300">{{ product }}</span>
+              <strong class="text-gray-900 dark:text-white">{{ getRecordValue(record, group, product) }}</strong>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <section class="mt-4 rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+        <h3 class="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Staff Remarks</h3>
+        <p class="whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-200">{{ record.remarks || '-' }}</p>
+      </section>
+
+      <footer class="mt-5 flex justify-end gap-2 border-t border-gray-200 pt-4 dark:border-gray-700">
+        <app-button size="sm" variant="outline" (btnClick)="closeRecord()">Close</app-button>
+        <app-button size="sm" (btnClick)="editRecord(record)">Edit Record</app-button>
+      </footer>
+    </ng-container>
+  </app-modal>
+</div>

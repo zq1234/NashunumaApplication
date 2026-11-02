@@ -54,6 +54,7 @@ export interface UserFilterParams {
   district?: string;
   tehsil?: string;
   userType?: string;
+  isAdmin?: boolean;
   isActive?: boolean;
 }
 

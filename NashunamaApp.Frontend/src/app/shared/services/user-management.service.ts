@@ -163,6 +163,9 @@ export class UserManagementService {
     if (params.userType) {
       httpParams = httpParams.set('userType', params.userType);
     }
+    if (params.isAdmin !== undefined && params.isAdmin !== null) {
+      httpParams = httpParams.set('isAdmin', params.isAdmin.toString());
+    }
     if (params.isActive !== undefined && params.isActive !== null) {
       httpParams = httpParams.set('isActive', params.isActive.toString());
     }
@@ -392,6 +395,7 @@ export class UserManagementService {
     district?: string;
     tehsil?: string;
     userType?: string;
+    isAdmin?: boolean;
     isActive?: boolean;
   }): Observable<Blob> {
     this.setLoading(true);
@@ -404,6 +408,7 @@ export class UserManagementService {
       if (filters.district) params = params.set('district', filters.district);
       if (filters.tehsil) params = params.set('tehsil', filters.tehsil);
       if (filters.userType) params = params.set('userType', filters.userType);
+      if (filters.isAdmin !== undefined && filters.isAdmin !== null) params = params.set('isAdmin', filters.isAdmin.toString());
       if (filters.isActive !== undefined) params = params.set('isActive', filters.isActive.toString());
     }
 

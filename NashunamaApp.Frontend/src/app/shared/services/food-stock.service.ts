@@ -270,6 +270,16 @@ export class FoodStockService {
       );
   }
 
+  /** Get all food-stock records for a site ID. */
+  getFoodStocksBySiteId(siteId: string): Observable<ApiResponse<FoodStock[]>> {
+    const encodedSiteId = encodeURIComponent(siteId);
+    return this.http.get<ApiResponse<FoodStock[]>>(`${this.apiUrl}/site/${encodedSiteId}`)
+      .pipe(
+        retry(3),
+        catchError(this.handleError<FoodStock[]>('getFoodStocksBySiteId'))
+      );
+  }
+
   // ============================================================
   // CREATE FOOD STOCK
   // ============================================================

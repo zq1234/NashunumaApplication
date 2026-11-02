@@ -52,16 +52,10 @@ export interface UserSummaryStats {
   totalUsers: number;
   activeUsers: number;
   inactiveUsers: number;
-  blockedUsers: number;
-  newUsersThisMonth: number;
-  usersByType: {
-    userType: string;
-    count: number;
-  }[];
-  usersByProvince: {
-    province: string;
-    count: number;
-  }[];
+  adminUsers: number;
+  nonAdminUsers: number;
+  transferredUsers: number;
+  notTransferredUsers: number;
 }
 
 /**

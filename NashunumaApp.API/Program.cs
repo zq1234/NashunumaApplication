@@ -1,3 +1,4 @@
+using DocumentFormat.OpenXml.Office2016.Drawing.ChartDrawing;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.OpenApi.Models;
@@ -126,6 +127,7 @@ try
     builder.Services.AddScoped<ILocationRepository, LocationRepository>();
     builder.Services.AddScoped<ILocationService, LocationService>();
     builder.Services.AddScoped<IMotherTrimisterService, MotherTrimisterService>();
+    builder.Services.AddScoped<IUserScopeService, UserScopeService>();
 
     // AutoMapper
     builder.Services.AddAutoMapper(typeof(MappingProfile));

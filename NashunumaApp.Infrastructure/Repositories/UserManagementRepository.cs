@@ -14,13 +14,19 @@ namespace NashunumaApp.Infrastructure.Repositories
     public class UserManagementRepository : GenericRepository<NthUser>, IUserManagementRepository
     {
         private readonly ApplicationDbContext _context;
+        private readonly IUserScopeService _scopeService;
 
-        public UserManagementRepository(ApplicationDbContext context) : base(context)
+        public UserManagementRepository(ApplicationDbContext context, IUserScopeService scopeService) : base(context)
         {
+            _scopeService = scopeService;
             _context = context;
         }
 
+        // ------------------------------------------------------------------
+        // Paged list
+        // ------------------------------------------------------------------
         public async Task<(List<UserWithLocationDto> Items, int TotalCount)> GetPagedUsersWithLocationAsync(
+            string currentUsername,
             int pageNumber,
             int pageSize,
             string? searchTerm = null,
@@ -32,103 +38,93 @@ namespace NashunumaApp.Infrastructure.Repositories
         {
             try
             {
-                // Build query with join first
-                var baseQuery = from user in _context.NthUsers
-                                join site in _context.NthSiteLocations
-                                    on user.SiteId equals site.Id into userSite
-                                from site in userSite.DefaultIfEmpty()
-                                where site.IsActive == 1
-                                select new { user, site };
+                var caller = await _scopeService.ResolveAsync(currentUsername);
+                if (caller == null)
+                    return (new List<UserWithLocationDto>(), 0);
+                if (!caller.IsAdmin && caller.ActiveSites.Count == 0)
+                    return (new List<UserWithLocationDto>(), 0);
 
-                // Apply simple search on user fields
+                var isAdmin = caller.IsAdmin;
+                var activeSiteIds = caller.ActiveSites.Select(s => s.Id).ToList();   // List<decimal>
+
+                var baseQuery = _context.NthUsers
+                    .Where(user => isAdmin ? true : (user.Username == currentUsername
+                    /*|| (user.SiteId.HasValue && activeSiteIds.Contains(user.SiteId.Value))*/));
                 if (!string.IsNullOrWhiteSpace(searchTerm))
                 {
-                    searchTerm = searchTerm.ToLower();
-                    baseQuery = baseQuery.Where(x =>
-                        (x.user.Username != null && x.user.Username.ToLower().Contains(searchTerm)) ||
-                        (x.user.Personname != null && x.user.Personname.ToLower().Contains(searchTerm)) ||
-                        (x.user.Email != null && x.user.Email.ToLower().Contains(searchTerm)) ||
-                        (x.user.Mobilenumber != null && x.user.Mobilenumber.ToLower().Contains(searchTerm)) ||
-                        (x.user.SiteName != null && x.user.SiteName.ToLower().Contains(searchTerm)) ||
-                        (x.user.Designation != null && x.user.Designation.ToLower().Contains(searchTerm)) ||
-                        (x.user.Isactive != null && x.user.Isactive.Contains(searchTerm))
-                    );
+                    var s = searchTerm.ToLower();
+                    baseQuery = baseQuery.Where(user =>
+                        (user.Username != null && user.Username.ToLower().Contains(s)) ||
+                        (user.Personname != null && user.Personname.ToLower().Contains(s)) ||
+                        (user.Email != null && user.Email.ToLower().Contains(s)) ||
+                        (user.Mobilenumber != null && user.Mobilenumber.ToLower().Contains(s)) ||
+                        (user.SiteName != null && user.SiteName.ToLower().Contains(s)) ||
+                        (user.Designation != null && user.Designation.ToLower().Contains(s)) ||
+                        (user.Isactive != null && user.Isactive.Contains(s)));
                 }
 
-                // Apply location filters
                 if (!string.IsNullOrWhiteSpace(province))
-                {
-                    baseQuery = baseQuery.Where(x => x.user.Province == province);
-                }
+                    baseQuery = baseQuery.Where(user => user.Province == province);
 
                 if (!string.IsNullOrWhiteSpace(district))
-                {
-                    baseQuery = baseQuery.Where(x => x.user.District == district);
-                }
+                    baseQuery = baseQuery.Where(user => user.District == district);
 
                 if (!string.IsNullOrWhiteSpace(tehsil))
-                {
-                    baseQuery = baseQuery.Where(x => x.user.Tehsil == tehsil);
-                }
+                    baseQuery = baseQuery.Where(user => user.Tehsil == tehsil);
 
                 if (!string.IsNullOrWhiteSpace(userType))
-                {
-                    baseQuery = baseQuery.Where(x => x.user.Usertype == userType);
-                }
+                    baseQuery = baseQuery.Where(user => user.Usertype == userType);
 
                 if (isActive.HasValue)
                 {
-                    string activeValue = isActive.ToString().ToLower();
-                    baseQuery = baseQuery.Where(x => x.user.Isactive == activeValue);
+                    var activeValue = isActive.Value ? "1" : "0";
+                    baseQuery = baseQuery.Where(user => user.Isactive == activeValue);
                 }
 
                 var totalCount = await baseQuery.CountAsync();
 
-                // Project to DTO
                 var items = await baseQuery
-                    .OrderBy(x => x.user.Username)
+                    .OrderBy(user => user.Username)
                     .Skip((pageNumber - 1) * pageSize)
                     .Take(pageSize)
-                    .Select(x => new UserWithLocationDto
+                    .Select(user => new UserWithLocationDto
                     {
-                        // User fields
-                        UserId = x.user.Userid,
-                        Username = x.user.Username,
-                        PersonName = x.user.Personname,
-                        Email = x.user.Email,
-                        Mobilenumber = x.user.Mobilenumber,
-                        Designation = x.user.Designation,
-                        Usertype = x.user.Usertype,
-                        Province = x.user.Province,
-                        District = x.user.District,
-                        Tehsil = x.user.Tehsil,
-                        SiteId = x.user.SiteId,
-                        SiteName = x.user.SiteName,
-                        Isactive = x.user.Isactive,
-                        Isadmin = x.user.Isadmin,
-                        Lastlogindatetime = x.user.Lastlogindatetime,
-                        Imeino = x.user.Imeino,
-                        Macaddress = x.user.Macaddress,
-                        Requestdatetime = x.user.Requestdatetime,
-                        Activedatetime = x.user.Activedatetime,
-                        Activedby = x.user.Activedby,
-                        ChangeType = x.user.ChangeType,
-                        Istransferred = x.user.Istransferred,
-                        // Site Location fields
-                        SiteAddress = x.site != null ? x.site.Address : null,
-                        SiteContact = x.site != null ? x.site.Contact : null,
-                        SiteGeoLocation = x.site != null ? x.site.GeoLocation : null,
-                        SiteProvince = x.site != null ? x.site.Province : null,
-                        SiteDistrict = x.site != null ? x.site.District : null,
-                        SiteTehsil = x.site != null ? x.site.Tehsil : null,
-                        SiteHeadName = x.site != null ? x.site.HeadName : null,
-                        SiteIsClosed = x.site != null ? x.site.IsClosed : null,
-                        SiteIsMobileSite = x.site != null ? x.site.IsMobileSite : null,
-                        SiteProvinceNew = x.site != null ? x.site.ProvinceNew : null,
-                        SiteDistrictNew = x.site != null ? x.site.DistrictNew : null,
-                        SiteTehsilNew = x.site != null ? x.site.TehsilNew : null,
-                        SiteLatitude = x.site != null ? x.site.Latitude : null,
-                        SiteLongitude = x.site != null ? x.site.Longitude : null
+                        UserId = user.Userid,
+                        Username = user.Username,
+                        PersonName = user.Personname,
+                        Email = user.Email,
+                        Mobilenumber = user.Mobilenumber,
+                        Designation = user.Designation,
+                        Usertype = user.Usertype,
+                        Province = user.Province,
+                        District = user.District,
+                        Tehsil = user.Tehsil,
+                        SiteId = user.SiteId,
+                        SiteName = user.SiteName,
+                        Isactive = user.Isactive,
+                        Isadmin = user.Isadmin,
+                        Lastlogindatetime = user.Lastlogindatetime,
+                        Imeino = user.Imeino,
+                        Macaddress = user.Macaddress,
+                        Requestdatetime = user.Requestdatetime,
+                        Activedatetime = user.Activedatetime,
+                        Activedby = user.Activedby,
+                        ChangeType = user.ChangeType,
+                        Istransferred = user.Istransferred,
+                        SiteAddress = null,
+                        SiteContact = null,
+                        SiteGeoLocation = null,
+                        SiteProvince = null,
+                        SiteDistrict = null,
+                        SiteTehsil = null,
+                        SiteHeadName = null,
+                        SiteIsClosed = null,
+                        SiteIsMobileSite = null,
+                        SiteProvinceNew = null,
+                        SiteDistrictNew = null,
+                        SiteTehsilNew = null,
+                        SiteLatitude = null,
+                        SiteLongitude = null
                     })
                     .ToListAsync();
 
@@ -140,6 +136,9 @@ namespace NashunumaApp.Infrastructure.Repositories
             }
         }
 
+        // ------------------------------------------------------------------
+        // Single user — keeps its join, not role-scoped
+        // ------------------------------------------------------------------
         public async Task<UserWithLocationDto> GetUserWithLocationByUsernameAsync(string username)
         {
             try
@@ -197,6 +196,9 @@ namespace NashunumaApp.Infrastructure.Repositories
             }
         }
 
+        // ------------------------------------------------------------------
+        // Mutations — unchanged
+        // ------------------------------------------------------------------
         public async Task<bool> UpdateUserLocationAsync(
             string username,
             string province,
@@ -212,8 +214,7 @@ namespace NashunumaApp.Infrastructure.Repositories
             try
             {
                 var user = await _context.NthUsers.FirstOrDefaultAsync(u => u.Username == username);
-                if (user == null)
-                    return false;
+                if (user == null) return false;
 
                 if (!string.IsNullOrEmpty(province))
                 {
@@ -238,11 +239,12 @@ namespace NashunumaApp.Infrastructure.Repositories
                     user.SiteId = siteId;
                     user.SiteName = siteName;
                 }
-                decimal currentTransferCount = user.Istransferred ?? 0;
+
+                var currentTransferCount = user.Istransferred ?? 0;
                 user.Istransferred = currentTransferCount + 1;
-                decimal SiteTransferCount = user.TransferCountForSite ?? 0;
-                user.TransferCountForSite = SiteTransferCount + 1;
-                //user.ChangeType = "Location Transfer";
+
+                var siteTransferCount = user.TransferCountForSite ?? 0;
+                user.TransferCountForSite = siteTransferCount + 1;
 
                 await _context.SaveChangesAsync();
                 return true;
@@ -258,10 +260,9 @@ namespace NashunumaApp.Infrastructure.Repositories
             try
             {
                 var user = await _context.NthUsers.FirstOrDefaultAsync(u => u.Username == username);
-                if (user == null)
-                    return false;
+                if (user == null) return false;
 
-                user.Isactive = isActive ? "1" : "0";
+                user.Isactive = isActive ? "true" : "false";
                 user.Activedby = modifiedBy;
                 user.Activedatetime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 
@@ -279,11 +280,10 @@ namespace NashunumaApp.Infrastructure.Repositories
             try
             {
                 var user = await _context.NthUsers.FirstOrDefaultAsync(u => u.Username == username);
-                if (user == null)
-                    return false;
+                if (user == null) return false;
 
-                user.Isactive = "0";
-                user.Isadmin = "0";
+                user.Isactive = "false";
+                user.Isadmin = "false";
                 user.Activedby = modifiedBy;
                 user.Activedatetime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 
@@ -295,15 +295,15 @@ namespace NashunumaApp.Infrastructure.Repositories
                 throw new Exception($"Error blocking user: {ex.Message}", ex);
             }
         }
+
         public async Task<bool> UnblockUserAsync(string username, string modifiedBy)
         {
             try
             {
                 var user = await _context.NthUsers.FirstOrDefaultAsync(u => u.Username == username);
-                if (user == null)
-                    return false;
+                if (user == null) return false;
 
-                user.Isactive = "1";
+                user.Isactive = "true";
                 user.Isadmin = "0";
                 user.Activedby = modifiedBy;
                 user.Activedatetime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
@@ -313,81 +313,92 @@ namespace NashunumaApp.Infrastructure.Repositories
             }
             catch (Exception ex)
             {
-                throw new Exception($"Error Un blocking user: {ex.Message}", ex);
+                throw new Exception($"Error unblocking user: {ex.Message}", ex);
             }
         }
 
+        // ------------------------------------------------------------------
+        // Users by location — scope via _scopeService, no join
+        // ------------------------------------------------------------------
         public async Task<(List<UserWithLocationDto> Items, int TotalCount)> GetUsersByLocationAsync(
-            string? province = null,string? district = null,string? tehsil = null,int pageNumber = 1,int pageSize = 10)
+            string currentUsername,
+            string? province = null,
+            string? district = null,
+            string? tehsil = null,
+            int pageNumber = 1,
+            int pageSize = 10)
         {
             try
             {
-                var query = from user in _context.NthUsers
-                            join site in _context.NthSiteLocations
-                                on user.SiteId equals site.Id into userSite
-                            from site in userSite.DefaultIfEmpty()
-                            where user.Isactive == "1" || user.Isactive == "true"
-                            select new UserWithLocationDto
-                            {
-                                UserId = user.Userid,
-                                Username = user.Username,
-                                PersonName = user.Personname,
-                                Email = user.Email,
-                                Mobilenumber = user.Mobilenumber,
-                                Designation = user.Designation,
-                                Usertype = user.Usertype,
-                                Province = user.Province,
-                                District = user.District,
-                                Tehsil = user.Tehsil,
-                                SiteId = user.SiteId,
-                                SiteName = user.SiteName,
-                                Isactive = user.Isactive,
-                                Isadmin = user.Isadmin,
-                                Lastlogindatetime = user.Lastlogindatetime,
-                                Imeino = user.Imeino,
-                                Macaddress = user.Macaddress,
-                                Requestdatetime = user.Requestdatetime,
-                                Activedatetime = user.Activedatetime,
-                                Activedby = user.Activedby,
-                                ChangeType = user.ChangeType,
-                                Istransferred = user.Istransferred,
-                                SiteAddress = site != null ? site.Address : null,
-                                SiteContact = site != null ? site.Contact : null,
-                                SiteGeoLocation = site != null ? site.GeoLocation : null,
-                                SiteProvince = site != null ? site.Province : null,
-                                SiteDistrict = site != null ? site.District : null,
-                                SiteTehsil = site != null ? site.Tehsil : null,
-                                SiteHeadName = site != null ? site.HeadName : null,
-                                SiteIsClosed = site != null ? site.IsClosed : null,
-                                SiteIsMobileSite = site != null ? site.IsMobileSite : null,
-                                SiteProvinceNew = site != null ? site.ProvinceNew : null,
-                                SiteDistrictNew = site != null ? site.DistrictNew : null,
-                                SiteTehsilNew = site != null ? site.TehsilNew : null,
-                                SiteLatitude = site != null ? site.Latitude : null,
-                                SiteLongitude = site != null ? site.Longitude : null
-                            };
+                var caller = await _scopeService.ResolveAsync(currentUsername);
+                if (caller == null)
+                    return (new List<UserWithLocationDto>(), 0);
+                if (!caller.IsAdmin && caller.ActiveSites.Count == 0)
+                    return (new List<UserWithLocationDto>(), 0);
+
+                var isAdmin = caller.IsAdmin;
+                var activeSiteIds = caller.ActiveSites.Select(s => s.Id).ToList();   // List<decimal>
+
+                var query = _context.NthUsers
+                    .Where(user => (user.Isactive == "1" || user.Isactive == "true")
+                                   && user.Username != currentUsername
+                                   && (isAdmin
+                                       || (user.SiteId.HasValue && activeSiteIds.Contains(user.SiteId.Value))));
 
                 if (!string.IsNullOrWhiteSpace(province))
-                {
-                    query = query.Where(x => x.Province == province);
-                }
+                    query = query.Where(user => user.Province == province);
 
                 if (!string.IsNullOrWhiteSpace(district))
-                {
-                    query = query.Where(x => x.District == district);
-                }
+                    query = query.Where(user => user.District == district);
 
                 if (!string.IsNullOrWhiteSpace(tehsil))
-                {
-                    query = query.Where(x => x.Tehsil == tehsil);
-                }
+                    query = query.Where(user => user.Tehsil == tehsil);
 
                 var totalCount = await query.CountAsync();
 
                 var items = await query
-                    .OrderBy(x => x.Username)
+                    .OrderBy(user => user.Username)
                     .Skip((pageNumber - 1) * pageSize)
                     .Take(pageSize)
+                    .Select(user => new UserWithLocationDto
+                    {
+                        UserId = user.Userid,
+                        Username = user.Username,
+                        PersonName = user.Personname,
+                        Email = user.Email,
+                        Mobilenumber = user.Mobilenumber,
+                        Designation = user.Designation,
+                        Usertype = user.Usertype,
+                        Province = user.Province,
+                        District = user.District,
+                        Tehsil = user.Tehsil,
+                        SiteId = user.SiteId,
+                        SiteName = user.SiteName,
+                        Isactive = user.Isactive,
+                        Isadmin = user.Isadmin,
+                        Lastlogindatetime = user.Lastlogindatetime,
+                        Imeino = user.Imeino,
+                        Macaddress = user.Macaddress,
+                        Requestdatetime = user.Requestdatetime,
+                        Activedatetime = user.Activedatetime,
+                        Activedby = user.Activedby,
+                        ChangeType = user.ChangeType,
+                        Istransferred = user.Istransferred,
+                        SiteAddress = null,
+                        SiteContact = null,
+                        SiteGeoLocation = null,
+                        SiteProvince = null,
+                        SiteDistrict = null,
+                        SiteTehsil = null,
+                        SiteHeadName = null,
+                        SiteIsClosed = null,
+                        SiteIsMobileSite = null,
+                        SiteProvinceNew = null,
+                        SiteDistrictNew = null,
+                        SiteTehsilNew = null,
+                        SiteLatitude = null,
+                        SiteLongitude = null
+                    })
                     .ToListAsync();
 
                 return (items, totalCount);
@@ -398,12 +409,32 @@ namespace NashunumaApp.Infrastructure.Repositories
             }
         }
 
-        public async Task<Dictionary<string, int>> GetLocationStatisticsAsync()
+        // ------------------------------------------------------------------
+        // Location statistics — scope via _scopeService
+        // ------------------------------------------------------------------
+        public async Task<Dictionary<string, int>> GetLocationStatisticsAsync(string currentUsername)
         {
             try
             {
-                var stats = await _context.NthUsers
-                    .Where(u => u.Isactive == "1" || u.Isactive == "true")
+                var caller = await _scopeService.ResolveAsync(currentUsername);
+                if (caller == null)
+                    return new Dictionary<string, int>();
+                if (!caller.IsAdmin && caller.ActiveSites.Count == 0)
+                    return new Dictionary<string, int>();
+
+                var isAdmin = caller.IsAdmin;
+                var activeSiteIds = caller.ActiveSites.Select(s => s.Id).ToList();   // List<decimal>
+
+                var query = _context.NthUsers
+                    .Where(u => (u.Isactive == "1" || u.Isactive == "true")
+                                && u.Username != currentUsername);
+
+                if (!isAdmin)
+                {
+                    query = query.Where(u => u.SiteId.HasValue && activeSiteIds.Contains(u.SiteId.Value));
+                }
+
+                var stats = await query
                     .GroupBy(u => u.Province ?? "Unknown")
                     .Select(g => new { Province = g.Key, Count = g.Count() })
                     .ToDictionaryAsync(x => x.Province, x => x.Count);
@@ -416,150 +447,190 @@ namespace NashunumaApp.Infrastructure.Repositories
             }
         }
 
+        // ------------------------------------------------------------------
+        // Search / role (kept for compat — not role-scoped, not exposed)
+        // ------------------------------------------------------------------
         public async Task<(List<UserWithLocationDto> Items, int TotalCount)> SearchUsersAsync(
-            string searchTerm,int pageNumber = 1,int pageSize = 10)
+            string searchTerm, int pageNumber = 1, int pageSize = 10)
         {
-            try
+            var query = from user in _context.NthUsers
+                        join site in _context.NthSiteLocations
+                            on user.SiteId equals site.Id into userSite
+                        from site in userSite.DefaultIfEmpty()
+                        select new UserWithLocationDto
+                        {
+                            UserId = user.Userid,
+                            Username = user.Username,
+                            PersonName = user.Personname,
+                            Email = user.Email,
+                            Mobilenumber = user.Mobilenumber,
+                            Designation = user.Designation,
+                            Usertype = user.Usertype,
+                            Province = user.Province,
+                            District = user.District,
+                            Tehsil = user.Tehsil,
+                            SiteId = user.SiteId,
+                            SiteName = user.SiteName,
+                            Isactive = user.Isactive,
+                            Isadmin = user.Isadmin,
+                            Lastlogindatetime = user.Lastlogindatetime,
+                            Imeino = user.Imeino,
+                            Macaddress = user.Macaddress,
+                            Requestdatetime = user.Requestdatetime,
+                            Activedatetime = user.Activedatetime,
+                            Activedby = user.Activedby,
+                            ChangeType = user.ChangeType,
+                            Istransferred = user.Istransferred,
+                            SiteAddress = site != null ? site.Address : null,
+                            SiteContact = site != null ? site.Contact : null,
+                            SiteGeoLocation = site != null ? site.GeoLocation : null,
+                            SiteProvince = site != null ? site.Province : null,
+                            SiteDistrict = site != null ? site.District : null,
+                            SiteTehsil = site != null ? site.Tehsil : null,
+                            SiteHeadName = site != null ? site.HeadName : null,
+                            SiteIsClosed = site != null ? site.IsClosed : null,
+                            SiteIsMobileSite = site != null ? site.IsMobileSite : null,
+                            SiteProvinceNew = site != null ? site.ProvinceNew : null,
+                            SiteDistrictNew = site != null ? site.DistrictNew : null,
+                            SiteTehsilNew = site != null ? site.TehsilNew : null,
+                            SiteLatitude = site != null ? site.Latitude : null,
+                            SiteLongitude = site != null ? site.Longitude : null
+                        };
+
+            if (!string.IsNullOrWhiteSpace(searchTerm))
             {
-                var query = from user in _context.NthUsers
-                            join site in _context.NthSiteLocations
-                                on user.SiteId equals site.Id into userSite
-                            from site in userSite.DefaultIfEmpty()
-                            select new UserWithLocationDto
-                            {
-                                UserId = user.Userid,
-                                Username = user.Username,
-                                PersonName = user.Personname,
-                                Email = user.Email,
-                                Mobilenumber = user.Mobilenumber,
-                                Designation = user.Designation,
-                                Usertype = user.Usertype,
-                                Province = user.Province,
-                                District = user.District,
-                                Tehsil = user.Tehsil,
-                                SiteId = user.SiteId,
-                                SiteName = user.SiteName,
-                                Isactive = user.Isactive,
-                                Isadmin = user.Isadmin,
-                                Lastlogindatetime = user.Lastlogindatetime,
-                                Imeino = user.Imeino,
-                                Macaddress = user.Macaddress,
-                                Requestdatetime = user.Requestdatetime,
-                                Activedatetime = user.Activedatetime,
-                                Activedby = user.Activedby,
-                                ChangeType = user.ChangeType,
-                                Istransferred = user.Istransferred,
-                                SiteAddress = site != null ? site.Address : null,
-                                SiteContact = site != null ? site.Contact : null,
-                                SiteGeoLocation = site != null ? site.GeoLocation : null,
-                                SiteProvince = site != null ? site.Province : null,
-                                SiteDistrict = site != null ? site.District : null,
-                                SiteTehsil = site != null ? site.Tehsil : null,
-                                SiteHeadName = site != null ? site.HeadName : null,
-                                SiteIsClosed = site != null ? site.IsClosed : null,
-                                SiteIsMobileSite = site != null ? site.IsMobileSite : null,
-                                SiteProvinceNew = site != null ? site.ProvinceNew : null,
-                                SiteDistrictNew = site != null ? site.DistrictNew : null,
-                                SiteTehsilNew = site != null ? site.TehsilNew : null,
-                                SiteLatitude = site != null ? site.Latitude : null,
-                                SiteLongitude = site != null ? site.Longitude : null
-                            };
-
-                if (!string.IsNullOrWhiteSpace(searchTerm))
-                {
-                    searchTerm = searchTerm.ToLower();
-                    query = query.Where(x =>
-                        (x.Username != null && x.Username.ToLower().Contains(searchTerm)) ||
-                        (x.PersonName != null && x.PersonName.ToLower().Contains(searchTerm)) ||
-                        (x.Email != null && x.Email.ToLower().Contains(searchTerm)) ||
-                        (x.Mobilenumber != null && x.Mobilenumber.ToLower().Contains(searchTerm)) ||
-                        (x.SiteName != null && x.SiteName.ToLower().Contains(searchTerm)) ||
-                        (x.Designation != null && x.Designation.ToLower().Contains(searchTerm))
-                    );
-                }
-
-                var totalCount = await query.CountAsync();
-
-                var items = await query
-                    .OrderBy(x => x.Username)
-                    .Skip((pageNumber - 1) * pageSize)
-                    .Take(pageSize)
-                    .ToListAsync();
-
-                return (items, totalCount);
+                var s = searchTerm.ToLower();
+                query = query.Where(x =>
+                    (x.Username != null && x.Username.ToLower().Contains(s)) ||
+                    (x.PersonName != null && x.PersonName.ToLower().Contains(s)) ||
+                    (x.Email != null && x.Email.ToLower().Contains(s)) ||
+                    (x.Mobilenumber != null && x.Mobilenumber.ToLower().Contains(s)) ||
+                    (x.SiteName != null && x.SiteName.ToLower().Contains(s)) ||
+                    (x.Designation != null && x.Designation.ToLower().Contains(s)));
             }
-            catch (Exception ex)
-            {
-                throw new Exception($"Error searching users: {ex.Message}", ex);
-            }
+
+            var totalCount = await query.CountAsync();
+            var items = await query
+                .OrderBy(x => x.Username)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (items, totalCount);
         }
 
         public async Task<(List<UserWithLocationDto> Items, int TotalCount)> GetUsersByRoleAsync(
-            string role,
-            int pageNumber = 1,
-            int pageSize = 10)
+            string role, int pageNumber = 1, int pageSize = 10)
+        {
+            var query = from user in _context.NthUsers
+                        join site in _context.NthSiteLocations
+                            on user.SiteId equals site.Id into userSite
+                        from site in userSite.DefaultIfEmpty()
+                        where user.Usertype == role || user.Usertype.ToLower() == role.ToLower()
+                        select new UserWithLocationDto
+                        {
+                            UserId = user.Userid,
+                            Username = user.Username,
+                            PersonName = user.Personname,
+                            Email = user.Email,
+                            Mobilenumber = user.Mobilenumber,
+                            Designation = user.Designation,
+                            Usertype = user.Usertype,
+                            Province = user.Province,
+                            District = user.District,
+                            Tehsil = user.Tehsil,
+                            SiteId = user.SiteId,
+                            SiteName = user.SiteName,
+                            Isactive = user.Isactive,
+                            Isadmin = user.Isadmin,
+                            Lastlogindatetime = user.Lastlogindatetime,
+                            Imeino = user.Imeino,
+                            Macaddress = user.Macaddress,
+                            Requestdatetime = user.Requestdatetime,
+                            Activedatetime = user.Activedatetime,
+                            Activedby = user.Activedby,
+                            ChangeType = user.ChangeType,
+                            Istransferred = user.Istransferred,
+                            SiteAddress = site != null ? site.Address : null,
+                            SiteContact = site != null ? site.Contact : null,
+                            SiteGeoLocation = site != null ? site.GeoLocation : null,
+                            SiteProvince = site != null ? site.Province : null,
+                            SiteDistrict = site != null ? site.District : null,
+                            SiteTehsil = site != null ? site.Tehsil : null,
+                            SiteHeadName = site != null ? site.HeadName : null,
+                            SiteIsClosed = site != null ? site.IsClosed : null,
+                            SiteIsMobileSite = site != null ? site.IsMobileSite : null,
+                            SiteProvinceNew = site != null ? site.ProvinceNew : null,
+                            SiteDistrictNew = site != null ? site.DistrictNew : null,
+                            SiteTehsilNew = site != null ? site.TehsilNew : null,
+                            SiteLatitude = site != null ? site.Latitude : null,
+                            SiteLongitude = site != null ? site.Longitude : null
+                        };
+
+            var totalCount = await query.CountAsync();
+            var items = await query
+                .OrderBy(x => x.Username)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (items, totalCount);
+        }
+
+        // ------------------------------------------------------------------
+        // Summary statistics — active/inactive, admin/non-admin, transferred
+        // ------------------------------------------------------------------
+        public async Task<UserSummaryStatsDto> GetUserSummaryStatsAsync(string currentUsername)
         {
             try
             {
-                var query = from user in _context.NthUsers
-                            join site in _context.NthSiteLocations
-                                on user.SiteId equals site.Id into userSite
-                            from site in userSite.DefaultIfEmpty()
-                            where user.Usertype == role || user.Usertype.ToLower() == role.ToLower()
-                            select new UserWithLocationDto
-                            {
-                                UserId = user.Userid,
-                                Username = user.Username,
-                                PersonName = user.Personname,
-                                Email = user.Email,
-                                Mobilenumber = user.Mobilenumber,
-                                Designation = user.Designation,
-                                Usertype = user.Usertype,
-                                Province = user.Province,
-                                District = user.District,
-                                Tehsil = user.Tehsil,
-                                SiteId = user.SiteId,
-                                SiteName = user.SiteName,
-                                Isactive = user.Isactive,
-                                Isadmin = user.Isadmin,
-                                Lastlogindatetime = user.Lastlogindatetime,
-                                Imeino = user.Imeino,
-                                Macaddress = user.Macaddress,
-                                Requestdatetime = user.Requestdatetime,
-                                Activedatetime = user.Activedatetime,
-                                Activedby = user.Activedby,
-                                ChangeType = user.ChangeType,
-                                Istransferred = user.Istransferred,
-                                SiteAddress = site != null ? site.Address : null,
-                                SiteContact = site != null ? site.Contact : null,
-                                SiteGeoLocation = site != null ? site.GeoLocation : null,
-                                SiteProvince = site != null ? site.Province : null,
-                                SiteDistrict = site != null ? site.District : null,
-                                SiteTehsil = site != null ? site.Tehsil : null,
-                                SiteHeadName = site != null ? site.HeadName : null,
-                                SiteIsClosed = site != null ? site.IsClosed : null,
-                                SiteIsMobileSite = site != null ? site.IsMobileSite : null,
-                                SiteProvinceNew = site != null ? site.ProvinceNew : null,
-                                SiteDistrictNew = site != null ? site.DistrictNew : null,
-                                SiteTehsilNew = site != null ? site.TehsilNew : null,
-                                SiteLatitude = site != null ? site.Latitude : null,
-                                SiteLongitude = site != null ? site.Longitude : null
-                            };
+                var caller = await _scopeService.ResolveAsync(currentUsername);
+                if (caller == null)
+                    return new UserSummaryStatsDto();
 
-                var totalCount = await query.CountAsync();
+                if (!caller.IsAdmin && caller.ActiveSites.Count == 0)
+                    return new UserSummaryStatsDto();
 
-                var items = await query
-                    .OrderBy(x => x.Username)
-                    .Skip((pageNumber - 1) * pageSize)
-                    .Take(pageSize)
-                    .ToListAsync();
+                var isAdmin = caller.IsAdmin;
+                var activeSiteIds = caller.ActiveSites.Select(s => s.Id).ToList();   // List<decimal>
 
-                return (items, totalCount);
+                // Scoped base query — self-excluded, same rules as the paged read.
+                var baseQuery = _context.NthUsers
+                    .Where(u => u.Username != currentUsername
+                                && (isAdmin
+                                    /*|| (u.SiteId.HasValue && activeSiteIds.Contains(u.SiteId.Value))*/));
+
+                // Single round-trip: aggregate everything at once.
+                var stats = await baseQuery
+                    .GroupBy(_ => 1)                        // collapse to one row
+                    .Select(g => new UserSummaryStatsDto
+                    {
+                        TotalUsers = g.Count(),
+
+                        ActiveUsers = g.Count(u => u.Isactive == "True" || u.Isactive == "true"),
+                        InactiveUsers = g.Count(u => !(u.Isactive == "True" || u.Isactive == "true")),
+
+                        AdminUsers = g.Count(u => u.Isadmin == "True" || u.Isadmin == "true"),
+                        NonAdminUsers = g.Count(u => !(u.Isadmin == "True" || u.Isadmin == "true")),
+
+                        // Total number of transfers across all users (sum of the per-user counter).
+                        TransferredUsers = g.Sum(u => u.TransferCountForSite ?? 0),
+
+                        // How many users have been transferred at least once.
+                        //TransferredUsers = g.Count(u => u.TransferCountForSite.HasValue && u.TransferCountForSite > 0),
+
+                        // How many users have never been transferred.
+                        NotTransferredUsers = g.Count(u => u.TransferCountForSite == null || u.TransferCountForSite == 0)
+                    })
+                    .FirstOrDefaultAsync();
+
+                // Empty scope → no rows → FirstOrDefaultAsync returns null.
+                return stats ?? new UserSummaryStatsDto();
             }
             catch (Exception ex)
             {
-                throw new Exception($"Error retrieving users by role: {ex.Message}", ex);
+                throw new Exception($"Error retrieving user summary statistics: {ex.Message}", ex);
             }
         }
     }
-}
+    }

@@ -45,4 +45,22 @@ namespace NashunumaApp.Domain.Common.DTOs
         public decimal? SiteLatitude { get; set; }
         public decimal? SiteLongitude { get; set; }
     }
+    public class UserSummaryStatsDto
+        {
+            public int TotalUsers { get; set; }
+
+            // Active / inactive
+            public int ActiveUsers { get; set; }
+            public int InactiveUsers { get; set; }
+
+            // Admin flag
+            public int AdminUsers { get; set; }
+            public int NonAdminUsers { get; set; }
+
+            // Transferred
+            public decimal TransferredUsers { get; set; }
+            public decimal TotalTransfers { get; set; }
+            public decimal NotTransferredUsers { get; set; }
+        
+    }
 }

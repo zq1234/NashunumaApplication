@@ -20,6 +20,13 @@ namespace NashunumaApp.API.Controllers
             _userManagementService = userManagementService;
         }
 
+        // Resolves the caller's username once, consistently across endpoints.
+        private string CurrentUsername =>
+            User.FindFirstValue("username")
+            ?? User.FindFirstValue(ClaimTypes.Name)
+            ?? User.FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? "System";
+
         [HttpGet("users")]
         public async Task<IActionResult> GetUsers(
             [FromQuery] int pageNumber = 1,
@@ -32,7 +39,7 @@ namespace NashunumaApp.API.Controllers
             [FromQuery] bool? isActive = null)
         {
             var result = await _userManagementService.GetPagedUsersAsync(
-                pageNumber, pageSize, searchTerm, province, district, tehsil, userType, isActive);
+                CurrentUsername, pageNumber, pageSize, searchTerm, province, district, tehsil, userType, isActive);
 
             return StatusCode(result.StatusCode, result);
         }
@@ -58,9 +65,9 @@ namespace NashunumaApp.API.Controllers
         }
 
         [HttpPut("users/{username}/location")]
-        public async Task<IActionResult> TransferUserLocation(string username,[FromBody] UpdateUserLocationDto locationDto)
+        public async Task<IActionResult> TransferUserLocation(string username, [FromBody] UpdateUserLocationDto locationDto)
         {
-            var modifiedBy = User.FindFirstValue("username") ?? User.FindFirstValue(ClaimTypes.Name) ?? "System";
+            var modifiedBy = CurrentUsername;
 
             var result = await _userManagementService.TransferUserLocationAsync(username, locationDto, modifiedBy);
 
@@ -83,12 +90,12 @@ namespace NashunumaApp.API.Controllers
         [HttpPatch("users/{username}/status")]
         public async Task<IActionResult> ToggleUserStatus(string username, [FromBody] bool isActive)
         {
-            
             if (string.IsNullOrWhiteSpace(username) || username.Trim().ToLower() == "undefined")
             {
                 return BadRequest(new { isSuccess = false, message = "Invalid username" });
             }
-            var modifiedBy = User.FindFirstValue("username") ?? User.FindFirstValue(ClaimTypes.Name) ?? "System";
+
+            var modifiedBy = CurrentUsername;
 
             var result = await _userManagementService.ToggleUserStatusAsync(username, isActive, modifiedBy);
 
@@ -111,7 +118,7 @@ namespace NashunumaApp.API.Controllers
         [HttpPost("users/{username}/block")]
         public async Task<IActionResult> BlockUser(string username)
         {
-            var modifiedBy = User.FindFirstValue("username") ?? User.FindFirstValue(ClaimTypes.Name) ?? "System";
+            var modifiedBy = CurrentUsername;
 
             var result = await _userManagementService.BlockUserAsync(username, modifiedBy);
 
@@ -134,9 +141,7 @@ namespace NashunumaApp.API.Controllers
         [HttpPatch("users/{username}/unblock")]
         public async Task<IActionResult> UnblockUser(string username)
         {
-            var modifiedBy = User.FindFirstValue("username")
-                             ?? User.FindFirstValue(ClaimTypes.Name)
-                             ?? "System";
+            var modifiedBy = CurrentUsername;
 
             var result = await _userManagementService.UnblockUserAsync(username, modifiedBy);
 
@@ -160,7 +165,7 @@ namespace NashunumaApp.API.Controllers
             [FromQuery] int pageSize = 10)
         {
             var result = await _userManagementService.GetUsersByLocationAsync(
-                province, district, tehsil, pageNumber, pageSize);
+                CurrentUsername, province, district, tehsil, pageNumber, pageSize);
 
             return StatusCode(result.StatusCode, result);
         }
@@ -168,8 +173,14 @@ namespace NashunumaApp.API.Controllers
         [HttpGet("statistics/location")]
         public async Task<IActionResult> GetLocationStatistics()
         {
-            var result = await _userManagementService.GetLocationStatisticsAsync();
+            var result = await _userManagementService.GetLocationStatisticsAsync(CurrentUsername);
+            return StatusCode(result.StatusCode, result);
+        }
+        [HttpGet("statistics/summary")]
+        public async Task<IActionResult> GetUserSummaryStats()
+        {
+            var result = await _userManagementService.GetUserSummaryStatsAsync(CurrentUsername);
             return StatusCode(result.StatusCode, result);
         }
     }
-}
+}   

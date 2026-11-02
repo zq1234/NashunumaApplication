@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FoodStockService } from '@shared/services/food-stock.service';
 import { FoodStock, CreateFoodStockDto, UpdateFoodStockDto } from '@core/models/food-stock.model';
+import { normalizeMissingStockNotification } from '@core/models/missing-stock.model';
 import { AuthService } from '@shared/services/auth.service';
 import { ApiResponse } from '@core/models/api-response.model';
 import { ComponentCardComponent } from '@shared/components/common/component-card/component-card.component';
@@ -36,9 +37,13 @@ export class FoodStockFormComponent implements OnInit {
   error: string | null = null;
   success: string | null = null;
   previousStockMessage: string | null = null;
+  latestEnteredDate: string | null = null;
+  missingStockDates: string[] = [];
+  lockedEnteredDate: string | null = null;
   isEdit = false;
   id: number | null = null;
   private previousStockRequest = 0;
+  private dateConstraintsRequest = 0;
 
   private readonly stockBalances = [
     { label: 'Mamta boxes', opening: 'openingStockBoxesMamta', received: 'receivedStockBoxesMamta', distributed: 'distributedBoxesMamta', closing: 'closingStockBoxesMamta' },
@@ -73,6 +78,7 @@ export class FoodStockFormComponent implements OnInit {
       if (date && !this.isEdit) {
         // Accept date format as provided (e.g., dd-MM-yyyy)
         this.stock.enteredOn = date;
+        this.lockedEnteredDate = this.toDateKey(date);
       }
 
       if (siteId && !this.isEdit) {
@@ -89,6 +95,9 @@ export class FoodStockFormComponent implements OnInit {
 
       if (!this.isEdit && this.stock.siteId && this.stock.enteredOn) {
         this.loadPreviousDayStock(this.stock.siteId, this.stock.enteredOn);
+      }
+      if (!this.isEdit && this.stock.siteId) {
+        this.loadDateConstraints(this.stock.siteId);
       }
     });
   }
@@ -248,13 +257,7 @@ export class FoodStockFormComponent implements OnInit {
 
     this.previousStockLoading = true;
     this.previousStockMessage = null;
-    this.foodStockService.getFoodStocks(1, 100, {
-      siteId,
-      pageNumber: 1,
-      pageSize: 100,
-      sortBy: 'enteredOn',
-      sortDescending: true
-    }).subscribe({
+    this.foodStockService.getFoodStocksBySiteId(siteId).subscribe({
       next: response => {
         if (requestId !== this.previousStockRequest) return;
         this.previousStockLoading = false;
@@ -265,7 +268,7 @@ export class FoodStockFormComponent implements OnInit {
         }
 
         const previousDate = this.getPreviousDateKey(targetDate);
-  const previous = response.data.items.find(record => {
+  const previous = response.data.find(record => {
           const recordSiteId = String((record as any).siteId ?? (record as any).SiteId ?? '');
           const recordDate = this.toDateKey((record as any).enteredOn ?? (record as any).EnteredOn ?? '');
           return recordSiteId === siteId && recordDate === previousDate;
@@ -315,6 +318,32 @@ export class FoodStockFormComponent implements OnInit {
     const [year, month, day] = dateKey.split('-').map(Number);
     const previousDate = new Date(Date.UTC(year, month - 1, day - 1));
     return `${previousDate.getUTCFullYear()}-${String(previousDate.getUTCMonth() + 1).padStart(2, '0')}-${String(previousDate.getUTCDate()).padStart(2, '0')}`;
+  }
+
+  private loadDateConstraints(siteId: string): void {
+    const requestId = ++this.dateConstraintsRequest;
+
+    this.foodStockService.getFoodStocksBySiteId(siteId).subscribe({
+      next: response => {
+        if (requestId !== this.dateConstraintsRequest || !response.isSuccess || !response.data) return;
+
+        const dates = response.data
+          .map(record => this.toDateKey(String((record as any).enteredOn ?? (record as any).EnteredOn ?? '')))
+          .filter((date): date is string => !!date);
+        this.latestEnteredDate = dates.sort().at(-1) ?? null;
+      }
+    });
+
+    this.foodStockService.getMissingStockDates().subscribe({
+      next: response => {
+        if (requestId !== this.dateConstraintsRequest || !response.isSuccess) return;
+        const notification = normalizeMissingStockNotification(response.data);
+        this.missingStockDates = (notification?.missingDates ?? [])
+          .filter(item => item.isMissing)
+          .map(item => this.toDateKey(item.date))
+          .filter((date): date is string => !!date);
+      }
+    });
   }
 
   private handleSaveResponse(resp: ApiResponse<any>): void {

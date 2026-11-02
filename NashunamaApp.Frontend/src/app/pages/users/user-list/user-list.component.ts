@@ -5,9 +5,10 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { Subject, debounceTime, distinctUntilChanged, takeUntil, finalize } from 'rxjs';
 import { UserManagementService } from '@shared/services/user-management.service';
+import { AuthService } from '@shared/services/auth.service';
 import { LocationService, Province, District, Tehsil, Sites } from '@shared/services/location.service';
 import { UserDto, UserFilterParams } from '@core/models/user.model';
-import { UpdateUserLocationDto, LocationHelper } from '@core/models/user-location.model';
+import { UpdateUserLocationDto, LocationHelper, UserSummaryStats } from '@core/models/user-location.model';
 import { ApiResponse, PaginatedResponse, ApiResponseHelper } from '@core/models/api-response.model';
 import { DataTableComponent, DataTableColumn } from '@shared/components/data-table/data-table.component';
 import { ModalComponent } from '@shared/components/ui/modal/modal.component';
@@ -39,6 +40,16 @@ export class UserListComponent implements OnInit, OnDestroy {
   // Data
   users: UserDto[] = [];
   totalItems = 0;
+  summaryStats: UserSummaryStats = {
+    totalUsers: 0,
+    activeUsers: 0,
+    inactiveUsers: 0,
+    adminUsers: 0,
+    nonAdminUsers: 0,
+    transferredUsers: 0,
+    notTransferredUsers: 0
+  };
+  loadingSummary = false;
 
   // UI State
   loading = false;
@@ -50,6 +61,7 @@ export class UserListComponent implements OnInit, OnDestroy {
   success: string | null = null;
   loadingLocations = false;
   loadingTransferSites = false;
+  currentUsername = '';
 
   // Alert
   alertVariant: 'success' | 'error' | 'warning' | 'info' = 'info';
@@ -68,15 +80,13 @@ export class UserListComponent implements OnInit, OnDestroy {
   selectedProvinceName: string | null = null;
   selectedDistrictName: string | null = null;
   selectedTehsilName: string | null = null;
-  userType = '';
+  isAdminFilter: boolean | null = null;
   isActive: boolean | null = null;
 
   // Dropdown options for filters
   provinces: Province[] = [];
   districts: District[] = [];
   tehsils: Tehsil[] = [];
-  userTypes: string[] = ['Admin', 'User', 'Manager', 'Coordinator', 'Supervisor'];
-
   // Display values for filters
   provinceDisplay = '';
   districtDisplay = '';
@@ -122,6 +132,8 @@ export class UserListComponent implements OnInit, OnDestroy {
   columns: DataTableColumn[] = [
     { field: 'srNo', header: 'S.No', sortable: false, width: '60px', type: 'number' },
     { field: 'username', header: 'Username', sortable: true, width: '120px' },
+    { field: 'siteId', header: 'Site ID', sortable: true, width: '100px', type: 'number' },
+    { field: 'isadmin', header: 'Is Admin', sortable: true, width: '100px' },
     { field: 'personName', header: 'Full Name', sortable: true, width: '150px' },
     { field: 'email', header: 'Email', sortable: true, width: '200px' },
     { field: 'mobilenumber', header: 'Mobile', sortable: true, width: '120px' },
@@ -136,13 +148,16 @@ export class UserListComponent implements OnInit, OnDestroy {
 
   constructor(
     private userService: UserManagementService,
-    private locationService: LocationService
+    private locationService: LocationService,
+    private authService: AuthService
   ) {}
 
   ngOnInit(): void {
+    this.currentUsername = this.authService.getCurrentUser()?.username ?? '';
     this.setupSearchDebounce();
     this.loadLocationData();
     this.loadUsers();
+    this.loadUserSummaryStats();
   }
 
   ngOnDestroy(): void {
@@ -521,6 +536,7 @@ export class UserListComponent implements OnInit, OnDestroy {
             setTimeout(() => {
               this.closeTransferModal();
               this.loadUsers();
+              this.loadUserSummaryStats();
             }, 1500);
           } else {
             const errorMsg = response.errors?.length ? response.errors.join(', ') : response.message;
@@ -548,7 +564,7 @@ export class UserListComponent implements OnInit, OnDestroy {
       province: this.provinceDisplay || undefined,
       district: this.districtDisplay || undefined,
       tehsil: this.tehsilDisplay || undefined,
-      userType: this.userType || undefined,
+      isAdmin: this.isAdminFilter !== null ? this.isAdminFilter : undefined,
       isActive: this.isActive !== null ? this.isActive : undefined
     };
 
@@ -559,6 +575,8 @@ export class UserListComponent implements OnInit, OnDestroy {
           if (ApiResponseHelper.isSuccess(response) && response.data) {
             this.users = response.data.items.map((item, index) => ({
               ...item,
+              siteId: item.siteId ?? (item as any).SiteId ?? null,
+              isadmin: String(item.isadmin ?? (item as any).IsAdmin ?? (item as any).isAdmin ?? 'false'),
               srNo: (this.pageNumber - 1) * this.pageSize + index + 1
             }));
             this.totalItems = response.data.totalCount;
@@ -571,6 +589,22 @@ export class UserListComponent implements OnInit, OnDestroy {
           this.showError('Error loading users: ' + error.message);
         }
       });
+  }
+
+  loadUserSummaryStats(): void {
+    this.loadingSummary = true;
+    this.userService.getUserSummaryStats().subscribe({
+      next: response => {
+        this.loadingSummary = false;
+        if (ApiResponseHelper.isSuccess(response) && response.data) {
+          this.summaryStats = response.data;
+        }
+      },
+      error: error => {
+        this.loadingSummary = false;
+        this.showError('Error loading user summary: ' + error.message);
+      }
+    });
   }
 
   // ============================================
@@ -644,7 +678,7 @@ export class UserListComponent implements OnInit, OnDestroy {
     this.provinceDisplay = '';
     this.districtDisplay = '';
     this.tehsilDisplay = '';
-    this.userType = '';
+    this.isAdminFilter = null;
     this.isActive = null;
     this.districts = [];
     this.tehsils = [];
@@ -700,6 +734,7 @@ export class UserListComponent implements OnInit, OnDestroy {
             this.showSuccess(
               response.message || `User ${newStatus ? 'activated' : 'deactivated'} successfully`
             );
+            this.loadUserSummaryStats();
             // keep optimistic change
           } else {
             // revert optimistic
@@ -812,6 +847,7 @@ export class UserListComponent implements OnInit, OnDestroy {
               this.showSuccess(response.message || 'User status updated successfully');
               this.closeConfirmModal();
               this.loadUsers();
+              this.loadUserSummaryStats();
             } else {
               const errorMsg = response.errors?.length ? response.errors.join(', ') : response.message;
               this.confirmError = errorMsg || 'Failed to update user status';
@@ -871,10 +907,21 @@ export class UserListComponent implements OnInit, OnDestroy {
 
   refresh(): void {
     this.loadUsers();
+    this.loadUserSummaryStats();
   }
 
   get hasItems(): boolean {
     return this.users && this.users.length > 0;
+  }
+
+  get filteredUsers(): UserDto[] {
+    if (this.isAdminFilter === null) return this.users;
+
+    return this.users.filter(user => {
+      const adminValue = (user as any).isadmin ?? (user as any).isAdmin ?? (user as any).IsAdmin;
+      const isAdmin = adminValue === true || ['1', 'true', 'yes'].includes(String(adminValue).toLowerCase());
+      return isAdmin === this.isAdminFilter;
+    });
   }
 
   get startRecord(): number {
@@ -894,7 +941,7 @@ export class UserListComponent implements OnInit, OnDestroy {
       province: this.provinceDisplay || undefined,
       district: this.districtDisplay || undefined,
       tehsil: this.tehsilDisplay || undefined,
-      userType: this.userType || undefined,
+      isAdmin: this.isAdminFilter !== null ? this.isAdminFilter : undefined,
       isActive: this.isActive !== null ? this.isActive : undefined
     };
 

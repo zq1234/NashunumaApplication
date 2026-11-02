@@ -81,7 +81,7 @@
           (keydown.enter)="onRowClick(row)"
           (keydown.space)="$event.preventDefault(); onRowClick(row)">
           <!-- Dynamic Columns -->
-          <td *ngFor="let col of columns" class="data-cell">
+          <td *ngFor="let col of columns" class="data-cell" [ngClass]="cellClassMap[col.field] || ''">
             <!-- Status Badge (skip when column is a toggle) -->
             <span *ngIf="isStatusField(col.field) && getColumnType(col) !== 'toggle'" 
                   class="status-badge"
@@ -128,6 +128,13 @@
                   [title]="getDisplayValue(row, col.field)">
               {{ getDisplayValue(row, col.field) }}
             </span>
+
+            <span *ngIf="rowClickable && col.field === columns[columns.length - 1]?.field"
+                  class="row-open-indicator"
+                  title="Open details"
+                  aria-label="Open details">
+              <i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i>
+            </span>
           </td>
 
           <!-- Actions -->
@@ -142,6 +149,7 @@
     </button>
 
     <button
+      *ngIf="canShowEditDelete(row)"
       type="button"
       class="icon-btn edit-btn"
       (click)="$event.stopPropagation(); edit.emit(row)"
@@ -150,6 +158,7 @@
     </button>
 
     <button
+      *ngIf="canShowEditDelete(row)"
       type="button"
       class="icon-btn delete-btn"
       (click)="$event.stopPropagation(); delete.emit(row)"

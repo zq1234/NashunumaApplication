@@ -29,7 +29,7 @@
             <app-input-field id="siteId" type="text" [value]="stock.siteId || ''" [disabled]="true" (valueChange)="stock.siteId = $event.toString()"></app-input-field>
           </div>
           <div>
-            <app-date-picker id="enteredOn" label="Entered On" placeholder="Select a date" [value]="stock.enteredOn || ''" (dateChange)="onEnteredOnChange($event)"></app-date-picker>
+            <app-date-picker id="enteredOn" label="Entered On" placeholder="Select a date" [value]="stock.enteredOn || ''" [latestEnteredDate]="isEdit ? null : latestEnteredDate" [missingDates]="missingStockDates" [onlyDate]="isEdit ? null : lockedEnteredDate" [maxDate]="isEdit ? undefined : 'today'" (dateChange)="onEnteredOnChange($event)"></app-date-picker>
           </div>
           <div>
             <app-label for="remarks">Remarks</app-label>

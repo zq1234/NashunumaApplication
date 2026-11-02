@@ -3,6 +3,7 @@ using AutoMapper;
 using NashunumaApp.Application.DTOs.Common;
 using NashunumaApp.Application.DTOs.User;
 using NashunumaApp.Application.Interfaces;
+using NashunumaApp.Domain.Common.DTOs;
 using NashunumaApp.Domain.Interfaces;
 using System;
 using System.Collections.Generic;
@@ -23,6 +24,7 @@ namespace NashunumaApp.Application.Services
         }
 
         public async Task<ApiResponse<PaginatedResponse<UserDto>>> GetPagedUsersAsync(
+            string currentUsername,
             int pageNumber,
             int pageSize,
             string? searchTerm = null,
@@ -34,48 +36,30 @@ namespace NashunumaApp.Application.Services
         {
             try
             {
-                // Validate pagination parameters
                 pageNumber = Math.Max(1, pageNumber);
                 pageSize = Math.Max(1, Math.Min(100, pageSize));
 
-                // Get paged data with location information
                 var result = await _userManagementRepository.GetPagedUsersWithLocationAsync(
-                    pageNumber,
-                    pageSize,
-                    searchTerm,
-                    province,
-                    district,
-                    tehsil,
-                    userType,
-                    isActive
-                );
+                    currentUsername, pageNumber, pageSize,
+                    searchTerm, province, district, tehsil, userType, isActive);
 
-                // Extract items and total count
-                var items = result.Items;
-                var totalCount = result.TotalCount;
+                var mappedItems = _mapper.Map<List<UserDto>>(result.Items);
 
-                // Map Domain DTO to Application DTO using AutoMapper
-                var mappedItems = _mapper.Map<List<UserDto>>(items);
-
-                // Create paginated response
                 var paginatedResponse = new PaginatedResponse<UserDto>
                 {
                     Items = mappedItems,
                     PageNumber = pageNumber,
                     PageSize = pageSize,
-                    TotalCount = totalCount
+                    TotalCount = result.TotalCount
                 };
 
                 return ApiResponse<PaginatedResponse<UserDto>>.Success(
-                    paginatedResponse,
-                    "Users retrieved successfully"
-                );
+                    paginatedResponse, "Users retrieved successfully");
             }
             catch (Exception ex)
             {
                 return ApiResponse<PaginatedResponse<UserDto>>.Failure(
-                    $"Failed to retrieve users: {ex.Message}"
-                );
+                    $"Failed to retrieve users: {ex.Message}");
             }
         }
 
@@ -84,20 +68,14 @@ namespace NashunumaApp.Application.Services
             try
             {
                 if (string.IsNullOrWhiteSpace(username))
-                {
                     return ApiResponse<UserDto>.Failure("Username is required");
-                }
 
                 var userWithLocation = await _userManagementRepository.GetUserWithLocationByUsernameAsync(username);
-
                 if (userWithLocation == null)
-                {
                     return ApiResponse<UserDto>.Failure($"User '{username}' not found");
-                }
 
-                var mappedUser = _mapper.Map<UserDto>(userWithLocation);
-
-                return ApiResponse<UserDto>.Success(mappedUser, "User retrieved successfully");
+                return ApiResponse<UserDto>.Success(
+                    _mapper.Map<UserDto>(userWithLocation), "User retrieved successfully");
             }
             catch (Exception ex)
             {
@@ -105,56 +83,40 @@ namespace NashunumaApp.Application.Services
             }
         }
 
-        public async Task<ApiResponse<UserDto>> TransferUserLocationAsync(string username,UpdateUserLocationDto locationDto,string modifiedBy)
+        public async Task<ApiResponse<UserDto>> TransferUserLocationAsync(
+            string username, UpdateUserLocationDto locationDto, string modifiedBy)
         {
             try
             {
                 if (string.IsNullOrWhiteSpace(username))
-                {
                     return ApiResponse<UserDto>.Failure("Username is required");
-                }
-
                 if (string.IsNullOrWhiteSpace(modifiedBy))
-                {
                     return ApiResponse<UserDto>.Failure("Modified by user is required");
-                }
 
-                // Check if user exists and is active
+                if (username == modifiedBy)
+                    return ApiResponse<UserDto>.Failure("You cannot transfer your own location");
+
                 var user = await _userManagementRepository.GetUserWithLocationByUsernameAsync(username);
                 if (user == null)
-                {
                     return ApiResponse<UserDto>.Failure($"User '{username}' not found");
-                }
 
                 if (user.Isactive != "1" && user.Isactive != "true")
-                {
                     return ApiResponse<UserDto>.Failure("Cannot transfer inactive user");
-                }
 
-                // Update location
                 var updated = await _userManagementRepository.UpdateUserLocationAsync(
                     username,
-                    locationDto.Province,
-                    locationDto.ProvinceId,
-                    locationDto.District,
-                    locationDto.DistrictId,
-                    locationDto.Tehsil,
-                    locationDto.TehsilId,
-                    locationDto.SiteId,
-                    locationDto.SiteName,
-                    modifiedBy
-                );
+                    locationDto.Province, locationDto.ProvinceId,
+                    locationDto.District, locationDto.DistrictId,
+                    locationDto.Tehsil, locationDto.TehsilId,
+                    locationDto.SiteId, locationDto.SiteName,
+                    modifiedBy);
 
                 if (!updated)
-                {
                     return ApiResponse<UserDto>.Failure("Failed to update user location");
-                }
 
-                // Get updated user
                 var updatedUser = await _userManagementRepository.GetUserWithLocationByUsernameAsync(username);
-                var mappedUser = _mapper.Map<UserDto>(updatedUser);
-
-                return ApiResponse<UserDto>.Success(mappedUser, "User location transferred successfully");
+                return ApiResponse<UserDto>.Success(
+                    _mapper.Map<UserDto>(updatedUser), "User location transferred successfully");
             }
             catch (Exception ex)
             {
@@ -167,27 +129,16 @@ namespace NashunumaApp.Application.Services
             try
             {
                 if (string.IsNullOrWhiteSpace(username))
-                {
                     return ApiResponse<bool>.Failure("Username is required");
-                }
-
                 if (string.IsNullOrWhiteSpace(modifiedBy))
-                {
                     return ApiResponse<bool>.Failure("Modified by user is required");
-                }
 
-                // Prevent deactivating self
                 if (username == modifiedBy)
-                {
                     return ApiResponse<bool>.Failure("You cannot change your own status");
-                }
 
                 var updated = await _userManagementRepository.ToggleUserStatusAsync(username, isActive, modifiedBy);
-
                 if (!updated)
-                {
                     return ApiResponse<bool>.Failure($"User '{username}' not found");
-                }
 
                 var message = isActive ? "activated" : "deactivated";
                 return ApiResponse<bool>.Success(true, $"User {message} successfully");
@@ -203,27 +154,16 @@ namespace NashunumaApp.Application.Services
             try
             {
                 if (string.IsNullOrWhiteSpace(username))
-                {
                     return ApiResponse<bool>.Failure("Username is required");
-                }
-
                 if (string.IsNullOrWhiteSpace(modifiedBy))
-                {
                     return ApiResponse<bool>.Failure("Modified by user is required");
-                }
 
-                // Prevent blocking self
                 if (username == modifiedBy)
-                {
                     return ApiResponse<bool>.Failure("You cannot block yourself");
-                }
 
                 var blocked = await _userManagementRepository.BlockUserAsync(username, modifiedBy);
-
                 if (!blocked)
-                {
                     return ApiResponse<bool>.Failure($"User '{username}' not found");
-                }
 
                 return ApiResponse<bool>.Success(true, "User blocked successfully");
             }
@@ -238,36 +178,30 @@ namespace NashunumaApp.Application.Services
             try
             {
                 if (string.IsNullOrWhiteSpace(username))
-                {
                     return ApiResponse<bool>.Failure("Username is required");
-                }
-
                 if (string.IsNullOrWhiteSpace(modifiedBy))
-                {
                     return ApiResponse<bool>.Failure("Modified by user is required");
-                }
 
-                // Prevent blocking self
                 if (username == modifiedBy)
-                {
-                    return ApiResponse<bool>.Failure("You cannot block yourself");
-                }
+                    return ApiResponse<bool>.Failure("You cannot unblock yourself");
 
                 var blocked = await _userManagementRepository.UnblockUserAsync(username, modifiedBy);
-
                 if (!blocked)
-                {
                     return ApiResponse<bool>.Failure($"User '{username}' not found");
-                }
 
-                return ApiResponse<bool>.Success(true, "User blocked successfully");
+                return ApiResponse<bool>.Success(true, "User unblocked successfully");
             }
             catch (Exception ex)
             {
-                return ApiResponse<bool>.Failure($"Failed to block user: {ex.Message}");
+                return ApiResponse<bool>.Failure($"Failed to unblock user: {ex.Message}");
             }
         }
+
+        // ------------------------------------------------------------------
+        // Role-scoped reads — forward currentUsername to the repository
+        // ------------------------------------------------------------------
         public async Task<ApiResponse<PaginatedResponse<UserDto>>> GetUsersByLocationAsync(
+            string currentUsername,
             string? province = null,
             string? district = null,
             string? tehsil = null,
@@ -276,64 +210,77 @@ namespace NashunumaApp.Application.Services
         {
             try
             {
-                // Validate pagination parameters
                 pageNumber = Math.Max(1, pageNumber);
                 pageSize = Math.Max(1, Math.Min(100, pageSize));
 
                 var result = await _userManagementRepository.GetUsersByLocationAsync(
-                    province,
-                    district,
-                    tehsil,
-                    pageNumber,
-                    pageSize
-                );
+                    currentUsername, province, district, tehsil, pageNumber, pageSize);
 
-                var items = result.Items;
-                var totalCount = result.TotalCount;
-
-                var mappedItems = _mapper.Map<List<UserDto>>(items);
+                var mappedItems = _mapper.Map<List<UserDto>>(result.Items);
 
                 var paginatedResponse = new PaginatedResponse<UserDto>
                 {
                     Items = mappedItems,
                     PageNumber = pageNumber,
                     PageSize = pageSize,
-                    TotalCount = totalCount
+                    TotalCount = result.TotalCount
                 };
 
                 return ApiResponse<PaginatedResponse<UserDto>>.Success(
-                    paginatedResponse,
-                    "Users by location retrieved successfully"
-                );
+                    paginatedResponse, "Users retrieved by location successfully");
             }
             catch (Exception ex)
             {
                 return ApiResponse<PaginatedResponse<UserDto>>.Failure(
-                    $"Failed to retrieve users by location: {ex.Message}"
-                );
+                    $"Failed to retrieve users by location: {ex.Message}");
             }
         }
 
-        public async Task<ApiResponse<LocationStatsDto>> GetLocationStatisticsAsync()
+        public async Task<ApiResponse<LocationStatsDto>> GetLocationStatisticsAsync(string currentUsername)
         {
             try
             {
-                var provinceStats = await _userManagementRepository.GetLocationStatisticsAsync();
+                if (string.IsNullOrWhiteSpace(currentUsername))
+                    return ApiResponse<LocationStatsDto>.Failure("Current username is required");
 
-                var stats = new LocationStatsDto
+                var stats = await _userManagementRepository.GetLocationStatisticsAsync(currentUsername);
+
+                var total = stats.Values.Sum();
+
+                var dto = new LocationStatsDto
                 {
-                    ProvinceStats = provinceStats,
-                    TotalUsers = provinceStats.Values.Sum(),
-                    ActiveUsers = provinceStats.Values.Sum(),
-                    InactiveUsers = 0
+                    TotalUsers = total,
+                    ProvinceStats = stats
                 };
 
-                return ApiResponse<LocationStatsDto>.Success(stats, "Location statistics retrieved successfully");
+                return ApiResponse<LocationStatsDto>.Success(
+                    dto, "Location statistics retrieved successfully");
             }
             catch (Exception ex)
             {
-                return ApiResponse<LocationStatsDto>.Failure($"Failed to retrieve statistics: {ex.Message}");
+                return ApiResponse<LocationStatsDto>.Failure(
+                    $"Failed to retrieve location statistics: {ex.Message}");
             }
         }
+
+        public async Task<ApiResponse<UserSummaryStatsDto>> GetUserSummaryStatsAsync(string currentUsername)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(currentUsername))
+                    return ApiResponse<UserSummaryStatsDto>.Failure("Current username is required");
+
+                var stats = await _userManagementRepository.GetUserSummaryStatsAsync(currentUsername);
+
+                return ApiResponse<UserSummaryStatsDto>.Success(
+                    stats, "User summary statistics retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<UserSummaryStatsDto>.Failure(
+                    $"Failed to retrieve user summary statistics: {ex.Message}");
+            }
+        }
+
     }
 }

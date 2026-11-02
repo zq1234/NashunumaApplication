@@ -30,6 +30,7 @@ export class DataTableComponent implements OnChanges, OnInit {
 
   @Input() data: any[] = [];
   @Input() columns: DataTableColumn[] = [];
+  @Input() cellClassMap: Record<string, string> = {};
   @Input() title = 'Data Table';
   @Input() loading = false;
   @Input() showSearch = true;
@@ -41,6 +42,8 @@ export class DataTableComponent implements OnChanges, OnInit {
   @Input() totalItems = 0;
   @Input() hidePagination = false;
   @Input() rowClickable = false;
+  @Input() hideEditDeleteForAdminRows = false;
+  @Input() protectedUsername = '';
 
   // whether to render the header area (page size, title, search)
   // (kept for potential future use)
@@ -265,6 +268,15 @@ export class DataTableComponent implements OnChanges, OnInit {
     if (this.rowClickable) {
       this.rowClick.emit(row);
     }
+  }
+
+  canShowEditDelete(row: any): boolean {
+    const adminValue = row?.isadmin ?? row?.isAdmin ?? row?.IsAdmin;
+    const isAdmin = adminValue === true || ['1', 'true', 'yes'].includes(String(adminValue).toLowerCase());
+    const username = String(row?.username ?? row?.userName ?? '').toLowerCase();
+    const isCurrentUser = !!this.protectedUsername && username === this.protectedUsername.toLowerCase();
+
+    return !(this.hideEditDeleteForAdminRows && isAdmin) && !isCurrentUser;
   }
 
   // ============================================

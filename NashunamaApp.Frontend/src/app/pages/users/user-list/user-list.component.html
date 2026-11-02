@@ -53,7 +53,7 @@
   }
 
   <!-- Stats Cards -->
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6" *ngIf="totalItems > 0">
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6" *ngIf="summaryStats.totalUsers > 0 || loadingSummary">
     <div class="stat-card">
       <div class="flex items-center gap-4">
         <div class="stat-card-icon stat-card-icon-primary">
@@ -61,7 +61,7 @@
         </div>
         <div>
           <p class="stat-card-label">Total Users</p>
-          <h3 class="stat-card-value">{{ totalItems }}</h3>
+          <h3 class="stat-card-value">{{ summaryStats.totalUsers }}</h3>
         </div>
       </div>
     </div>
@@ -73,7 +73,7 @@
         </div>
         <div>
           <p class="stat-card-label">Active</p>
-          <h3 class="stat-card-value">{{ getActiveCount() }}</h3>
+          <h3 class="stat-card-value">{{ summaryStats.activeUsers }}</h3>
         </div>
       </div>
     </div>
@@ -85,7 +85,7 @@
         </div>
         <div>
           <p class="stat-card-label">Inactive</p>
-          <h3 class="stat-card-value">{{ getInactiveCount() }}</h3>
+          <h3 class="stat-card-value">{{ summaryStats.inactiveUsers }}</h3>
         </div>
       </div>
     </div>
@@ -97,8 +97,29 @@
         </div>
         <div>
           <p class="stat-card-label">Admins</p>
-          <h3 class="stat-card-value">{{ getAdminCount() }}</h3>
+          <h3 class="stat-card-value">{{ summaryStats.adminUsers }}</h3>
         </div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="flex items-center gap-4">
+        <div class="stat-card-icon stat-card-icon-info"><i class="fas fa-user-shield text-xl"></i></div>
+        <div><p class="stat-card-label">Non-Admin</p><h3 class="stat-card-value">{{ summaryStats.nonAdminUsers }}</h3></div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="flex items-center gap-4">
+        <div class="stat-card-icon stat-card-icon-success"><i class="fas fa-map-marker-alt text-xl"></i></div>
+        <div><p class="stat-card-label">Transferred</p><h3 class="stat-card-value">{{ summaryStats.transferredUsers }}</h3></div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="flex items-center gap-4">
+        <div class="stat-card-icon stat-card-icon-danger"><i class="fas fa-map-marker-alt text-xl"></i></div>
+        <div><p class="stat-card-label">Not Transferred</p><h3 class="stat-card-value">{{ summaryStats.notTransferredUsers }}</h3></div>
       </div>
     </div>
   </div>
@@ -140,11 +161,12 @@
         </select>
       </div>
 
-      <!-- User Type -->
+      <!-- Admin Filter -->
       <div>
-        <select id="user-type-filter" class="form-select" [(ngModel)]="userType" (change)="onFilterChange()" aria-label="Filter by user type">
-          <option value="">All Types</option>
-          <option *ngFor="let type of userTypes" [value]="type">{{ type }}</option>
+        <select id="admin-filter" class="form-select" [(ngModel)]="isAdminFilter" (change)="onFilterChange()" aria-label="Filter by admin status">
+          <option [ngValue]="null">All Admin Status</option>
+          <option [ngValue]="true">IsAdmin: true</option>
+          <option [ngValue]="false">IsAdmin: false</option>
         </select>
       </div>
 
@@ -166,7 +188,7 @@
   </app-component-card>
 
   <!-- DataTable Component -->
-  <app-data-table [data]="users"
+  <app-data-table [data]="filteredUsers"
                   [columns]="columns"
                   [title]="'User Records'"
                   [showSearch]="false"
@@ -182,6 +204,8 @@
                   [toggleDisabled]="loadingStatus"
                   [blockField]="'isblocked'"
                   [blockDisabled]="loadingBlock"
+                  [hideEditDeleteForAdminRows]="true"
+                  [protectedUsername]="currentUsername"
                   (view)="onView($event)"
                   (edit)="onEdit($event)"
                   (delete)="onDelete($event)"

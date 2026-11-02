@@ -12,6 +12,7 @@ import { PageBreadcrumbComponent } from '@shared/components/common/page-breadcru
 import { ComponentCardComponent } from '@shared/components/common/component-card/component-card.component';
 import { ButtonComponent } from '@shared/components/ui/button/button.component';
 import { AuthService } from '@shared/services/auth.service';
+import { MissingStockDateDto } from '@core/models/missing-stock.model';
 
 @Component({
   selector: 'app-food-stock-list',
@@ -36,6 +37,7 @@ export class FoodStockListComponent implements OnInit, OnDestroy {
   totalSites = 0;
   notUpdated = 0;
   lowStockSites = 0;
+  missingStockDates: MissingStockDateDto[] = [];
   
   // UI State
   loading = false;
@@ -84,6 +86,11 @@ export class FoodStockListComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.setupSearchDebounce();
+    this.authService.missingStockNotification$.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(notification => {
+      this.missingStockDates = notification?.missingDates.filter(item => item.isMissing) ?? [];
+    });
     this.authService.refreshMissingDates();
     this.loadFoodStocks();
     this.loadSummary();
@@ -247,7 +254,30 @@ export class FoodStockListComponent implements OnInit, OnDestroy {
     this.openDetails(item);
   }
 
+  addNew(): void {
+    const dates = this.missingStockDates.map(item => item.date).filter(Boolean);
+    if (!dates.length) return;
+
+    this.authService.startMissingSequence(dates);
+    const date = this.authService.popNextMissingDate();
+    if (date) {
+      this.router.navigate(['/foodstock/create'], { queryParams: { date } });
+    }
+  }
+
   openDetails(item: FoodStock): void {
+    if (item.siteId !== null && item.siteId !== undefined && String(item.siteId).trim()) {
+      this.router.navigate(['/foodstock/site', item.siteId], {
+        queryParams: {
+          siteName: item.siteName || null,
+          province: item.province || null,
+          district: item.district || null,
+          tehsil: item.tehsil || null
+        }
+      });
+      return;
+    }
+
     if (item.id !== null && item.id !== undefined) {
       this.router.navigate(['/foodstock', item.id]);
     }

@@ -369,8 +369,88 @@ layer(base);
     background: #f8fafc;
   }
 
+  app-data-table .data-row td.stock-color-mamta {
+    background: #9d2d52;
+    color: #ffffff;
+    font-weight: 700;
+  }
+
+  app-data-table .data-row td.stock-color-wawa {
+    background: #cbc02c;
+    color: #111827;
+    font-weight: 700;
+  }
+
+  app-data-table .data-row td.stock-color-rutf {
+    background: #4d589c;
+    color: #ffffff;
+    font-weight: 700;
+  }
+
+  app-data-table .data-row td.stock-color-ifa {
+    background: #ffffff;
+    color: #111827;
+    font-weight: 700;
+  }
+
+  app-data-table .data-row.row-clickable:hover td.stock-color-mamta,
+  app-data-table .data-row.row-clickable:focus-visible td.stock-color-mamta {
+    background: #9d2d52;
+    color: #ffffff;
+  }
+
+  app-data-table .data-row.row-clickable:hover td.stock-color-wawa,
+  app-data-table .data-row.row-clickable:focus-visible td.stock-color-wawa {
+    background: #cbc02c;
+    color: #111827;
+  }
+
+  app-data-table .data-row.row-clickable:hover td.stock-color-rutf,
+  app-data-table .data-row.row-clickable:focus-visible td.stock-color-rutf {
+    background: #4d589c;
+    color: #ffffff;
+  }
+
+  app-data-table .data-row.row-clickable:hover td.stock-color-ifa,
+  app-data-table .data-row.row-clickable:focus-visible td.stock-color-ifa {
+    background: #ffffff;
+    color: #111827;
+  }
+
   app-data-table .data-row:hover td {
     background: #f0f7ff;
+  }
+
+  app-data-table .data-row.row-clickable {
+    cursor: pointer;
+    transition: background-color 140ms ease, box-shadow 140ms ease;
+  }
+
+  app-data-table .data-row.row-clickable:hover td {
+    background: #e6f2ff;
+  }
+
+  app-data-table .data-row.row-clickable:hover td:first-child {
+    box-shadow: inset 3px 0 0 #2563eb;
+  }
+
+  app-data-table .data-row.row-clickable:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: -2px;
+  }
+
+  app-data-table .row-open-indicator {
+    float: right;
+    margin-left: 0.75rem;
+    color: #2563eb;
+    opacity: 0.62;
+    transition: opacity 140ms ease, transform 140ms ease;
+  }
+
+  app-data-table .data-row.row-clickable:hover .row-open-indicator,
+  app-data-table .data-row.row-clickable:focus-visible .row-open-indicator {
+    opacity: 1;
+    transform: translate(2px, -2px);
   }
 
   app-data-table .status-badge,

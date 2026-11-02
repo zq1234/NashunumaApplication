@@ -1,6 +1,6 @@
 ﻿// Application/DTOs/FoodStock/FoodStockDto.cs
-namespace NashunumaApp.Application.DTOs.FoodStock
-{
+namespace NashunumaApp.Domain.Common.DTOs;
+
     public sealed class UserScope
     {
         public bool IsAdmin { get; init; }
@@ -16,4 +16,3 @@ namespace NashunumaApp.Application.DTOs.FoodStock
         public decimal Id { get; init; }
         public string? Province { get; init; }
     }
-}

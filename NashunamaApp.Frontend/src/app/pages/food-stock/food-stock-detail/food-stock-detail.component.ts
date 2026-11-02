@@ -5,7 +5,6 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { FoodStockService } from '@shared/services/food-stock.service';
 import { FoodStock } from '@core/models/food-stock.model';
 import { PageBreadcrumbComponent } from '@shared/components/common/page-breadcrumb/page-breadcrumb.component';
-import { ComponentCardComponent } from '@shared/components/common/component-card/component-card.component';
 import { ButtonComponent } from '@shared/components/ui/button/button.component';
 
 @Component({
@@ -14,7 +13,6 @@ import { ButtonComponent } from '@shared/components/ui/button/button.component';
   imports: [
     CommonModule,
     PageBreadcrumbComponent,
-    ComponentCardComponent,
     ButtonComponent
   ],
   templateUrl: './food-stock-detail.component.html',
@@ -73,6 +71,34 @@ export class FoodStockDetailComponent implements OnInit {
 
   onPrint(): void {
     window.print();
+  }
+
+  formatDetailDate(value: string | null | undefined): string {
+    if (!value) return '-';
+    const date = this.parseStockDate(value);
+    return date
+      ? date.toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' })
+      : value;
+  }
+
+  formatDetailTime(value: string | null | undefined): string {
+    if (!value) return '-';
+    const date = this.parseStockDate(value);
+    return date
+      ? date.toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' })
+      : value;
+  }
+
+  private parseStockDate(value: string): Date | null {
+    const dayFirst = value.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})(?:[T\s](.*))?$/);
+    if (dayFirst) {
+      const [, day, month, year, time = '00:00:00'] = dayFirst;
+      const parsed = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${time}`);
+      return Number.isNaN(parsed.getTime()) ? null : parsed;
+    }
+
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
   }
 
   // Helper methods for statistics
