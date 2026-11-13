@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using NashunumaApp.Domain.Entities;
 using NashunumaApp.Infrastructure.Identity;
+using NashunumaApp.Infrastructure.TempOracleEntities;
 
 public partial class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 {
@@ -25,7 +26,11 @@ public partial class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public virtual DbSet<NthSiteLocation> NthSiteLocations { get; set; }
     //public virtual DbSet<NthPamentInformation> NthPamentInformations { get; set; }
     public virtual DbSet<NthSnfStock> Foodstock { get; set; }
-
+    public virtual DbSet<NdepLibDistrict> NdepLibDistricts { get; set; }
+    public virtual DbSet<NdepLibLocality> NdepLibLocalitys { get; set; }
+    public virtual DbSet<NdepLibProvince> NdepLibProvinces { get; set; }
+    public virtual DbSet<NdepLibTehsil> NdepLibTehsils { get; set; }
+    public virtual DbSet<NdepLibUC> NdepLibUCs { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // Required for Identity
@@ -40,9 +45,17 @@ public partial class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             .UseCollation("USING_NLS_COMP");
         modelBuilder.Entity<NthSiteLocation>(entity =>
         {
-            entity
-                .HasNoKey()
-                .ToTable("NTH_SITE_LOCATION", "BISP_NASHUNUMA");
+            //entity
+            //    .HasNoKey()
+            //    .ToTable("NTH_SITE_LOCATION", "BISP_NASHUNUMA");
+
+            entity.ToTable("NTH_SITE_LOCATION", "BISP_NASHUNUMA");
+
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.Id)
+                  .HasColumnName("ID")
+                  .ValueGeneratedOnAdd();
 
             entity.HasIndex(e => e.Id, "IDX_ID_");
 
@@ -1603,10 +1616,61 @@ public partial class ApplicationDbContext : IdentityDbContext<ApplicationUser>
                 .IsUnicode(false)
                 .HasColumnName("UCTYPE");
         });
+        // Province
+        modelBuilder.Entity<NdepLibProvince>(entity =>
+        {
+            entity.ToTable(
+                "NDEP_LIB_PROVINCE_LOCAL",
+                "BISP_NASHUNUMA");
 
+            entity.HasKey(e => e.ID);
+            entity.Property(e => e.ID).HasColumnName("ID");
+            entity.Property(e => e.PROVCODE).HasColumnName("PROVCODE");
+            entity.Property(e => e.PROVINCE).HasColumnName("PROVINCE");
+        });
+
+        // District
+        modelBuilder.Entity<NdepLibDistrict>(entity =>
+        {
+            entity.ToTable(
+                "NDEP_LIB_DISTRICT_LOCAL",
+                "BISP_NASHUNUMA");
+
+            entity.HasKey(e => e.ID);
+        });
+
+        // Tehsil
+        modelBuilder.Entity<NdepLibTehsil>(entity =>
+        {
+            entity.ToTable(
+                "NDEP_LIB_TEHSIL_LOCAL",
+                "BISP_NASHUNUMA");
+
+            entity.HasKey(e => e.ID);
+        });
+
+        // Locality
+        modelBuilder.Entity<NdepLibLocality>(entity =>
+        {
+            entity.ToTable(
+                "NDEP_LIB_LOCALITY_LOCAL",
+                "BISP_NASHUNUMA");
+
+            entity.HasKey(e => e.ID);
+        });
+
+        // Union Council
+        modelBuilder.Entity<NdepLibUC>(entity =>
+        {
+            entity.ToTable(
+                "NDEP_LIB_UC_LOCAL",
+                "BISP_NASHUNUMA");
+
+            entity.HasKey(e => e.ID);
+        });
+    
         OnModelCreatingPartial(modelBuilder);
 
-       
 
     }
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder);

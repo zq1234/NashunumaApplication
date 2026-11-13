@@ -2,7 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using NashunumaApp.Infrastructure.Data;
+ 
 using NashunumaApp.Infrastructure.Identity;
 
 namespace NashunumaApp.Infrastructure.Services

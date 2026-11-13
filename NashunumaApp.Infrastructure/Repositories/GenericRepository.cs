@@ -1,6 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using NashunumaApp.Domain.Interfaces;
-using NashunumaApp.Infrastructure.Data;
+
 using System;
 using System.Collections.Generic;
 using System.Linq;

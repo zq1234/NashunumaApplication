@@ -46,6 +46,11 @@ export class AppSidebarComponent implements OnInit, OnDestroy {
       path: "/foodstock",
     },
     {
+      icon: `<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.5C8.41 2.5 5.5 5.41 5.5 9V12.5L3.5 16.5H20.5L18.5 12.5V9C18.5 5.41 15.59 2.5 12 2.5ZM12 21.5C10.9 21.5 10 20.6 10 19.5H14C14 20.6 13.1 21.5 12 21.5Z" fill="currentColor"/><path d="M3 5h18v2H3V5zm0 6h18v2H3v-2zm0 6h18v2H3v-2z" fill="currentColor" opacity="0.15"/></svg>`,
+      name: "Site Locations",
+      path: "/site-location",
+    },
+    {
       icon: `<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 5h18v2H3V5zm0 6h18v2H3v-2zm0 6h18v2H3v-2z" fill="currentColor"/></svg>`,
       name: "MotherTrimister Records",
       path: "/mother-trimister",

@@ -129,6 +129,9 @@ try
     builder.Services.AddScoped<IMotherTrimisterService, MotherTrimisterService>();
     builder.Services.AddScoped<IUserScopeService, UserScopeService>();
 
+    builder.Services.AddScoped<ISiteLocationRepository, SiteLocationRepository>();
+    builder.Services.AddScoped<ISiteLocationService, SiteLocationService>();
+
     // AutoMapper
     builder.Services.AddAutoMapper(typeof(MappingProfile));
 

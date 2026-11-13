@@ -25,12 +25,9 @@ namespace NashunumaApp.API.Controllers
             _logger = logger;
         }
 
-        /// <summary>
         /// GET api/foodstock
         /// Paged list — admin sees all rows, non-admin sees own rows only.
-        /// Supports all caller filters: search, siteId, siteName, province,
-        /// district, tehsil, date, dateFrom, dateTo, enteredBy, headName.
-        /// </summary>
+       
         [HttpGet]
         public async Task<IActionResult> GetFoodStocks(
             [FromQuery] int pageNumber = 1,
@@ -88,7 +85,9 @@ namespace NashunumaApp.API.Controllers
             }
         }
 
-        /// <summary>GET api/foodstock/{id} — single stock row by primary key.</summary>
+       
+        /// GET api/foodstock/{id} — single stock row by primary key.
+        
         [HttpGet("{id}")]
         public async Task<IActionResult> GetFoodStockById(decimal id)
         {
@@ -112,7 +111,8 @@ namespace NashunumaApp.API.Controllers
             }
         }
 
-        /// <summary>GET api/foodstock/summary — role-scoped summary counters.</summary>
+        // GET api/foodstock/summary — role-scoped summary counters.
+      
         [HttpGet("summary")]
         public async Task<IActionResult> GetSummaryStats()
         {
@@ -164,19 +164,7 @@ namespace NashunumaApp.API.Controllers
                     enteredBy ?? "null", headName ?? "null", format);
 
                 var result = await _foodStockService.ExportFoodStocksAsync(
-                    username!,
-                    searchTerm,
-                    siteId,
-                    siteName,
-                    province,
-                    district,
-                    tehsil,
-                    date,
-                    dateFrom,
-                    dateTo,
-                    enteredBy,
-                    headName,
-                    format);
+                    username!,searchTerm,  siteId, siteName,province,district, tehsil,date,dateFrom,dateTo, enteredBy, headName,format);
 
                 if (!result.IsSuccess)
                 {

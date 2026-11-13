@@ -8,6 +8,11 @@
 		<WarningsNotAsErrors>$(WarningsNotAsErrors);NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
 
 	</PropertyGroup>
+	<ItemGroup>
+	  <Compile Remove="TempOracleEntities\**" />
+	  <EmbeddedResource Remove="TempOracleEntities\**" />
+	  <None Remove="TempOracleEntities\**" />
+	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="ClosedXML" Version="0.105.1" />
@@ -44,5 +49,9 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\NashunumaApp.Domain\NashunumaApp.Domain.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Data\Configurations\" />
 	</ItemGroup>
 </Project>

@@ -1,0 +1,150 @@
+<!-- src/app/features/site-location/site-location-create/site-location-create.component.html -->
+<app-modal [isOpen]="isOpen" (close)="dismiss()" className="max-w-[720px] p-5 lg:p-6">
+  <!-- Header -->
+  <div class="mb-5 flex items-start gap-3">
+    <div class="flex h-11 w-11 items-center justify-center rounded-full bg-brand-50 text-brand-500 dark:bg-brand-500/10">
+      <i class="fas fa-map-marker-alt text-xl"></i>
+    </div>
+    <div class="flex-1">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Create new site</h3>
+      <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+        Select province, district, tehsil and UC, then give the site a name.
+      </p>
+    </div>
+  </div>
+
+  <!-- Error banner -->
+  @if (errorMessage) {
+    <div class="mb-4 rounded-xl border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-700 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-400">
+      {{ errorMessage }}
+    </div>
+  }
+
+  <!-- Form -->
+  <form [formGroup]="form" (ngSubmit)="submit()" class="space-y-4">
+    
+
+    <!-- Location cascade -->
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div>
+        <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Province <span class="text-error-500">*</span>
+        </label>
+        <select
+          formControlName="provinceId"
+          (change)="onProvinceChange()"
+          class="h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus:border-brand-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
+        >
+          <option [ngValue]="null">-- select --</option>
+          @for (p of provinces; track p.id) {
+            <option [ngValue]="p.id">{{ p.province }}</option>
+          }
+        </select>
+      </div>
+
+      <div>
+        <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          District <span class="text-error-500">*</span>
+        </label>
+        <select
+          formControlName="districtId"
+          (change)="onDistrictChange()"
+          class="h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus:border-brand-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
+        >
+          <option [ngValue]="null">-- select --</option>
+          @for (d of districts; track d.id) {
+            <option [ngValue]="d.id">{{ d.district }}</option>
+          }
+        </select>
+      </div>
+
+      <div>
+        <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Tehsil <span class="text-error-500">*</span>
+        </label>
+        <select
+          formControlName="tehsilId"
+          (change)="onTehsilChange()"
+          class="h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus:border-brand-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
+        >
+          <option [ngValue]="null">-- select --</option>
+          @for (t of tehsils; track t.id) {
+            <option [ngValue]="t.id">{{ t.tehsil }}</option>
+          }
+        </select>
+      </div>
+
+      <div>
+        <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">UC</label>
+        <select
+          formControlName="ucId"
+          class="h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus:border-brand-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
+        >
+          <option [ngValue]="null">-- select --</option>
+          @for (u of ucs; track u.id) {
+            <option [ngValue]="u.id">{{ u.uc }}</option>
+          }
+        </select>
+      </div>
+    </div>
+<!-- Site name -->
+    <div>
+      <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+        Site name <span class="text-error-500">*</span>
+      </label>
+      <input
+        type="text"
+        formControlName="siteName"
+        placeholder="e.g. BHU Model Town"
+        class="h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus:border-brand-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
+      />
+      @if (form.controls.siteName.touched && form.controls.siteName.invalid) {
+        <p class="mt-1 text-xs text-error-500">Site name is required (max 200 chars).</p>
+      }
+    </div>
+    <!-- Optional extras -->
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div>
+        <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Contact</label>
+        <input type="text" formControlName="contact"
+               class="h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus:border-brand-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200" />
+      </div>
+
+      <div>
+        <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Head name</label>
+        <input type="text" formControlName="headName"
+               class="h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus:border-brand-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200" />
+      </div>
+    </div>
+
+    <div class="flex items-center justify-between rounded-xl border border-gray-200 bg-gray-50 px-3 py-3 dark:border-gray-700 dark:bg-gray-800/50">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Is Mobile Site</label>
+        <p class="text-xs text-gray-500 dark:text-gray-400">Select Yes if this site is mobile</p>
+      </div>
+
+      <label class="relative inline-flex cursor-pointer items-center">
+        <input type="checkbox" formControlName="isMobileSite" class="peer sr-only" />
+        <div class="h-6 w-11 rounded-full bg-gray-200 peer-checked:bg-brand-500 dark:bg-gray-700"></div>
+        <div class="absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition-transform peer-checked:translate-x-5"></div>
+        <span class="ml-3 text-sm font-medium text-gray-700 dark:text-gray-200">
+          {{ form.get('isMobileSite')?.value ? 'Yes' : 'No' }}
+        </span>
+      </label>
+    </div>
+
+    <div>
+      <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Address</label>
+      <textarea rows="2" formControlName="address"
+                class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-brand-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"></textarea>
+    </div>
+
+    <!-- Footer -->
+    <div class="flex items-center justify-end gap-3 border-t border-gray-200 pt-4 dark:border-gray-800">
+      <app-button size="sm" variant="outline" (btnClick)="dismiss()">Cancel</app-button>
+      <app-button size="sm" [disabled]="form.invalid || saving" (btnClick)="submit()">
+        {{ saving ? 'Saving…' : 'Create Site' }}
+      </app-button>
+    </div>
+  </form>
+</app-modal>

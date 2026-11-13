@@ -2,7 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using NashunumaApp.Domain.Common.DTOs;
 using NashunumaApp.Domain.Interfaces;
-using NashunumaApp.Infrastructure.Data;
+ 
 
 namespace NashunumaApp.Infrastructure.Repositories
 {

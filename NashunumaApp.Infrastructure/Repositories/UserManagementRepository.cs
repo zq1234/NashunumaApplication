@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using NashunumaApp.Domain.Common.DTOs;
 using NashunumaApp.Domain.Entities;
 using NashunumaApp.Domain.Interfaces;
-using NashunumaApp.Infrastructure.Data;
+ 
 using System;
 using System.Collections.Generic;
 using System.Linq;

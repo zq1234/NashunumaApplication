@@ -2,7 +2,7 @@
 using NashunumaApp.Domain.Common.DTOs;
 using NashunumaApp.Domain.Entities;
 using NashunumaApp.Domain.Interfaces;
-using NashunumaApp.Infrastructure.Data;
+ 
 using NashunumaApp.Infrastructure.Helpers;
 using System;
 using System.Collections.Generic;

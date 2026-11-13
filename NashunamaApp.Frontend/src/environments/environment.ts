@@ -59,8 +59,21 @@ export const environment: Environment = {
     'motherTrimister.byBatch': '/api/LookUp/by-batch',
     'motherTrimister.byBatchExcel': '/api/LookUp/by-batch-excel',
     'motherTrimister.getById': '/api/LookUp/by-id',
-    'motherTrimister.export': '/api/LookUp/export'
+    'motherTrimister.export': '/api/LookUp/export',
+    // Site Location CRUD
+
+    'siteLocation.getProvinces': '/api/SiteLocation/provinces',
+    'siteLocation.getDistricts': '/api/SiteLocation/districts',
+    'siteLocation.getTehsils': '/api/SiteLocation/tehsils',
+    'siteLocation.getUcs': '/api/SiteLocation/ucs',
+    'siteLocation.getAll': '/api/SiteLocation',
+    'siteLocation.getById': '/api/SiteLocation/{id}',
+    'siteLocation.create': '/api/SiteLocation',
+    'siteLocation.update': '/api/SiteLocation/{id}',
+    'siteLocation.delete': '/api/SiteLocation/{id}',
+
   },
+  
 
   features: {
     enableSwagger: true,

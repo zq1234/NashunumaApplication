@@ -2,7 +2,7 @@
 using NashunumaApp.Domain.Common;                    
 using NashunumaApp.Domain.Common.DTOs;
 using NashunumaApp.Domain.Interfaces;                // <-- IUserScopeService
-using NashunumaApp.Infrastructure.Data;
+ 
 namespace NashunumaApp.Infrastructure.Repositories
 {
     public class UserScopeService : IUserScopeService

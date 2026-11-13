@@ -7,7 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using NashunumaApp.Domain.Interfaces;
-using NashunumaApp.Infrastructure.Data;
+
 using NashunumaApp.Infrastructure.Identity;
 using NashunumaApp.Infrastructure.Repositories;
 using NashunumaApp.Infrastructure.Persistence.Interceptors;

@@ -107,6 +107,16 @@ export const routes: Routes = [
         title: 'MotherTrimister Records'
       },
 
+      // Site Locations
+      {
+        path: 'site-location',
+        loadComponent: () =>
+          import('./shared/components/site-location/site-location-list/site-location-list.component').then(
+            m => m.SiteLocationListComponent
+          ),
+        title: 'Site Locations'
+      },
+
       // Profile
       {
         path: 'profile',
