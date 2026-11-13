@@ -24,6 +24,7 @@ public partial class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public virtual DbSet<NthTehsil> NthTehsils { get; set; }
     public virtual DbSet<NthUc> NthUcs { get; set; }
     public virtual DbSet<NthSiteLocation> NthSiteLocations { get; set; }
+    public virtual DbSet<UserLocationTransferAudit> UserLocationTransferAudits { get; set; }
     //public virtual DbSet<NthPamentInformation> NthPamentInformations { get; set; }
     public virtual DbSet<NthSnfStock> Foodstock { get; set; }
     public virtual DbSet<NdepLibDistrict> NdepLibDistricts { get; set; }
@@ -43,6 +44,43 @@ public partial class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder
             .HasDefaultSchema("MZAHID")
             .UseCollation("USING_NLS_COMP");
+
+        modelBuilder.Entity<UserLocationTransferAudit>(entity =>
+        {
+            entity.ToTable("USER_LOCATION_TRANSFER_AUDIT", "BISP_NASHUNUMA");
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.Id)
+                .HasColumnType("NUMBER")
+                .HasColumnName("ID");
+                //.ValueGeneratedOnAdd();
+            entity.Property(e => e.UserId).HasColumnType("NUMBER").HasColumnName("USER_ID");
+            entity.Property(e => e.Username).HasMaxLength(100).IsUnicode(false).HasColumnName("USERNAME");
+            entity.Property(e => e.ModifiedBy).HasMaxLength(100).IsUnicode(false).HasColumnName("MODIFIED_BY");
+            entity.Property(e => e.FromProvince).HasMaxLength(100).IsUnicode(false).HasColumnName("FROM_PROVINCE");
+            entity.Property(e => e.FromProvinceId).HasColumnType("NUMBER").HasColumnName("FROM_PROVINCE_ID");
+            entity.Property(e => e.FromDistrict).HasMaxLength(100).IsUnicode(false).HasColumnName("FROM_DISTRICT");
+            entity.Property(e => e.FromDistrictId).HasColumnType("NUMBER").HasColumnName("FROM_DISTRICT_ID");
+            entity.Property(e => e.FromTehsil).HasMaxLength(100).IsUnicode(false).HasColumnName("FROM_TEHSIL");
+            entity.Property(e => e.FromTehsilId).HasColumnType("NUMBER").HasColumnName("FROM_TEHSIL_ID");
+            entity.Property(e => e.FromSiteId).HasColumnType("NUMBER").HasColumnName("FROM_SITE_ID");
+            entity.Property(e => e.FromSiteName).HasMaxLength(100).IsUnicode(false).HasColumnName("FROM_SITE_NAME");
+            entity.Property(e => e.ToProvince).HasMaxLength(100).IsUnicode(false).HasColumnName("TO_PROVINCE");
+            entity.Property(e => e.ToProvinceId).HasColumnType("NUMBER").HasColumnName("TO_PROVINCE_ID");
+            entity.Property(e => e.ToDistrict).HasMaxLength(100).IsUnicode(false).HasColumnName("TO_DISTRICT");
+            entity.Property(e => e.ToDistrictId).HasColumnType("NUMBER").HasColumnName("TO_DISTRICT_ID");
+            entity.Property(e => e.ToTehsil).HasMaxLength(100).IsUnicode(false).HasColumnName("TO_TEHSIL");
+            entity.Property(e => e.ToTehsilId).HasColumnType("NUMBER").HasColumnName("TO_TEHSIL_ID");
+            entity.Property(e => e.ToSiteId).HasColumnType("NUMBER").HasColumnName("TO_SITE_ID");
+            entity.Property(e => e.ToSiteName).HasMaxLength(100).IsUnicode(false).HasColumnName("TO_SITE_NAME");
+            entity.Property(e => e.SystemName).HasMaxLength(100).IsUnicode(false).HasColumnName("SYSTEM_NAME");
+            entity.Property(e => e.TransferredAt).HasColumnType("TIMESTAMP").HasColumnName("TRANSFERRED_AT");
+            entity.Property(e => e.Status).HasMaxLength(20).IsUnicode(false).HasColumnName("STATUS");
+            entity.Property(e => e.FailureReason).HasMaxLength(2000).IsUnicode(false).HasColumnName("FAILURE_REASON");
+            entity.Property(e => e.TotalTransferCount).HasColumnType("NUMBER").HasColumnName("TOTAL_TRANSFER_COUNT");
+            entity.HasIndex(e => new { e.Username, e.TransferredAt });
+        });
+
         modelBuilder.Entity<NthSiteLocation>(entity =>
         {
             //entity

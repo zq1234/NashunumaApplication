@@ -26,6 +26,8 @@ namespace NashunumaApp.Domain.Interfaces
             string district, decimal? districtId, string tehsil, decimal? tehsilId,
             decimal? siteId, string siteName, string modifiedBy);
 
+        Task AddTransferAuditAsync(UserLocationTransferAudit audit);
+
         Task<bool> ToggleUserStatusAsync(string username, bool isActive, string modifiedBy);
         Task<bool> BlockUserAsync(string username, string modifiedBy);
         Task<bool> UnblockUserAsync(string username, string modifiedBy);

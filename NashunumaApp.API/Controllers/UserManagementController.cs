@@ -21,11 +21,7 @@ namespace NashunumaApp.API.Controllers
         }
 
         // Resolves the caller's username once, consistently across endpoints.
-        private string CurrentUsername =>
-            User.FindFirstValue("username")
-            ?? User.FindFirstValue(ClaimTypes.Name)
-            ?? User.FindFirstValue(ClaimTypes.NameIdentifier)
-            ?? "System";
+        private string CurrentUsername => User.FindFirstValue("username")  ?? User.FindFirstValue(ClaimTypes.Name) ?? User.FindFirstValue(ClaimTypes.NameIdentifier)?? "System";
 
         [HttpGet("users")]
         public async Task<IActionResult> GetUsers(
@@ -68,6 +64,7 @@ namespace NashunumaApp.API.Controllers
         public async Task<IActionResult> TransferUserLocation(string username, [FromBody] UpdateUserLocationDto locationDto)
         {
             var modifiedBy = CurrentUsername;
+
 
             var result = await _userManagementService.TransferUserLocationAsync(username, locationDto, modifiedBy);
 

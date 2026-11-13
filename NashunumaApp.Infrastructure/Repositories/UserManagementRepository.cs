@@ -1,14 +1,9 @@
 ﻿// Infrastructure/Repositories/UserManagementRepository.cs
+using DocumentFormat.OpenXml.Presentation;
 using Microsoft.EntityFrameworkCore;
 using NashunumaApp.Domain.Common.DTOs;
 using NashunumaApp.Domain.Entities;
 using NashunumaApp.Domain.Interfaces;
- 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-
 namespace NashunumaApp.Infrastructure.Repositories
 {
     public class UserManagementRepository : GenericRepository<NthUser>, IUserManagementRepository
@@ -158,8 +153,11 @@ namespace NashunumaApp.Infrastructure.Repositories
                                 Designation = user.Designation,
                                 Usertype = user.Usertype,
                                 Province = user.Province,
+                                ProvinceId=user.ProvinceId,
                                 District = user.District,
+                                DistrictId=user.DistrictId,
                                 Tehsil = user.Tehsil,
+                                TehsilId=user.TehsilId,
                                 SiteId = user.SiteId,
                                 SiteName = user.SiteName,
                                 Isactive = user.Isactive,
@@ -196,23 +194,11 @@ namespace NashunumaApp.Infrastructure.Repositories
             }
         }
 
-        // ------------------------------------------------------------------
-        // Mutations — unchanged
-        // ------------------------------------------------------------------
-        public async Task<bool> UpdateUserLocationAsync(
-            string username,
-            string province,
-            decimal? provinceId,
-            string district,
-            decimal? districtId,
-            string tehsil,
-            decimal? tehsilId,
-            decimal? siteId,
-            string siteName,
-            string modifiedBy)
+        public async Task<bool> UpdateUserLocationAsync( string username,  string province,decimal? provinceId,string district,  decimal? districtId,string tehsil,decimal? tehsilId,decimal? siteId,string siteName,string modifiedBy)
         {
             try
             {
+
                 var user = await _context.NthUsers.FirstOrDefaultAsync(u => u.Username == username);
                 if (user == null) return false;
 
@@ -253,6 +239,22 @@ namespace NashunumaApp.Infrastructure.Repositories
             {
                 throw new Exception($"Error updating user location: {ex.Message}", ex);
             }
+        }
+
+        public async Task AddTransferAuditAsync(UserLocationTransferAudit audit)
+        {
+            try
+            {
+
+                _context.UserLocationTransferAudits.Add(audit);
+                await _context.SaveChangesAsync();
+
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error updating user location: {ex.Message}", ex);
+            }
+
         }
 
         public async Task<bool> ToggleUserStatusAsync(string username, bool isActive, string modifiedBy)

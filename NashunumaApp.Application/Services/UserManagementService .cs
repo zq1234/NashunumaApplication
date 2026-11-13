@@ -4,6 +4,7 @@ using NashunumaApp.Application.DTOs.Common;
 using NashunumaApp.Application.DTOs.User;
 using NashunumaApp.Application.Interfaces;
 using NashunumaApp.Domain.Common.DTOs;
+using NashunumaApp.Domain.Entities;
 using NashunumaApp.Domain.Interfaces;
 using System;
 using System.Collections.Generic;
@@ -17,7 +18,9 @@ namespace NashunumaApp.Application.Services
         private readonly IUserManagementRepository _userManagementRepository;
         private readonly IMapper _mapper;
 
-        public UserManagementService(IUserManagementRepository userManagementRepository, IMapper mapper)
+        public UserManagementService(
+            IUserManagementRepository userManagementRepository,
+            IMapper mapper)
         {
             _userManagementRepository = userManagementRepository;
             _mapper = mapper;
@@ -86,22 +89,44 @@ namespace NashunumaApp.Application.Services
         public async Task<ApiResponse<UserDto>> TransferUserLocationAsync(
             string username, UpdateUserLocationDto locationDto, string modifiedBy)
         {
+            UserWithLocationDto? user = null;
             try
             {
+
                 if (string.IsNullOrWhiteSpace(username))
+                {
+                    //await RecordTransferAuditAsync(username, null, locationDto, modifiedBy, "Failed", "Username is required");
                     return ApiResponse<UserDto>.Failure("Username is required");
+                }
                 if (string.IsNullOrWhiteSpace(modifiedBy))
+                {
+                    //await RecordTransferAuditAsync(username, null, locationDto, modifiedBy, "Failed", "Modified by user is required");
                     return ApiResponse<UserDto>.Failure("Modified by user is required");
+                }
 
                 if (username == modifiedBy)
+                {
+                    //await RecordTransferAuditAsync(username, null, locationDto, modifiedBy, "Failed", "You cannot transfer your own location");
                     return ApiResponse<UserDto>.Failure("You cannot transfer your own location");
+                }
 
-                var user = await _userManagementRepository.GetUserWithLocationByUsernameAsync(username);
+                user = await _userManagementRepository.GetUserWithLocationByUsernameAsync(username);
                 if (user == null)
+                {
+                    //await RecordTransferAuditAsync(username, null, locationDto, modifiedBy, "Failed", $"User '{username}' not found");
                     return ApiResponse<UserDto>.Failure($"User '{username}' not found");
+                }
 
                 if (user.Isactive != "1" && user.Isactive != "true")
+                {
+                    //await RecordTransferAuditAsync(username, user, locationDto, modifiedBy, "Failed", "Cannot transfer inactive user");
                     return ApiResponse<UserDto>.Failure("Cannot transfer inactive user");
+                }
+
+                if (IsSameLocation(user, locationDto))
+                {
+                    return ApiResponse<UserDto>.Failure("User is already assigned to the specified site");
+                }
 
                 var updated = await _userManagementRepository.UpdateUserLocationAsync(
                     username,
@@ -112,15 +137,64 @@ namespace NashunumaApp.Application.Services
                     modifiedBy);
 
                 if (!updated)
+                {
+                    //await RecordTransferAuditAsync(username, user, locationDto, modifiedBy, "Failed", "Failed to update user location");
                     return ApiResponse<UserDto>.Failure("Failed to update user location");
+                }
 
                 var updatedUser = await _userManagementRepository.GetUserWithLocationByUsernameAsync(username);
-                return ApiResponse<UserDto>.Success(
-                    _mapper.Map<UserDto>(updatedUser), "User location transferred successfully");
+                await RecordTransferAuditAsync(username, user, locationDto, modifiedBy, "Success", null);
+                return ApiResponse<UserDto>.Success( _mapper.Map<UserDto>(updatedUser), "User location transferred successfully");
             }
             catch (Exception ex)
             {
+                //await RecordTransferAuditAsync(username, user, locationDto, modifiedBy, "Failed", ex.Message);
                 return ApiResponse<UserDto>.Failure($"Failed to transfer user location: {ex.Message}");
+            }
+        }
+
+        private static bool IsSameLocation(UserWithLocationDto user, UpdateUserLocationDto locationDto)
+        {
+            var siteId = locationDto.SiteId ?? user.SiteId;
+            var siteName = locationDto.SiteId.HasValue ? locationDto.SiteName : user.SiteName;
+
+            return user.SiteId == siteId && string.Equals(user.SiteName, siteName, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private async Task RecordTransferAuditAsync( string username, UserWithLocationDto? user,  UpdateUserLocationDto? locationDto,string modifiedBy,string status, string? failureReason)
+        {
+            try
+            {
+                await _userManagementRepository.AddTransferAuditAsync(new UserLocationTransferAudit
+                {
+                    UserId = user?.UserId,
+                    Username = username,
+                    ModifiedBy = modifiedBy,
+                    FromProvince = user?.Province,
+                    FromProvinceId=user?.ProvinceId,
+                    FromDistrict = user?.District,
+                    FromDistrictId=user?.DistrictId,
+                    FromTehsilId=user?.TehsilId,
+                    FromTehsil = user?.Tehsil,
+                    FromSiteId = user?.SiteId,
+                    FromSiteName = user?.SiteName,
+                    ToProvince = locationDto?.Province,
+                    ToProvinceId = locationDto?.ProvinceId,
+                    ToDistrict = locationDto?.District,
+                    ToDistrictId = locationDto?.DistrictId,
+                    ToTehsil = locationDto?.Tehsil,
+                    ToTehsilId = locationDto?.TehsilId,
+                    ToSiteId = locationDto?.SiteId,
+                    ToSiteName = locationDto?.SiteName,
+                    TransferredAt = DateTime.UtcNow,
+                    Status = status,
+                    FailureReason = failureReason,
+                    TotalTransferCount = status == "Success" ? (user?.Istransferred ?? 0) + 1 : user?.Istransferred ?? 0
+                });
+            }
+            catch
+            {
+               
             }
         }
 

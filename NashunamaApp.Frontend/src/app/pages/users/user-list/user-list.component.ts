@@ -223,6 +223,7 @@ export class UserListComponent implements OnInit, OnDestroy {
     if (cachedProvinces && cachedProvinces.length > 0) {
       this.provinces = cachedProvinces;
       this.transferProvinces = cachedProvinces;
+      this.syncTransferLocationIds();
       this.loadingLocations = false;
       return;
     }
@@ -233,6 +234,7 @@ export class UserListComponent implements OnInit, OnDestroy {
         if (ApiResponseHelper.isSuccess(response) && response.data) {
           this.provinces = response.data;
           this.transferProvinces = response.data;
+          this.syncTransferLocationIds();
         } else {
           this.showError('Failed to load provinces: ' + response.message);
           this.setDefaultFilterOptions();
@@ -257,6 +259,7 @@ export class UserListComponent implements OnInit, OnDestroy {
       { id: 7, provcode: 7, province: 'AJK' }
     ];
     this.transferProvinces = this.provinces;
+    this.syncTransferLocationIds();
   }
 
   // ============================================
@@ -355,6 +358,10 @@ export class UserListComponent implements OnInit, OnDestroy {
     this.transferDistrictName = user.district || null;
     this.transferTehsilName = user.tehsil || null;
     this.transferSiteName = user.siteName || null;
+    this.transferDistricts = [];
+    this.transferTehsils = [];
+    this.transferSites = [];
+    this.syncTransferLocationIds();
    
     if (this.transferProvinceName) {
       this.loadTransferDistricts(this.transferProvinceName);
@@ -373,6 +380,7 @@ export class UserListComponent implements OnInit, OnDestroy {
     const cachedDistricts = this.locationService.getCachedDistricts(provinceName);
     if (cachedDistricts && cachedDistricts.length > 0) {
       this.transferDistricts = cachedDistricts;
+      this.syncTransferLocationIds();
       return;
     }
 
@@ -380,6 +388,7 @@ export class UserListComponent implements OnInit, OnDestroy {
       next: (response: ApiResponse<District[]>) => {
         if (ApiResponseHelper.isSuccess(response) && response.data) {
           this.transferDistricts = response.data;
+          this.syncTransferLocationIds();
         }
       },
       error: (error) => {
@@ -392,6 +401,7 @@ export class UserListComponent implements OnInit, OnDestroy {
     const cachedTehsils = this.locationService.getCachedTehsils(districtName);
     if (cachedTehsils && cachedTehsils.length > 0) {
       this.transferTehsils = cachedTehsils;
+      this.syncTransferLocationIds();
       return;
     }
 
@@ -399,6 +409,7 @@ export class UserListComponent implements OnInit, OnDestroy {
       next: (response: ApiResponse<Tehsil[]>) => {
         if (ApiResponseHelper.isSuccess(response) && response.data) {
           this.transferTehsils = response.data;
+          this.syncTransferLocationIds();
         }
       },
       error: (error) => {
@@ -417,11 +428,17 @@ export class UserListComponent implements OnInit, OnDestroy {
     this.transferSiteName = null;
     this.transferError = null;
 
+    const selectedProvince = this.transferProvinces.find(p => p.province === provinceName) ?? null;
+
     this.transferForm = {
       ...this.transferForm,
       province: provinceName || '',
+      provinceId: selectedProvince?.id ?? null,
       district: '',
+      districtId: null,
       tehsil: '',
+      tehsilId: null,
+      siteId: null,
       siteName: ''
     };
 
@@ -438,10 +455,15 @@ export class UserListComponent implements OnInit, OnDestroy {
     this.transferSiteName = null;
     this.transferError = null;
 
+    const selectedDistrict = this.transferDistricts.find(d => d.district === districtName) ?? null;
+
     this.transferForm = {
       ...this.transferForm,
       district: districtName || '',
+      districtId: selectedDistrict?.id ?? null,
       tehsil: '',
+      tehsilId: null,
+      siteId: null,
       siteName: ''
     };
 
@@ -454,9 +476,14 @@ export class UserListComponent implements OnInit, OnDestroy {
     this.transferTehsilName = tehsilName;
     this.transferSites = [];
     this.transferSiteName = null;
+
+    const selectedTehsil = this.transferTehsils.find(t => t.tehsil === tehsilName) ?? null;
+
     this.transferForm = {
       ...this.transferForm,
       tehsil: tehsilName || '',
+      tehsilId: selectedTehsil?.id ?? null,
+      siteId: null,
       siteName: ''
     };
 
@@ -473,6 +500,7 @@ export class UserListComponent implements OnInit, OnDestroy {
         this.loadingTransferSites = false;
         if (ApiResponseHelper.isSuccess(response) && response.data) {
           this.transferSites = response.data;
+          this.syncTransferLocationIds();
         } else {
           this.transferSites = [];
           this.transferError = response.message || 'Failed to load sites';
@@ -486,10 +514,30 @@ export class UserListComponent implements OnInit, OnDestroy {
       }
     });
   }
-  onTransferSiteNameChange(siteName: string | null): void {
-    this.transferSiteName = siteName;
+
+  private syncTransferLocationIds(): void {
+    const province = this.transferProvinces.find(item => item.province === this.transferProvinceName);
+    const district = this.transferDistricts.find(item => item.district === this.transferDistrictName);
+    const tehsil = this.transferTehsils.find(item => item.tehsil === this.transferTehsilName);
+    const site = this.transferSites.find(item => (item.site || item.sitename) === this.transferSiteName);
+
     this.transferForm = {
       ...this.transferForm,
+      provinceId: province?.id ?? null,
+      districtId: district?.id ?? null,
+      tehsilId: tehsil?.id ?? null,
+      siteId: site?.id ?? this.transferForm.siteId
+    };
+  }
+
+  onTransferSiteNameChange(siteName: string | null): void {
+    this.transferSiteName = siteName;
+
+    const selectedSite = this.transferSites.find(s => (s.site || s.sitename) === siteName) ?? null;
+
+    this.transferForm = {
+      ...this.transferForm,
+      siteId: selectedSite?.id ?? null,
       siteName: siteName || ''
     };
   }
@@ -516,12 +564,20 @@ export class UserListComponent implements OnInit, OnDestroy {
     this.transferSuccess = null;
 
     const location = LocationHelper.fromUser(this.selectedUser);
-    if (!location.province) {
+    if (!this.transferForm.provinceId) {
       this.transferError = 'Please select a province';
       return;
     }
-    if (!location.district) {
+    if (!this.transferForm.districtId) {
       this.transferError = 'Please select a district';
+      return;
+    }
+    if (!this.transferForm.tehsilId) {
+      this.transferError = 'Please select a tehsil';
+      return;
+    }
+    if (!this.transferForm.siteId && !this.transferForm.siteName) {
+      this.transferError = 'Please select a site';
       return;
     }
 
