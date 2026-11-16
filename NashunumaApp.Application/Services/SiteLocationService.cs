@@ -187,7 +187,7 @@ namespace NashunumaApp.Application.Services
                 entity.SiteTarget = request.SiteTarget;
                 entity.Latitude = request.Latitude;
                 entity.Longitude = request.Longitude;
-                entity.IsActive = request.IsActive ? 1 : 0;
+                entity.IsActive = entity.IsActive;
                 entity.UpdatedBy = currentUser;
                 entity.UpdatedOn = DateTime.UtcNow;
 

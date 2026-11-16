@@ -192,11 +192,11 @@ namespace NashunumaApp.Infrastructure.Repositories
                 .AnyAsync(g =>
                     g.PId == provinceId &&
                     g.DId == districtId &&
-                    g.TId == tehsilId &&
+                    g.TId == tehsilId ||
                     (ucId == null || g.UcId == ucId.Value) &&
                     g.Province != null && g.Province.ToLower() == provinceName.ToLower() &&
                     g.District != null && g.District.ToLower() == districtName.ToLower() &&
-                    g.Tehsil != null && g.Tehsil.ToLower() == tehsilName.ToLower() &&
+                    g.Tehsil != null && g.Tehsil.ToLower() == tehsilName.ToLower() ||
                     (ucId == null || (g.Uc != null && g.Uc.ToLower() == ucName!.ToLower())),
                     ct);
 
