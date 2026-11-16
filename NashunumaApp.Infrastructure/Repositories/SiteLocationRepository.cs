@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using NashunumaApp.Domain.Common.DTOs;
 using NashunumaApp.Domain.Entities;
 using NashunumaApp.Domain.Interfaces;
+using NashunumaApp.Infrastructure.TempOracleEntities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -120,8 +121,7 @@ namespace NashunumaApp.Infrastructure.Repositories
 
         // -------------------- Names resolution --------------------
 
-        public async Task<(string? Province, string? District, string? Tehsil)> ResolveNamesAsync(
-            decimal provinceId, decimal districtId, decimal tehsilId, CancellationToken ct = default)
+        public async Task<(string? Province, string? District, string? Tehsil, string? Uc)> ResolveNamesAsync(decimal provinceId, decimal districtId, decimal tehsilId, decimal? ucId, CancellationToken ct = default)
         {
             var province = await _context.NdepLibProvinces.AsNoTracking()
                 .Where(p => p.PROVCODE == provinceId)
@@ -134,10 +134,104 @@ namespace NashunumaApp.Infrastructure.Repositories
             var tehsil = await _context.NdepLibTehsils.AsNoTracking()
                 .Where(t => t.TEHSILCODE == tehsilId && t.DISTCODE == districtId)
                 .Select(t => t.TEHSIL).FirstOrDefaultAsync(ct);
+            var uc = await _context.NdepLibUCs.AsNoTracking()
+                .Where(t => t.UCCODE == ucId && t.TEHSILCODE == tehsilId)
+                .Select(t => t.UC).FirstOrDefaultAsync(ct);
 
-            return (province, district, tehsil);
+            return (province?.ToLower(), district?.ToLower(), tehsil?.ToLower(), uc?.ToLower());
         }
 
+        //public async Task<(string? Province, string? District, string? Tehsil, string? Uc)> ResolveNamesAsync(decimal provinceId,decimal districtId, decimal tehsilId,decimal? ucId,string provinceName,
+        // string districtName,string tehsilName, string? ucName, CancellationToken ct = default)
+        //{
+        //    var rows = await _context.NthGeoLocations.AsNoTracking()
+        //        .Where(g => g.PId == provinceId &&
+        //                    g.DId == districtId &&
+        //                    g.TId == tehsilId &&
+        //                    (ucId == null || g.UcId == ucId.Value))
+        //        .Select(g => new { g.Province, g.District, g.Tehsil, g.Uc })
+        //        .ToListAsync(ct);
+
+        //    var row = rows.FirstOrDefault(r =>
+        //        string.Equals(r.Province, provinceName, StringComparison.OrdinalIgnoreCase) &&
+        //        string.Equals(r.District, districtName, StringComparison.OrdinalIgnoreCase) &&
+        //        string.Equals(r.Tehsil, tehsilName, StringComparison.OrdinalIgnoreCase) &&
+        //        (ucId == null || string.Equals(r.Uc, ucName, StringComparison.OrdinalIgnoreCase)));
+
+        //    return (row?.Province?.ToLower(),row?.District?.ToLower(),row?.Tehsil?.ToLower(),row?.Uc?.ToLower()
+        //    );
+        //}
+        // -------------------- Dropdown Lookups --------------------
+
+        public async Task<List<SiteDropdownDto>> GetSitesByFiltersAsync(decimal? provinceId = null,decimal? districtId = null,decimal? tehsilId = null, CancellationToken ct = default)
+        {
+            var query = _context.NthSiteLocations.AsNoTracking();
+
+            if (provinceId.HasValue)
+                query = query.Where(s => s.ProvinceId == provinceId.Value);
+
+            if (districtId.HasValue)
+                query = query.Where(s => s.DistrictId == districtId.Value);
+
+            if (tehsilId.HasValue)
+                query = query.Where(s => s.TehsilId == tehsilId.Value);
+
+            return await query
+                .Where(s => s.SiteName != null)
+                .OrderBy(s => s.SiteName)
+                .Select(s => new SiteDropdownDto { Id = s.Id, SiteName = s.SiteName })
+                .ToListAsync(ct);
+        }
+
+        // -------------------- Geolocation Data Creation --------------------
+
+        public async Task CreateGeolocationDataIfNotExistsAsync(string currentUser, decimal provinceId, decimal districtId,decimal tehsilId,decimal? ucId,string provinceName,
+                string districtName,string tehsilName,string? ucName, CancellationToken ct = default)
+        {
+            var exists = await _context.NthGeoLocations.AsNoTracking()
+                .AnyAsync(g =>
+                    g.PId == provinceId &&
+                    g.DId == districtId &&
+                    g.TId == tehsilId &&
+                    (ucId == null || g.UcId == ucId.Value) &&
+                    g.Province != null && g.Province.ToLower() == provinceName.ToLower() &&
+                    g.District != null && g.District.ToLower() == districtName.ToLower() &&
+                    g.Tehsil != null && g.Tehsil.ToLower() == tehsilName.ToLower() &&
+                    (ucId == null || (g.Uc != null && g.Uc.ToLower() == ucName!.ToLower())),
+                    ct);
+
+            if (exists)
+                return;
+
+            var country = await _context.NthGeoLocations.AsNoTracking()
+                .Where(g => g.PId == provinceId && g.Country != null)
+                .Select(g => g.Country)
+                .FirstOrDefaultAsync(ct);
+
+            var entity = new NthGeoLocation
+            {
+                Country = country ?? "PAKISTAN",
+                Province = provinceName,
+                PId = provinceId,
+
+                District = districtName,
+                DId = districtId,
+
+                Tehsil = tehsilName,
+                TId = tehsilId,
+
+                Uc = ucId.HasValue ? ucName : null,
+                UcId = ucId ?? 0m,
+                Village = null,
+                VId = 0m,
+                Remarks = null,
+                EnteredOn = DateTime.UtcNow,
+                EnteredBy = currentUser
+            };
+
+            _context.NthGeoLocations.Add(entity);
+            await _context.SaveChangesAsync(ct);
+        }
         // -------------------- Mapping --------------------
 
         private static SiteLocationDto Map(NthSiteLocation x) => new()

@@ -142,16 +142,19 @@ export class FoodStockListComponent implements OnInit, OnDestroy {
     ).subscribe({
       next: (response: ApiResponse<PaginatedResponse<FoodStock>>) => {
         if (response.isSuccess && response.data) {
-          this.foodStocks = response.data.items.map((item, index) => ({
-            ...item,
-            srNo: (this.pageNumber - 1) * this.pageSize + index + 1,
-            wawa: this.calculateWawa(item),
-            mamta: this.calculateMamta(item),
-            rutf: this.calculateRutf(item),
-            ifa: item.ifaClosing || 'N/A',
-            dated: this.formatDate(item.enteredOn),
-            activityTime: this.formatTime(item.enteredOn)
-          }));
+          this.foodStocks = response.data.items.map((item, index) => {
+            const normalized = { ...item, ...this.normalizeStockFields(item) };
+            return {
+              ...normalized,
+              srNo: (this.pageNumber - 1) * this.pageSize + index + 1,
+              wawa: this.calculateWawa(normalized),
+              mamta: this.calculateMamta(normalized),
+              rutf: this.calculateRutf(normalized),
+              ifa: normalized.ifaClosing || 'N/A',
+              dated: this.formatDate(normalized.enteredOn),
+              activityTime: this.formatTime(normalized.enteredOn)
+            };
+          });
           this.totalItems = response.data.totalCount;
         } else {
           this.error = response.message || 'Failed to load food stocks';
@@ -198,6 +201,43 @@ export class FoodStockListComponent implements OnInit, OnDestroy {
     const received = parseInt(item.rutfReceived || '0');
     const distributed = parseInt(item.rutfDistributed || '0');
     return opening + received - distributed;
+  }
+
+  private normalizeStockFields(item: FoodStock): Partial<FoodStock> {
+    const source = item as unknown as Record<string, unknown>;
+    const aliases: Record<string, string[]> = {
+      openingStockBoxesMamta: ['OpeningStockBoxesMamta', 'OPENING_STOCK_BOXES_MAMTA'],
+      receivedStockBoxesMamta: ['ReceivedStockBoxesMamta', 'RECEIVED_STOCK_BOXES_MAMTA'],
+      distributedBoxesMamta: ['DistributedBoxesMamta', 'DISTRIBUTED_BOXES_MAMTA'],
+      closingStockBoxesMamta: ['ClosingStockBoxesMamta', 'CLOSING_STOCK_BOXES_MAMTA'],
+      openingStockBoxesWawa: ['OpeningStockBoxesWawa', 'OPENING_STOCK_BOXES_WAWA'],
+      receivedStockBoxesWawa: ['ReceivedStockBoxesWawa', 'RECEIVED_STOCK_BOXES_WAWA'],
+      distributedBoxesWawa: ['DistributedBoxesWawa', 'DISTRIBUTED_BOXES_WAWA'],
+      closingStockBoxesWawa: ['ClosingStockBoxesWawa', 'CLOSING_STOCK_BOXES_WAWA'],
+      openingStockSachetsMamta: ['OpeningStockSachetsMamta', 'OPENING_STOCK_SACHETS_MAMTA'],
+      receivedStockSachetsMamta: ['ReceivedStockSachetsMamta', 'RECEIVED_STOCK_SACHETS_MAMTA'],
+      distributedSachetsMamta: ['DistributedSachetsMamta', 'DISTRIBUTED_SACHETS_MAMTA'],
+      closingStockSachetsMamta: ['ClosingStockSachetsMamta', 'CLOSING_STOCK_SACHETS_MAMTA'],
+      openingStockSachetsWawa: ['OpeningStockSachetsWawa', 'OPENING_STOCK_SACHETS_WAWA'],
+      receivedStockSachetsWawa: ['ReceivedStockSachetsWawa', 'RECEIVED_STOCK_SACHETS_WAWA'],
+      distributedSachetsWawa: ['DistributedSachetsWawa', 'DISTRIBUTED_SACHETS_WAWA'],
+      closingStockSachetsWawa: ['ClosingStockSachetsWawa', 'CLOSING_STOCK_SACHETS_WAWA'],
+      rutfOpening: ['RutfOpening', 'RUTF_OPENING'],
+      rutfReceived: ['RutfReceived', 'RUTF_RECEIVED'],
+      rutfDistributed: ['RutfDistributed', 'RUTF_DISTRIBUTED'],
+      rutfClosing: ['RutfClosing', 'RUTF_CLOSING'],
+      ifaOpening: ['IfaOpening', 'IFA_OPENING'],
+      ifaReceived: ['IfaReceived', 'IFA_RECEIVED'],
+      ifaDistributed: ['IfaDistributed', 'IFA_DISTRIBUTED'],
+      ifaClosing: ['IfaClosing', 'IFA_CLOSING']
+    };
+
+    const normalized: Record<string, unknown> = {};
+    for (const [field, keys] of Object.entries(aliases)) {
+      const value = source[field] ?? keys.map(key => source[key]).find(candidate => candidate !== null && candidate !== undefined);
+      if (value !== undefined) normalized[field] = value;
+    }
+    return normalized as Partial<FoodStock>;
   }
 
   private parseFlexibleDate(dateString: string | null): Date | null {
@@ -255,14 +295,7 @@ export class FoodStockListComponent implements OnInit, OnDestroy {
   }
 
   addNew(): void {
-    const dates = this.missingStockDates.map(item => item.date).filter(Boolean);
-    if (!dates.length) return;
-
-    this.authService.startMissingSequence(dates);
-    const date = this.authService.popNextMissingDate();
-    if (date) {
-      this.router.navigate(['/foodstock/create'], { queryParams: { date } });
-    }
+    this.router.navigate(['/foodstock/create']);
   }
 
   openDetails(item: FoodStock): void {

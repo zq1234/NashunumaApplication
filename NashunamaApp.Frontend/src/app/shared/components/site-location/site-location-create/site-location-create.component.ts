@@ -1,7 +1,7 @@
 // src/app/features/site-location/site-location-create/site-location-create.component.ts
 import {
-  Component, Input, Output, EventEmitter, OnInit,
-  OnDestroy, inject
+  Component, Input, Output, EventEmitter, OnInit, OnChanges,
+  OnDestroy, SimpleChanges, inject
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
@@ -35,9 +35,10 @@ import { ButtonComponent } from '@shared/components/ui/button/button.component';
   templateUrl: './site-location-create.component.html',
   styleUrls: ['./site-location-create.component.css']
 })
-export class SiteLocationCreateComponent implements OnInit, OnDestroy {
+export class SiteLocationCreateComponent implements OnInit, OnChanges, OnDestroy {
   /** Controls the modal open state — same contract as your MissingStock popup */
   @Input() isOpen = false;
+  @Input() site: SiteLocation | null = null;
 
   /** Emitted when the dialog should close (dismiss or cancel) */
   @Output() close = new EventEmitter<void>();
@@ -67,7 +68,8 @@ export class SiteLocationCreateComponent implements OnInit, OnDestroy {
     tehsilId: [null as number | null, Validators.required],
     ucId: [null as number | null],
     isMobileSite: [false],
-    contact: [''],
+    isActive: [true],
+    contact: ['', Validators.pattern(/^03\d{2}-\d{7}$/)],
     headName: [''],
     siteTarget: [null as number | null],
     geoLocation: [''],
@@ -80,8 +82,20 @@ export class SiteLocationCreateComponent implements OnInit, OnDestroy {
     // Load provinces once — safe to do in init even when modal is closed
     const s = this.svc.getProvinces().subscribe(res => {
       this.provinces = ApiResponseHelper.isSuccess(res) ? res.data : [];
+      if (this.isOpen && this.site) this.populateForEdit(this.site);
     });
     this.subs.add(s);
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (!this.isOpen) return;
+    if (changes['site'] || changes['isOpen']) {
+      if (this.site) {
+        if (this.provinces.length) this.populateForEdit(this.site);
+      } else {
+        this.reset();
+      }
+    }
   }
 
   ngOnDestroy(): void {
@@ -149,21 +163,28 @@ export class SiteLocationCreateComponent implements OnInit, OnDestroy {
     this.saving = true;
     this.errorMessage = null;
 
-    const s = this.svc.createSite({
+    const request = {
       siteName: (v.siteName ?? '').trim(),
       provinceId: v.provinceId!,
       districtId: v.districtId!,
       tehsilId: v.tehsilId!,
       ucId: v.ucId,
-      isMobileSite: v.isMobileSite ? 'Yes' : 'No',
-      contact: v.contact,
+      isMobileSite: v.isMobileSite ? '1' : '0',
+      contact: this.mobileDigits(v.contact),
       headName: v.headName,
       siteTarget: v.siteTarget,
       geoLocation: v.geoLocation,
       latitude: v.latitude,
       longitude: v.longitude,
-      address: v.address
-    }).subscribe({
+      address: v.address,
+      isActive: v.isActive ?? true
+    };
+
+    const request$ = this.site
+      ? this.svc.updateSite(this.site.id, request)
+      : this.svc.createSite(request);
+
+    const s = request$.subscribe({
       next: res => {
         this.saving = false;
         if (ApiResponseHelper.isSuccess(res) && res.data) {
@@ -191,6 +212,7 @@ export class SiteLocationCreateComponent implements OnInit, OnDestroy {
       tehsilId: null,
       ucId: null,
       isMobileSite: false,
+      isActive: true,
       contact: '',
       headName: '',
       siteTarget: null,
@@ -203,5 +225,57 @@ export class SiteLocationCreateComponent implements OnInit, OnDestroy {
     this.tehsils = [];
     this.ucs = [];
     this.errorMessage = null;
+  }
+
+  private populateForEdit(site: SiteLocation): void {
+    this.errorMessage = null;
+    this.svc.getDistricts(site.provinceId!).subscribe(response => {
+      if (!ApiResponseHelper.isSuccess(response) || this.site?.id !== site.id) return;
+      this.districts = response.data;
+
+      this.svc.getTehsils(site.districtId!).subscribe(tehsilResponse => {
+        if (!ApiResponseHelper.isSuccess(tehsilResponse) || this.site?.id !== site.id) return;
+        this.tehsils = tehsilResponse.data;
+
+        this.svc.getUcs(site.tehsilId!).subscribe(ucResponse => {
+          if (!ApiResponseHelper.isSuccess(ucResponse) || this.site?.id !== site.id) return;
+          this.ucs = ucResponse.data;
+          this.form.patchValue({
+            siteName: site.siteName ?? '',
+            provinceId: site.provinceId,
+            districtId: site.districtId,
+            tehsilId: site.tehsilId,
+            ucId: site.ucId,
+            isMobileSite: this.isYes(site.isMobileSite),
+            // isActive: site.isActive,
+            contact: site.contact ?? '',
+            headName: site.headName ?? '',
+            siteTarget: site.siteTarget,
+            geoLocation: site.geoLocation ?? '',
+            latitude: site.latitude,
+            longitude: site.longitude,
+            address: site.address ?? ''
+          });
+        });
+      });
+    });
+  }
+
+  private isYes(value: string | null): boolean {
+    return value?.toLowerCase() === 'yes' || value === '1' || value?.toLowerCase() === 'true';
+  }
+
+  formatContactInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const digits = input.value.replace(/\D/g, '').slice(0, 11);
+    input.value = digits.length > 4
+      ? `${digits.slice(0, 4)}-${digits.slice(4)}`
+      : digits;
+    this.form.controls.contact.setValue(input.value);
+  }
+
+  private mobileDigits(value: string | null): string | null {
+    const digits = value?.replace(/\D/g, '') ?? '';
+    return digits || null;
   }
 }

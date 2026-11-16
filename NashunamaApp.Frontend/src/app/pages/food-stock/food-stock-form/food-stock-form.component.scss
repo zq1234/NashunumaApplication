@@ -31,21 +31,71 @@
 
 .stock-section-heading {
   margin-bottom: 1rem;
-  padding-left: 0.75rem;
-  border-left: 3px solid #0f766e;
+  padding: 0.85rem 1rem;
+  border-left: 4px solid #0f766e;
+  border-radius: 0 0.65rem 0.65rem 0;
+  background: #ecfdf5;
 }
 
 .stock-section-heading h2 {
   margin: 0;
-  color: #111827;
+  color: #064e3b;
   font-size: 1rem;
   font-weight: 700;
 }
 
 .stock-section-heading p {
   margin: 0.2rem 0 0;
-  color: #6b7280;
+  color: #047857;
   font-size: 0.8rem;
+}
+
+.stock-section:nth-child(1) .stock-section-heading { border-color: #0284c7; background: #f0f9ff; }
+.stock-section:nth-child(1) .stock-section-heading h2 { color: #075985; }
+.stock-section:nth-child(1) .stock-section-heading p { color: #0369a1; }
+.stock-section:nth-child(2) .stock-section-heading { border-color: #16a34a; background: #f0fdf4; }
+.stock-section:nth-child(2) .stock-section-heading h2 { color: #166534; }
+.stock-section:nth-child(2) .stock-section-heading p { color: #15803d; }
+.stock-section:nth-child(3) .stock-section-heading { border-color: #d97706; background: #fffbeb; }
+.stock-section:nth-child(3) .stock-section-heading h2 { color: #92400e; }
+.stock-section:nth-child(3) .stock-section-heading p { color: #b45309; }
+.stock-section:nth-child(4) .stock-section-heading { border-color: #e11d48; background: #fff1f2; }
+.stock-section:nth-child(4) .stock-section-heading h2 { color: #9f1239; }
+.stock-section:nth-child(4) .stock-section-heading p { color: #be123c; }
+.stock-section:nth-child(5) .stock-section-heading { border-color: #0891b2; background: #ecfeff; }
+.stock-section:nth-child(5) .stock-section-heading h2 { color: #155e75; }
+.stock-section:nth-child(5) .stock-section-heading p { color: #0e7490; }
+.stock-section:nth-child(6) .stock-section-heading { border-color: #7c3aed; background: #f5f3ff; }
+.stock-section:nth-child(6) .stock-section-heading h2 { color: #5b21b6; }
+.stock-section:nth-child(6) .stock-section-heading p { color: #6d28d9; }
+.stock-section:nth-child(7) .stock-section-heading { border-color: #475569; background: #f8fafc; }
+.stock-section:nth-child(7) .stock-section-heading h2 { color: #334155; }
+
+.stock-site-select {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  background: #fff;
+  color: #374151;
+  font-size: 0.875rem;
+}
+
+.stock-site-select:focus {
+  border-color: #0f766e;
+  outline: 2px solid rgb(15 118 110 / 15%);
+}
+
+:host-context(.dark) .stock-site-select {
+  border-color: #374151;
+  background: #111827;
+  color: #e5e7eb;
+}
+
+:host-context(.dark) .stock-section-heading h2,
+:host-context(.dark) .stock-section-heading p {
+  filter: brightness(1.3);
 }
 
 .stock-fields-grid {

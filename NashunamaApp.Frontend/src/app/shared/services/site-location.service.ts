@@ -65,6 +65,25 @@ export class SiteLocationService {
     return this.cachedGet<UcLookup[]>('siteLocation.getUcs', {}, { tehsilId });
   }
 
+  getSitesByFilters(
+    provinceId?: number | null,
+    districtId?: number | null,
+    tehsilId?: number | null
+  ): Observable<ApiResponse<SiteLocation[]>> {
+    let params = new HttpParams();
+    if (provinceId != null) params = params.set('provinceId', provinceId.toString());
+    if (districtId != null) params = params.set('districtId', districtId.toString());
+    if (tehsilId != null) params = params.set('tehsilId', tehsilId.toString());
+
+    return this.http.get<ApiResponse<SiteLocation[]>>(
+      this.resolve('siteLocation.getSites'),
+      { params }
+    ).pipe(
+      retry(3),
+      catchError(this.handleError<SiteLocation[]>('getSitesByFilters'))
+    );
+  }
+
   // ============================================================
   // GET PAGINATED SITES
   // ============================================================

@@ -107,30 +107,47 @@ export class FoodStockSiteHistoryComponent implements OnInit {
   }
 
   getRecordValue(record: FoodStock, group: string, product: string): string {
-    const groupPrefix: Record<string, string> = {
-      Received: 'received',
-      Opening: 'opening',
-      Distributed: 'distributed',
-      Closing: 'closing'
+    const fields: Record<string, Record<string, keyof FoodStock>> = {
+      Received: {
+        'Mamta Boxes': 'receivedStockBoxesMamta',
+        'Wawa Boxes': 'receivedStockBoxesWawa',
+        'Mamta Sachets': 'receivedStockSachetsMamta',
+        'Wawa Sachets': 'receivedStockSachetsWawa',
+        RUTF: 'rutfReceived',
+        IFA: 'ifaReceived',
+        MMS: 'mmsReceived'
+      },
+      Opening: {
+        'Mamta Boxes': 'openingStockBoxesMamta',
+        'Wawa Boxes': 'openingStockBoxesWawa',
+        'Mamta Sachets': 'openingStockSachetsMamta',
+        'Wawa Sachets': 'openingStockSachetsWawa',
+        RUTF: 'rutfOpening',
+        IFA: 'ifaOpening',
+        MMS: 'mmsOpening'
+      },
+      Distributed: {
+        'Mamta Boxes': 'distributedBoxesMamta',
+        'Wawa Boxes': 'distributedBoxesWawa',
+        'Mamta Sachets': 'distributedSachetsMamta',
+        'Wawa Sachets': 'distributedSachetsWawa',
+        RUTF: 'rutfDistributed',
+        IFA: 'ifaDistributed',
+        MMS: 'mmsDistributed'
+      },
+      Closing: {
+        'Mamta Boxes': 'closingStockBoxesMamta',
+        'Wawa Boxes': 'closingStockBoxesWawa',
+        'Mamta Sachets': 'closingStockSachetsMamta',
+        'Wawa Sachets': 'closingStockSachetsWawa',
+        RUTF: 'rutfClosing',
+        IFA: 'ifaClosing',
+        MMS: 'mmsClosing'
+      }
     };
-    const productSuffix: Record<string, string> = {
-      'Mamta Boxes': 'StockBoxesMamta',
-      'Wawa Boxes': 'StockBoxesWawa',
-      'Mamta Sachets': 'StockSachetsMamta',
-      'Wawa Sachets': 'StockSachetsWawa',
-      RUTF: 'Rutf',
-      IFA: 'Ifa'
-    };
-    const prefix = groupPrefix[group];
-    const suffix = productSuffix[product];
-    if (!prefix || !suffix) return '0';
 
-    const field = product === 'RUTF'
-      ? `rutf${group}`
-      : product === 'IFA'
-        ? `ifa${group}`
-        : `${prefix}${suffix}`;
-    return this.value((record as any)[field]);
+    const field = fields[group]?.[product];
+    return field ? this.value(record[field]) : '0';
   }
 
   private normalizeRecord(source: FoodStock): FoodStock {

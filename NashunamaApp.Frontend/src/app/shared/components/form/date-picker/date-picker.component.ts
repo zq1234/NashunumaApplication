@@ -22,6 +22,7 @@ export class DatePickerComponent {
   @Input() missingDates: string[] = [];
   @Input() onlyDate: string | null = null;
   @Input() maxDate?: string;
+  @Input() disableWeekends = false;
   @Output() dateChange = new EventEmitter<any>();
 
   @ViewChild('dateInput', { static: false }) dateInput!: ElementRef<HTMLInputElement>;
@@ -48,7 +49,7 @@ export class DatePickerComponent {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (this.flatpickrInstance && (changes['latestEnteredDate'] || changes['missingDates'] || changes['onlyDate'] || changes['maxDate'])) {
+    if (this.flatpickrInstance && (changes['latestEnteredDate'] || changes['missingDates'] || changes['onlyDate'] || changes['maxDate'] || changes['disableWeekends'])) {
       this.flatpickrInstance.set('maxDate', this.maxDate ?? '');
       this.flatpickrInstance.set('disable', [(date: Date) => this.isDisabledDate(date)]);
     }
@@ -68,6 +69,10 @@ export class DatePickerComponent {
   }
 
   private isDisabledDate(date: Date): boolean {
+    if (this.disableWeekends && (date.getDay() === 0 || date.getDay() === 6)) {
+      return true;
+    }
+
     const dateKey = this.toDateKey(date);
     const maxDateKey = this.maxDate === 'today'
       ? this.toDateKey(new Date())

@@ -100,7 +100,7 @@
         <section *ngFor="let group of ['Received', 'Opening', 'Distributed', 'Closing']" class="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
           <h3 class="bg-amber-700 px-3 py-2 text-sm font-semibold text-white">{{ group }} Stock</h3>
           <div class="divide-y divide-gray-100 dark:divide-gray-800">
-            <div *ngFor="let product of ['Mamta Boxes', 'Wawa Boxes', 'Mamta Sachets', 'Wawa Sachets', 'RUTF', 'IFA']" class="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+            <div *ngFor="let product of ['Mamta Boxes', 'Wawa Boxes', 'Mamta Sachets', 'Wawa Sachets', 'RUTF', 'IFA', 'MMS']" class="flex items-center justify-between gap-3 px-3 py-2 text-sm">
               <span class="text-gray-600 dark:text-gray-300">{{ product }}</span>
               <strong class="text-gray-900 dark:text-white">{{ getRecordValue(record, group, product) }}</strong>
             </div>

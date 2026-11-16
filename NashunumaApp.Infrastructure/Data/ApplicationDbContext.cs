@@ -16,7 +16,7 @@ public partial class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public virtual DbSet<NthMotherTrimister> NthMotherTrimisters { get; set; }
     public virtual DbSet<NthChildInformation> NthChildInformations { get; set; }
     public virtual DbSet<NthChildVisitDetail> NthChildVisitDetails { get; set; }
-    //public virtual DbSet<NthGeoLocation> NthGeoLocations { get; set; }
+    public virtual DbSet<NthGeoLocation> NthGeoLocations { get; set; }
     //public virtual DbSet<NthAdolescenceChildVisitDetail> NthAdolescenceChildVisitDetails { get; set; }
     //public virtual DbSet<NthNadraChildVerification> NthNadraChildVerifications { get; set; }
     public virtual DbSet<NthProvince> NthProvinces { get; set; }
@@ -80,7 +80,80 @@ public partial class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(e => e.TotalTransferCount).HasColumnType("NUMBER").HasColumnName("TOTAL_TRANSFER_COUNT");
             entity.HasIndex(e => new { e.Username, e.TransferredAt });
         });
+        modelBuilder.Entity<NthGeoLocation>(entity =>
+        {
+            entity.ToTable("NTH_GEO_LOCATION", "BISP_NASHUNUMA");
 
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.Id)
+                .HasColumnName("ID")
+                .HasColumnType("NUMBER")
+                .ValueGeneratedOnAdd();
+
+            entity.Property(e => e.Country)
+                .HasColumnName("COUNTRY")
+                .HasColumnType("VARCHAR2(50)")
+                .HasMaxLength(50);
+
+            entity.Property(e => e.Province)
+                .HasColumnName("PROVINCE")
+                .HasColumnType("VARCHAR2(50)")
+                .HasMaxLength(50);
+
+            entity.Property(e => e.PId)
+                .HasColumnName("P_ID")
+                .HasColumnType("NUMBER");
+
+            entity.Property(e => e.District)
+                .HasColumnName("DISTRICT")
+                .HasColumnType("VARCHAR2(50)")
+                .HasMaxLength(50);
+
+            entity.Property(e => e.DId)
+                .HasColumnName("D_ID")
+                .HasColumnType("NUMBER");
+
+            entity.Property(e => e.Tehsil)
+                .HasColumnName("TEHSIL")
+                .HasColumnType("VARCHAR2(50)")
+                .HasMaxLength(50);
+
+            entity.Property(e => e.TId)
+                .HasColumnName("T_ID")
+                .HasColumnType("NUMBER");
+
+            entity.Property(e => e.Uc)
+                .HasColumnName("UC")
+                .HasColumnType("VARCHAR2(50)")
+                .HasMaxLength(50);
+
+            entity.Property(e => e.UcId)
+                .HasColumnName("UC_ID")
+                .HasColumnType("NUMBER");
+
+            entity.Property(e => e.Village)
+                .HasColumnName("VILLAGE")
+                .HasColumnType("VARCHAR2(50)")
+                .HasMaxLength(50);
+
+            entity.Property(e => e.VId)
+                .HasColumnName("V_ID")
+                .HasColumnType("NUMBER");
+
+            entity.Property(e => e.Remarks)
+                .HasColumnName("REMARKS")
+                .HasColumnType("VARCHAR2(20)")
+                .HasMaxLength(20);
+
+            entity.Property(e => e.EnteredOn)
+                .HasColumnName("ENTEREDON")
+                .HasColumnType("DATE");
+            entity.Property(e => e.EnteredBy)
+               .HasColumnName("ENTEREDBY")
+               .HasColumnType("VARCHAR2(100)")
+               .HasMaxLength(100);
+        });
         modelBuilder.Entity<NthSiteLocation>(entity =>
         {
             //entity

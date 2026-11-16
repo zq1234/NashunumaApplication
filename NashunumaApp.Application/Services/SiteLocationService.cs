@@ -24,8 +24,7 @@ namespace NashunumaApp.Application.Services
             _mapper = mapper;
         }
 
-        public async Task<ApiResponse<PaginatedResponse<SiteLocationDto>>> GetAllAsync(
-            int pageNumber = 1, int pageSize = 10, string? search = null, CancellationToken ct = default)
+        public async Task<ApiResponse<PaginatedResponse<SiteLocationDto>>> GetAllAsync(int pageNumber = 1, int pageSize = 10, string? search = null, CancellationToken ct = default)
         {
             try
             {
@@ -68,7 +67,7 @@ namespace NashunumaApp.Application.Services
             }
         }
 
-        public async Task<ApiResponse<SiteLocationDto>> CreateAsync(CreateSiteLocationRequest request, string currentUser,CancellationToken ct = default)
+        public async Task<ApiResponse<SiteLocationDto>> CreateAsync(CreateSiteLocationRequest request,string currentUser,CancellationToken ct = default)
         {
             try
             {
@@ -76,7 +75,14 @@ namespace NashunumaApp.Application.Services
                     return ApiResponse<SiteLocationDto>.Failure(
                         $"A site named '{request.SiteName}' already exists");
 
-                var names = await _repository.ResolveNamesAsync( request.ProvinceId, request.DistrictId,request.TehsilId,ct);
+                // 1. Ensure NthGeoLocation row exists, matching BOTH ids and names
+               
+
+                // 2. Resolve canonical names from the (now guaranteed) row
+                var names = await _repository.ResolveNamesAsync(request.ProvinceId, request.DistrictId, request.TehsilId, request.UcId, ct);
+
+                await _repository.CreateGeolocationDataIfNotExistsAsync(currentUser, request.ProvinceId, request.DistrictId, request.TehsilId, request.UcId, names.Province, names.District,
+                    names.Tehsil, names.Uc, ct);
 
                 if (names.Province == null)
                     return ApiResponse<SiteLocationDto>.Failure("Invalid province");
@@ -91,10 +97,8 @@ namespace NashunumaApp.Application.Services
 
                 var entity = new NthSiteLocation
                 {
-                    // Primary information
-                    SiteName = request.SiteName.Trim(),
+                    SiteName = request.SiteName.Trim().ToLower(),
 
-                    // Original location information
                     ProvinceId = request.ProvinceId,
                     Province = names.Province,
                     DistrictId = request.DistrictId,
@@ -102,7 +106,6 @@ namespace NashunumaApp.Application.Services
                     TehsilId = request.TehsilId,
                     Tehsil = names.Tehsil,
 
-                    // New location information
                     ProvinceIdNew = request.ProvinceId,
                     ProvinceNew = names.Province,
                     DistrictIdNew = request.DistrictId,
@@ -110,7 +113,6 @@ namespace NashunumaApp.Application.Services
                     TehsilIdNew = request.TehsilId,
                     TehsilNew = names.Tehsil,
 
-                    // Site details
                     Address = request.Address,
                     Contact = request.Contact,
                     GeoLocation = request.GeoLocation,
@@ -119,18 +121,15 @@ namespace NashunumaApp.Application.Services
                     Latitude = null,
                     Longitude = null,
 
-                    // Site status
                     IsActive = 0,
                     IsClosed = null,
                     IsMobileSite = request.IsMobileSite,
 
-                    // Location matching information
-                    MatchedP = "true",
-                    MatchedD = "true",
-                    MatchedT = "true" ,
-                    IsManualUpdate = "true",
+                    MatchedP = "YES",
+                    MatchedD = "YES",
+                    MatchedT = "YES",
+                    IsManualUpdate = "YES",
 
-                    // Audit information
                     CreatedBy = currentUser,
                     CreatedOn = DateTime.UtcNow,
                     UpdatedBy = null,
@@ -153,8 +152,7 @@ namespace NashunumaApp.Application.Services
                     $"Failed to create site location: {ex.Message}");
             }
         }
-        public async Task<ApiResponse<SiteLocationDto>> UpdateAsync(
-            decimal id, UpdateSiteLocationRequest request, string currentUser, CancellationToken ct = default)
+        public async Task<ApiResponse<SiteLocationDto>> UpdateAsync(decimal id, UpdateSiteLocationRequest request, string currentUser, CancellationToken ct = default)
         {
             try
             {
@@ -165,8 +163,7 @@ namespace NashunumaApp.Application.Services
                 if (await _repository.ExistsByNameAsync(request.SiteName, id, ct))
                     return ApiResponse<SiteLocationDto>.Failure($"A site named '{request.SiteName}' already exists");
 
-                var names = await _repository.ResolveNamesAsync(
-                    request.ProvinceId, request.DistrictId, request.TehsilId, ct);
+                var names = await _repository.ResolveNamesAsync(request.ProvinceId, request.DistrictId, request.TehsilId, request.UcId, ct);
 
                 if (names.Province == null)
                     return ApiResponse<SiteLocationDto>.Failure("Invalid province");
@@ -175,7 +172,8 @@ namespace NashunumaApp.Application.Services
                 if (names.Tehsil == null)
                     return ApiResponse<SiteLocationDto>.Failure("Tehsil does not belong to the selected district");
 
-                entity.SiteName = request.SiteName.Trim();
+
+                entity.SiteName = request.SiteName.Trim().ToLower();
                 entity.ProvinceId = request.ProvinceId;
                 entity.Province = names.Province;
                 entity.DistrictId = request.DistrictId;
@@ -276,6 +274,19 @@ namespace NashunumaApp.Application.Services
             catch (Exception ex)
             {
                 return ApiResponse<List<UcDto>>.Failure($"Failed to retrieve UCs: {ex.Message}");
+            }
+        }
+
+        public async Task<ApiResponse<List<SiteDropdownDto>>> GetSitesByFiltersAsync( decimal? provinceId = null, decimal? districtId = null, decimal? tehsilId = null,CancellationToken ct = default)
+        {
+            try
+            {
+                var list = await _repository.GetSitesByFiltersAsync(provinceId, districtId, tehsilId, ct);
+                return ApiResponse<List<SiteDropdownDto>>.Success(list, "Sites retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<List<SiteDropdownDto>>.Failure($"Failed to retrieve sites: {ex.Message}");
             }
         }
     }

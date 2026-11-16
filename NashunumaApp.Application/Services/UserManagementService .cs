@@ -86,8 +86,7 @@ namespace NashunumaApp.Application.Services
             }
         }
 
-        public async Task<ApiResponse<UserDto>> TransferUserLocationAsync(
-            string username, UpdateUserLocationDto locationDto, string modifiedBy)
+        public async Task<ApiResponse<UserDto>> TransferUserLocationAsync(string username, UpdateUserLocationDto locationDto, string modifiedBy)
         {
             UserWithLocationDto? user = null;
             try

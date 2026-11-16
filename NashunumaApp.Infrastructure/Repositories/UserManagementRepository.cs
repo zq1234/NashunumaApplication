@@ -225,6 +225,7 @@ namespace NashunumaApp.Infrastructure.Repositories
                     user.SiteId = siteId;
                     user.SiteName = siteName;
                 }
+                
 
                 var currentTransferCount = user.Istransferred ?? 0;
                 user.Istransferred = currentTransferCount + 1;
@@ -245,7 +246,6 @@ namespace NashunumaApp.Infrastructure.Repositories
         {
             try
             {
-
                 _context.UserLocationTransferAudits.Add(audit);
                 await _context.SaveChangesAsync();
 

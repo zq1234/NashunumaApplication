@@ -3,7 +3,9 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FoodStockService } from '@shared/services/food-stock.service';
+import { SiteLocationService } from '@shared/services/site-location.service';
 import { FoodStock, CreateFoodStockDto, UpdateFoodStockDto } from '@core/models/food-stock.model';
+import { SiteLocation } from '@core/models/site-location.model';
 import { normalizeMissingStockNotification } from '@core/models/missing-stock.model';
 import { AuthService } from '@shared/services/auth.service';
 import { ApiResponse } from '@core/models/api-response.model';
@@ -39,7 +41,8 @@ export class FoodStockFormComponent implements OnInit {
   previousStockMessage: string | null = null;
   latestEnteredDate: string | null = null;
   missingStockDates: string[] = [];
-  lockedEnteredDate: string | null = null;
+  sites: SiteLocation[] = [];
+  sitesLoading = false;
   isEdit = false;
   id: number | null = null;
   private previousStockRequest = 0;
@@ -58,11 +61,13 @@ export class FoodStockFormComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private foodStockService: FoodStockService
-    , private authService: AuthService
+    private foodStockService: FoodStockService,
+    private authService: AuthService,
+    private siteLocationService: SiteLocationService
   ) {}
 
   ngOnInit(): void {
+    this.loadSites();
     const idParam = this.route.snapshot.params['id'];
     if (idParam) {
       this.isEdit = true;
@@ -70,16 +75,9 @@ export class FoodStockFormComponent implements OnInit {
       this.loadStock(this.id);
     }
 
-    // Prefill from query params (e.g., ?date=25-07-2026 or ?siteId=5)
+    // Prefill site from an optional query parameter; entry dates come from missing-date data.
     this.route.queryParams.subscribe(params => {
-      const date = params['date'];
       const siteId = params['siteId'] ?? params['siteid'];
-
-      if (date && !this.isEdit) {
-        // Accept date format as provided (e.g., dd-MM-yyyy)
-        this.stock.enteredOn = date;
-        this.lockedEnteredDate = this.toDateKey(date);
-      }
 
       if (siteId && !this.isEdit) {
         this.stock.siteId = siteId?.toString();
@@ -100,6 +98,114 @@ export class FoodStockFormComponent implements OnInit {
         this.loadDateConstraints(this.stock.siteId);
       }
     });
+  }
+
+  private loadSites(): void {
+    this.sitesLoading = true;
+    const user = this.authService.getCurrentUser();
+    if (!user?.province) {
+      this.loadSitesByFilters(null, null, null);
+      return;
+    }
+
+    this.siteLocationService.getProvinces().subscribe({
+      next: response => {
+        const province = response.data?.find(item => this.sameLocationName(item.province, user.province));
+        if (!response.isSuccess || !province) {
+          this.failToLoadSites('Could not resolve your province to a location ID.');
+          return;
+        }
+
+        if (!user.district) {
+          this.loadSitesByFilters(province.id, null, null);
+          return;
+        }
+
+        this.siteLocationService.getDistricts(province.id).subscribe({
+          next: districtResponse => {
+            const district = districtResponse.data?.find(item => this.sameLocationName(item.district, user.district));
+            if (!districtResponse.isSuccess || !district) {
+              this.failToLoadSites('Could not resolve your district to a location ID.');
+              return;
+            }
+
+            if (!user.tehsil) {
+              this.loadSitesByFilters(province.id, district.id, null);
+              return;
+            }
+
+            this.siteLocationService.getTehsils(district.id).subscribe({
+              next: tehsilResponse => {
+                const tehsil = tehsilResponse.data?.find(item => this.sameLocationName(item.tehsil, user.tehsil));
+                if (!tehsilResponse.isSuccess || !tehsil) {
+                  this.failToLoadSites('Could not resolve your tehsil to a location ID.');
+                  return;
+                }
+                this.loadSitesByFilters(province.id, district.id, tehsil.id);
+              },
+              error: error => this.failToLoadSites(error?.message ?? 'Unable to load tehsils.')
+            });
+          },
+          error: error => this.failToLoadSites(error?.message ?? 'Unable to load districts.')
+        });
+      },
+      error: error => this.failToLoadSites(error?.message ?? 'Unable to load provinces.')
+    });
+  }
+
+  private loadSitesByFilters(provinceId: number | null, districtId: number | null, tehsilId: number | null): void {
+    this.siteLocationService.getSitesByFilters(provinceId, districtId, tehsilId).subscribe({
+      next: response => {
+        this.sitesLoading = false;
+        if (!response.isSuccess || !response.data) {
+          this.failToLoadSites(response.message || 'Unable to load site locations.');
+          return;
+        }
+
+        const data = response.data as unknown as { items?: SiteLocation[]; Items?: SiteLocation[] };
+        this.sites = Array.isArray(response.data)
+          ? response.data
+          : Array.isArray(data.items)
+            ? data.items
+            : Array.isArray(data.Items)
+              ? data.Items
+              : [];
+
+        if (!this.isEdit && this.stock.siteId && !this.sites.some(site => this.sameSiteId(site.id, this.stock.siteId))) {
+          this.error = 'Your assigned site is not available in the selected location.';
+        }
+      },
+      error: error => this.failToLoadSites(error?.message ?? 'Unable to load site locations.')
+    });
+  }
+
+  private failToLoadSites(message: string): void {
+    this.sitesLoading = false;
+    this.sites = [];
+    this.error = message;
+  }
+
+  private sameLocationName(first: string | null | undefined, second: string | null | undefined): boolean {
+    return (first ?? '').trim().toLocaleLowerCase() === (second ?? '').trim().toLocaleLowerCase();
+  }
+
+  onSiteChange(siteId: string): void {
+    this.stock.siteId = siteId || null;
+    this.previousStockRequest++;
+    this.previousStockLoading = false;
+    this.previousStockMessage = null;
+
+    if (this.isEdit) return;
+
+    for (const balance of this.stockBalances) {
+      (this.stock as Record<string, any>)[balance.opening] = '';
+    }
+    this.recalculateClosingStocks();
+
+    if (siteId) {
+      this.loadDateConstraints(siteId);
+      if (this.stock.enteredOn) this.loadPreviousDayStock(siteId, this.stock.enteredOn);
+    }
   }
 
   loadStock(id: number): void {
@@ -267,27 +373,29 @@ export class FoodStockFormComponent implements OnInit {
           return;
         }
 
-        const previousDate = this.getPreviousDateKey(targetDate);
-  const previous = response.data.find(record => {
-          const recordSiteId = String((record as any).siteId ?? (record as any).SiteId ?? '');
-          const recordDate = this.toDateKey((record as any).enteredOn ?? (record as any).EnteredOn ?? '');
-          return recordSiteId === siteId && recordDate === previousDate;
-        });
+        const previous = response.data
+          .map(record => ({
+            record,
+            date: this.toDateKey(String((record as any).enteredOn ?? (record as any).EnteredOn ?? '')),
+            siteId: String((record as any).siteId ?? (record as any).SiteId ?? '')
+          }))
+          .filter(item => item.siteId === siteId && !!item.date && item.date < targetDate)
+          .sort((a, b) => b.date!.localeCompare(a.date!))[0];
 
         if (!previous) {
           this.setOpeningStocksToZero();
-          this.previousStockMessage = 'No previous-day stock record was found. Opening stocks were set to zero.';
+          this.previousStockMessage = 'No earlier stock record was found. Opening stocks were set to zero.';
           return;
         }
 
         for (const balance of this.stockBalances) {
           const closingField = balance.closing;
           const pascalClosingField = closingField.charAt(0).toUpperCase() + closingField.slice(1);
-          const closingValue = (previous as any)[closingField] ?? (previous as any)[pascalClosingField] ?? '0';
+          const closingValue = (previous.record as any)[closingField] ?? (previous.record as any)[pascalClosingField] ?? '0';
           (this.stock as Record<string, any>)[balance.opening] = String(closingValue ?? '0');
         }
         this.recalculateClosingStocks();
-        this.previousStockMessage = `Previous day's closing stock (${previousDate}) was used as today's opening stock.`;
+        this.previousStockMessage = `Closing stock from the latest earlier record (${previous.date}) was used as opening stock.`;
       },
       error: () => {
         if (requestId !== this.previousStockRequest) return;
@@ -314,12 +422,6 @@ export class FoodStockFormComponent implements OnInit {
     return `${dayFirst[3]}-${dayFirst[2].padStart(2, '0')}-${dayFirst[1].padStart(2, '0')}`;
   }
 
-  private getPreviousDateKey(dateKey: string): string {
-    const [year, month, day] = dateKey.split('-').map(Number);
-    const previousDate = new Date(Date.UTC(year, month - 1, day - 1));
-    return `${previousDate.getUTCFullYear()}-${String(previousDate.getUTCMonth() + 1).padStart(2, '0')}-${String(previousDate.getUTCDate()).padStart(2, '0')}`;
-  }
-
   private loadDateConstraints(siteId: string): void {
     const requestId = ++this.dateConstraintsRequest;
 
@@ -341,9 +443,36 @@ export class FoodStockFormComponent implements OnInit {
         this.missingStockDates = (notification?.missingDates ?? [])
           .filter(item => item.isMissing)
           .map(item => this.toDateKey(item.date))
-          .filter((date): date is string => !!date);
+          .filter((date): date is string => !!date)
+          .filter(date => !this.isWeekend(date))
+          .sort();
+
+        const notificationSiteId = String(notification?.siteId ?? '');
+        const isSelectedSiteNotification = !notificationSiteId || this.sameSiteId(notificationSiteId, siteId);
+        if (!this.isEdit && !this.stock.enteredOn && isSelectedSiteNotification && this.missingStockDates.length) {
+          this.stock.enteredOn = this.missingStockDates[0];
+          this.loadPreviousDayStock(siteId, this.stock.enteredOn);
+        }
       }
     });
+  }
+
+  private sameSiteId(first: number | string | null | undefined, second: number | string | null | undefined): boolean {
+    const firstValue = String(first ?? '').trim();
+    const secondValue = String(second ?? '').trim();
+    if (!firstValue || !secondValue) return false;
+
+    const firstNumber = Number(firstValue);
+    const secondNumber = Number(secondValue);
+    return Number.isFinite(firstNumber) && Number.isFinite(secondNumber)
+      ? firstNumber === secondNumber
+      : firstValue === secondValue;
+  }
+
+  private isWeekend(dateKey: string): boolean {
+    const [year, month, day] = dateKey.split('-').map(Number);
+    const dayOfWeek = new Date(year, month - 1, day).getDay();
+    return dayOfWeek === 0 || dayOfWeek === 6;
   }
 
   private handleSaveResponse(resp: ApiResponse<any>): void {
@@ -351,17 +480,8 @@ export class FoodStockFormComponent implements OnInit {
     if (resp.isSuccess) {
       this.success = resp.message || 'Saved successfully';
 
-      // After successful save, if there is an auto-sequence of missing dates, navigate to next
-      const next = this.authService.popNextMissingDate();
-      if (next) {
-        // small delay to allow UI update before navigating
-        setTimeout(() => this.router.navigate(['/foodstock/create'], { queryParams: { date: next } }), 600);
-      } else {
-        // No more pending dates - refresh notification to check if any remain server-side,
-        // then go back to list. This keeps the modal visible until the backend reports no missing dates.
-        this.authService.refreshMissingDates();
-        setTimeout(() => this.router.navigate(['/foodstock']), 800);
-      }
+      this.authService.refreshMissingDates();
+      setTimeout(() => this.router.navigate(['/foodstock']), 800);
     } else {
       this.error = resp.message || 'Save failed';
     }

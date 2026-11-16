@@ -20,6 +20,16 @@ namespace NashunumaApp.Domain.Interfaces
         Task<List<DistrictDto>> GetDistrictsByProvinceAsync(decimal provinceId, CancellationToken ct = default);
         Task<List<TehsilDto>> GetTehsilsByDistrictAsync(decimal districtId, CancellationToken ct = default);
         Task<List<UcDto>> GetUcsByTehsilAsync(decimal tehsilId, CancellationToken ct = default);
-        Task<(string? Province, string? District, string? Tehsil)> ResolveNamesAsync(decimal provinceId, decimal districtId, decimal tehsilId, CancellationToken ct = default);
+        Task<(string? Province, string? District, string? Tehsil, string? Uc)> ResolveNamesAsync(decimal provinceId, decimal districtId, decimal tehsilId,decimal? ucId, CancellationToken ct = default);
+        //  resolve from NTH_GEO_LOCATION matching BOTH ids and names
+        //Task<(string? Province, string? District, string? Tehsil, string? Uc)>ResolveNamesAsync( decimal provinceId, decimal districtId, decimal tehsilId,
+        //        decimal? ucId, string provinceName, string districtName, string tehsilName,string? ucName, CancellationToken ct = default);
+
+        // ---- Geolocation data creation ----
+
+        Task CreateGeolocationDataIfNotExistsAsync( string currentUser, decimal provinceId, decimal districtId, decimal tehsilId,
+            decimal? ucId,string provinceName,string districtName,string tehsilName, string? ucName,CancellationToken ct = default);
+        // Dropdown/Lookup - Sites by hierarchical filters
+        Task<List<SiteDropdownDto>> GetSitesByFiltersAsync(decimal? provinceId = null,decimal? districtId = null,decimal? tehsilId = null, CancellationToken ct = default);
     }
 }

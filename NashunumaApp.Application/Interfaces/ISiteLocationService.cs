@@ -27,5 +27,12 @@ namespace NashunumaApp.Application.Interfaces
         Task<ApiResponse<List<DistrictDto>>> GetDistrictsAsync(decimal provinceId, CancellationToken ct = default);
         Task<ApiResponse<List<TehsilDto>>> GetTehsilsAsync(decimal districtId, CancellationToken ct = default);
         Task<ApiResponse<List<UcDto>>> GetUcsAsync(decimal tehsilId, CancellationToken ct = default);
+
+        // Dropdown for sites by hierarchical filters
+        Task<ApiResponse<List<SiteDropdownDto>>> GetSitesByFiltersAsync(
+            decimal? provinceId = null,
+            decimal? districtId = null,
+            decimal? tehsilId = null,
+            CancellationToken ct = default);
     }
 }

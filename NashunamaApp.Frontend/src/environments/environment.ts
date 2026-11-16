@@ -66,6 +66,7 @@ export const environment: Environment = {
     'siteLocation.getDistricts': '/api/SiteLocation/districts',
     'siteLocation.getTehsils': '/api/SiteLocation/tehsils',
     'siteLocation.getUcs': '/api/SiteLocation/ucs',
+    'siteLocation.getSites': '/api/SiteLocation/sites',
     'siteLocation.getAll': '/api/SiteLocation',
     'siteLocation.getById': '/api/SiteLocation/{id}',
     'siteLocation.create': '/api/SiteLocation',

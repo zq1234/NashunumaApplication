@@ -31,6 +31,8 @@ export class SiteLocationListComponent implements OnInit, OnDestroy {
 
   searchTerm = '';
   isCreateModalOpen = false;
+  selectedSite: SiteLocation | null = null;
+  deletingSiteId: number | null = null;
 
   ngOnInit(): void {
     this.loadSites();
@@ -44,14 +46,11 @@ export class SiteLocationListComponent implements OnInit, OnDestroy {
   loadSites(): void {
     this.loading = true;
     this.errorMessage = null;
-
-    this.siteLocationService
-      .getSites(this.pageNumber, this.pageSize, { search: this.searchTerm || undefined })
+    this.siteLocationService.getSites(this.pageNumber, this.pageSize, { search: this.searchTerm || undefined })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (response) => {
+        next: response => {
           this.loading = false;
-
           if (ApiResponseHelper.isSuccess(response) && response.data) {
             this.sites = response.data.items ?? [];
             this.totalCount = response.data.totalCount ?? 0;
@@ -62,7 +61,7 @@ export class SiteLocationListComponent implements OnInit, OnDestroy {
           this.errorMessage = ApiResponseHelper.getErrorMessage(response);
           this.sites = [];
         },
-        error: (error) => {
+        error: error => {
           this.loading = false;
           this.errorMessage = error?.message ?? 'Unable to load site locations.';
           this.sites = [];
@@ -76,6 +75,12 @@ export class SiteLocationListComponent implements OnInit, OnDestroy {
   }
 
   openCreateModal(): void {
+    this.selectedSite = null;
+    this.isCreateModalOpen = true;
+  }
+
+  openEditModal(site: SiteLocation): void {
+    this.selectedSite = site;
     this.isCreateModalOpen = true;
   }
 
@@ -85,8 +90,34 @@ export class SiteLocationListComponent implements OnInit, OnDestroy {
 
   onSiteCreated(): void {
     this.closeCreateModal();
+    this.selectedSite = null;
     this.pageNumber = 1;
     this.loadSites();
+  }
+
+  deleteSite(site: SiteLocation): void {
+    const name = site.siteName || 'this site';
+    if (!window.confirm(`Delete ${name}? This action cannot be undone.`)) return;
+
+    this.errorMessage = null;
+    this.deletingSiteId = site.id;
+    this.siteLocationService.deleteSite(site.id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: response => {
+          this.deletingSiteId = null;
+          if (ApiResponseHelper.isSuccess(response)) {
+            if (this.sites.length === 1 && this.pageNumber > 1) this.pageNumber--;
+            this.loadSites();
+          } else {
+            this.errorMessage = ApiResponseHelper.getErrorMessage(response);
+          }
+        },
+        error: error => {
+          this.deletingSiteId = null;
+          this.errorMessage = error?.message ?? 'Unable to delete site location.';
+        }
+      });
   }
 
   goToPage(page: number): void {

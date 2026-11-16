@@ -25,11 +25,17 @@
         </header>
         <div class="stock-fields-grid">
           <div>
-            <app-label for="siteId">Site ID</app-label>
-            <app-input-field id="siteId" type="text" [value]="stock.siteId || ''" [disabled]="true" (valueChange)="stock.siteId = $event.toString()"></app-input-field>
+            <app-label for="siteId">Site <span class="text-danger">*</span></app-label>
+            <select id="siteId" class="stock-site-select" [value]="stock.siteId || ''"
+                    [disabled]="isEdit || sitesLoading" (change)="onSiteChange($any($event.target).value)">
+              <option value="">{{ sitesLoading ? 'Loading sites...' : 'Select a site' }}</option>
+              @for (site of sites; track site.id) {
+                <option [value]="site.id">{{ site.siteName }}{{ site.tehsil ? ' - ' + site.tehsil : '' }}</option>
+              }
+            </select>
           </div>
           <div>
-            <app-date-picker id="enteredOn" label="Entered On" placeholder="Select a date" [value]="stock.enteredOn || ''" [latestEnteredDate]="isEdit ? null : latestEnteredDate" [missingDates]="missingStockDates" [onlyDate]="isEdit ? null : lockedEnteredDate" [maxDate]="isEdit ? undefined : 'today'" (dateChange)="onEnteredOnChange($event)"></app-date-picker>
+            <app-date-picker id="enteredOn" label="Entered On" placeholder="Select a date" [value]="stock.enteredOn || ''" [latestEnteredDate]="isEdit ? null : latestEnteredDate" [missingDates]="missingStockDates" [maxDate]="isEdit ? undefined : 'today'" [disableWeekends]="true" (dateChange)="onEnteredOnChange($event)"></app-date-picker>
           </div>
           <div>
             <app-label for="remarks">Remarks</app-label>

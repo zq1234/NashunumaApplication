@@ -60,6 +60,13 @@ namespace NashunumaApp.API.Controllers
             return StatusCode(result.StatusCode, result);
         }
 
+        [HttpGet("sites")]
+        public async Task<IActionResult> GetSites([FromQuery] decimal? provinceId = null, [FromQuery] decimal? districtId = null,[FromQuery] decimal? tehsilId = null, CancellationToken ct = default)
+        {
+            var result = await _service.GetSitesByFiltersAsync(provinceId, districtId, tehsilId, ct);
+            return StatusCode(result.StatusCode, result);
+        }
+
         // ---------------- CRUD ----------------
 
         [HttpGet]
